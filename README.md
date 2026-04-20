@@ -105,6 +105,50 @@ while web UI is up.
 
 ---
 
+## Flow: calibrate the compass
+
+The T-Watch Ultra IMU (BHI260AP) does **not** include a magnetometer fusion
+mode that survives the watch sleeping/rebooting. The compass uses
+`GAME_ROTATION_VECTOR` (gyro + accel only), so on every cold boot the heading
+is **relative to whatever orientation the watch happened to wake up in** — it
+will drift until you tell it where north is.
+
+Calibration is a one-shot offset stored in NVS (namespace `compass`, key
+`offset`). It survives reboots until you do `pio run -t erase` or re-calibrate.
+Drift over a few hours of normal use is small but noticeable; recalibrate when
+the heading no longer matches reality.
+
+**How to calibrate:**
+
+1. Open the **Sensor** app on the watch (menu → Sensor).
+2. Get a reference compass:
+   - iPhone built-in **Compass** app (works great), or
+   - Any Android compass app, or
+   - A real magnetic compass.
+3. Lay both devices flat next to each other on a non-metal surface, screens
+   up, **pointing the same direction**. Avoid laptops, speakers, anything with
+   a magnet or thick steel underneath.
+4. Slowly rotate both together until the **reference** reads **0° / N**
+   (north). Hold still for a second to let the gyro settle.
+5. On the watch, tap the **"POINT N + CALIBRATE"** button at the bottom of
+   the Sensor screen.
+6. The button hides itself — calibration saved. The watch dial now reads ~0°
+   when pointed north.
+7. Rotate the watch and verify the heading tracks (E should read ~90°, S
+   ~180°, W ~270°).
+
+**To recalibrate later:** the button is hidden after first calibration. Reset
+NVS to bring it back: hold the side button to reboot, or rebuild + flash with
+`pio run -t erase -t upload`. Easier alternative: add a "force recalibrate"
+gesture later (TODO).
+
+**Tip:** calibrate near a window or outdoors — phone compasses (the reference)
+are themselves easily fooled by buildings' steel framing. If iPhone keeps
+asking you to "wave it in a figure-8", do that first, then calibrate the
+watch against the freshly-calibrated phone.
+
+---
+
 ## Flow: pair with Watch Dogs Go game (uConsole, BLE)
 
 **First connection (PIN required):**
