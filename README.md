@@ -261,62 +261,179 @@ pio run --target upload --upload-port /dev/ttyACM0
 pio device monitor --baud 115200
 ```
 
+
+## 🔌 Unified JSON Command API Reference / Birleşik JSON Komut Kılavuzu
+
+Both **BLE Nordic UART** and HTTP `POST /api/cmd` accept single-line, `\n` (newline / LF) terminated JSON objects. Below is the complete catalog of all **34 commands** supported by the SCR Terminal firmware.
+
+Hem **BLE Nordic UART** hem de HTTP `POST /api/cmd` istekleri tek satırlık, `\n` (satır sonu / LF) ile sonlandırılmış JSON objelerini kabul eder. Aşağıda SCR Terminal yazılımı tarafından desteklenen **34 komutun tamamı** listelenmiştir.
+
 ---
 
-## 🔌 Birleşik JSON Komut API Referansı
+### 1. ⚙️ System Commands / Sistem Komutları
 
-Hem BLE Nordic UART hem de HTTP `POST /api/cmd` istekleri aşağıdaki JSON formatını kabul eder:
+*   **System Status / Sistem Durumu (`status`):**
+    *   *Usage / Kullanım:* `{"cmd":"status"}`
+    *   *Description / Açıklama:* Returns detailed hardware telemetry (battery %, battery voltage, charging status, NTP status, free RAM heap, active services). / Detaylı donanım telemetrisini (batarya yüzdesi, voltajı, şarj durumu, NTP durumu, boş RAM miktarı ve aktif servisleri) döner.
+*   **Version Info / Versiyon Bilgisi (`version`):**
+    *   *Usage / Kullanım:* `{"cmd":"version"}`
+    *   *Description / Açıklama:* Returns firmware build version, codename, board hardware type, and enabled compile-time features. / Yazılım derleme sürümünü, kod adını, donanım tipini ve aktif özellikleri döner.
+*   **Haptic Test / Titreşim Testi (`haptic`):**
+    *   *Usage / Kullanım:* `{"cmd":"haptic"}`
+    *   *Description / Açıklama:* Triggers a short haptic feedback vibration using the DRV2605 driver. / DRV2605 sürücüsü aracılığıyla saatte kısa bir titreşim geri bildirimi tetikler.
+*   **Set Brightness / Parlaklık Ayarı (`brightness`):**
+    *   *Usage / Kullanım:* `{"cmd":"brightness", "params":{"v":150}}`
+    *   *Params / Parametre:* `v` (Integer: `10` to `255`) — Target brightness value. / `10` ile `255` arası parlaklık tamsayı değeri.
+*   **Cycle Watchface / Kadran Değiştirme (`watchface`):**
+    *   *Usage / Kullanım:* `{"cmd":"watchface", "params":{"style":"next"}}`
+    *   *Params / Parametre:* `style` (String: `"next"` or `"prev"`)
+*   **Reboot Device / Yeniden Başlatma (`reboot`):**
+    *   *Usage / Kullanım:* `{"cmd":"reboot"}`
+    *   *Description / Açıklama:* Performs a clean software reboot of the ESP32-S3. / ESP32-S3 çipini yazılımsal olarak temiz bir şekilde yeniden başlatır.
+*   **Compass Data / Pusula Bilgisi (`compass`):**
+    *   *Usage / Kullanım:* `{"cmd":"compass"}`
+    *   *Description / Açıklama:* Returns current vector headings (heading, roll, pitch) from the BHI260AP IMU. / BHI260AP IMU sensöründen anlık yönelim vektörlerini (sapma, yuvarlanma, yunuslama) döner.
+*   **Sensor Telemetry / Sensör Telemetrisi (`sensor_data`):**
+    *   *Usage / Kullanım:* `{"cmd":"sensor_data"}`
+    *   *Description / Açıklama:* Returns live battery data, heap storage, system uptime in seconds, and GPS coordinates if a valid fix exists. / Canlı batarya verilerini, bellek durumunu, saniye cinsinden çalışma süresini ve eğer GPS bağlantısı varsa konum koordinatlarını döner.
 
-### 1. Sistem Komutları
-*   **Durum Sorgula:** `{"cmd":"status"}`
-    *   *Dönen Yanıt:* `{"type":"status","time":"12:34:56","date":"2026-06-08","bat":92,"bat_v":4.15,"charging":false,"ntp":true,"heap":185,"lora":false,"nfc":false}`
-*   **Haptik Testi:** `{"cmd":"haptic"}`
-*   **Parlaklık Ayarla:** `{"cmd":"brightness", "params":{"v":150}}` (v: 10 - 255)
-*   **Cihazı Yeniden Başlat:** `{"cmd":"reboot"}`
+---
 
-### 2. Sanal Pet Komutları
-*   **Durum Sorgula:** `{"cmd":"pet_status"}`
-    *   *Dönen Yanıt:* `{"type":"pet_status","level":2,"xp":45,"energy":80,"health":95,"cleanliness":70,"poops":1}`
-*   **Besle:** `{"cmd":"pet_feed"}`
-*   **Kernel Kalibre Et (İyileştir):** `{"cmd":"pet_heal"}`
-*   **Temizle:** `{"cmd":"pet_clean"}`
+### 2. 👾 SCR-Bit Pet Commands / Sanal Pet Komutları
 
-### 3. RF & Jammer Komutları
-*   **Jammer Başlat:** `{"cmd":"rf_jammer_start", "params":{"freq":433920000}}` (Hz cinsinden frekans)
-*   **Jammer Durdur:** `{"cmd":"rf_jammer_stop"}`
-*   **Tesla Sinyali Gönder:** `{"cmd":"rf_tesla_send"}`
-*   **RF Durumu Sorgula:** `{"cmd":"rf_status"}`
-    *   *Dönen Yanıt:* `{"type":"rf_status","active":false,"freq":433920000,"tesla_sending":false}`
+*   **Get Pet Stats / Pet İstatistikleri (`pet_status`):**
+    *   *Usage / Kullanım:* `{"cmd":"pet_status"}`
+    *   *Description / Açıklama:* Returns the virtual pet's stats (Level, XP progress %, Energy, Health, Cleanliness, and wire poop count on the ground). / Sanal petin seviyesini, XP ilerlemesini, Enerji, Sağlık ve Temizlik barlarını ve yerdeki kablo pisliklerinin sayısını döner.
+*   **Feed Pet / Besleme (`pet_feed`):**
+    *   *Usage / Kullanım:* `{"cmd":"pet_feed"}`
+    *   *Description / Açıklama:* Feeds the pet code packets, restoring `Energy` by 20 units and granting XP. / Robota kod paketleri yükleyerek `Enerji` değerini 20 birim artırır ve XP kazandırır.
+*   **Heal Pet / İyileştirme (`pet_heal`):**
+    *   *Usage / Kullanım:* `{"cmd":"pet_heal"}`
+    *   *Description / Açıklama:* Re-calibrates the core system to restore `Health` by 30 units. / Sistem çekirdeğini kalibre ederek petin `Sağlık` durumunu 30 birim iyileştirir.
+*   **Clean Pet / Temizleme (`pet_clean`):**
+    *   *Usage / Kullanım:* `{"cmd":"pet_clean"}`
+    *   *Description / Açıklama:* Sweeps all wire scrap poops from the display and restores `Cleanliness` to 100%. / Ekrandaki tüm kablo atıklarını temizler ve petin `Temizlik` barını 100%'e çıkarır.
 
-### 4. HID / BadUSB Komutları
-*   **Yayın Başlat:** `{"cmd":"hid_start"}`
-*   **Yayın Durdur:** `{"cmd":"hid_stop"}`
-*   **HID Durumu Sorgula:** `{"cmd":"hid_status"}`
-*   **SD Karttan Payload Çalıştır:** `{"cmd":"hid_run_script", "params":{"path":"/scripts/payload.txt","ble":true}}`
-*   **Çalışan Scripti İptal Et:** `{"cmd":"hid_abort_script"}`
+---
 
-### 5. Diğer Komutlar / Other Commands
-*   **GPS Aç/Kapat (GPS On/Off):** `{"cmd":"gps_on"}` / `{"cmd":"gps_off"}`
-*   **WiFi Taraması Başlat (Start WiFi Scan):** `{"cmd":"recon_wifi"}`
-*   **BLE Taraması Başlat (Start BLE Scan):** `{"cmd":"recon_ble", "params":{"duration":10}}`
-*   **Tarama Sonuçlarını Getir (Get Scan Results):** `{"cmd":"recon_results"}`
-*   **Tarama İşlemini Durdur (Stop Active Scan):** `{"cmd":"recon_stop"}`
-*   **Hedefli WiFi Deauth Tetikle (Targeted Deauth):** `{"cmd":"recon_deauth", "params":{"bssid":"AA:BB:CC:DD:EE:FF","ch":6}}`
-*   **Deauth Saldırısını Durdur (Stop Deauth):** `{"cmd":"recon_stop"}`
-*   **NFC Okumayı Başlat (Start NFC Scan):** `{"cmd":"nfc_scan"}`
-*   **NFC Okumayı Durdur (Stop NFC Scan):** `{"cmd":"nfc_stop"}`
-*   **Okunan NFC Kartı SD Karta Kaydet (Save Scanned NFC):** `{"cmd":"nfc_save"}`
-*   **NFC Kartlarını Listele (List Saved NFCs):** `{"cmd":"nfc_list"}`
-*   **Kayıtlı NFC Kartı Sil (Delete Saved NFC):** `{"cmd":"nfc_delete", "params":{"idx":0}}`
-*   **NFC Kartı Bilgisayara İndir (Download NFC):** `{"cmd":"nfc_download", "params":{"idx":0}}`
-*   **NFC Kartları Dışa Aktar (Export NFC to Flipper):** `{"cmd":"nfc_export"}`
-*   **LoRa Servisini Başlat (Start LoRa RX/TX):** `{"cmd":"lora_start"}`
-*   **LoRa Servisini Durdur (Stop LoRa):** `{"cmd":"lora_stop"}`
-*   **LoRa Mesajı Gönder (Send LoRa Message):** `{"cmd":"lora_send", "params":{"text":"hello"}}`
-*   **LoRa Düğüm Reklamı Gönder (Send LoRa Advert):** `{"cmd":"lora_advert"}`
-*   **LoRa Geçmişini Yükle (Load LoRa History):** `{"cmd":"lora_history"}`
-*   **Saat Temasını Değiştir (Cycle Watchface):** `{"cmd":"watchface", "params":{"style":"next"}}`
-*   **Sürüm Sorgula (Get Firmware Version):** `{"cmd":"version"}`
+### 3. 📻 Sub-GHz RF Commands / RF & Jammer Komutları
+
+*   **Start Jammer / Jammer Başlat (`rf_jammer_start`):**
+    *   *Usage / Kullanım:* `{"cmd":"rf_jammer_start", "params":{"freq":433920000}}`
+    *   *Params / Parametre:* `freq` (Integer: Frequency in Hz. Default: `433920000` / 433.92 MHz). / Hz cinsinden hedef kesici frekansı.
+*   **Stop Jammer / Jammer Durdur (`rf_jammer_stop`):**
+    *   *Usage / Kullanım:* `{"cmd":"rf_jammer_stop"}`
+    *   *Description / Açıklama:* Disables the jammer transmission engine. / Jammer verici sinyalini tamamen kapatır.
+*   **Tesla Signal / Tesla Sinyali (`rf_tesla_send`):**
+    *   *Usage / Kullanım:* `{"cmd":"rf_tesla_send"}`
+    *   *Description / Açıklama:* Transmits a single-pass burst simulation pattern at common automotive charger frequencies. / Yaygın şarj portu frekanslarında tek geçişli bir RF Tesla simülasyon sinyali gönderir.
+*   **RF Status / RF Durumu (`rf_status`):**
+    *   *Usage / Kullanım:* `{"cmd":"rf_status"}`
+    *   *Description / Açıklama:* Queries whether the jammer is active, target frequency, and Tesla burst status. / Jammer'ın aktiflik durumunu, frekansını ve Tesla gönderim durumunu sorgular.
+
+---
+
+### 4. ⌨️ BLE & USB HID Keyboard Commands / Klavye Komutları
+
+*   **Start HID / Klavyeyi Aktifleştir (`hid_start`):**
+    *   *Usage / Kullanım:* `{"cmd":"hid_start"}`
+    *   *Description / Açıklama:* Initiates Bluetooth HID service, advertising the watch as `SCR-Keyboard`. / Bluetooth HID klavye servisini `SCR-Keyboard` ismiyle yayına açar.
+*   **Stop HID / Klavyeyi Kapat (`hid_stop`):**
+    *   *Usage / Kullanım:* `{"cmd":"hid_stop"}`
+    *   *Description / Açıklama:* Stops BLE advertising and disconnects the keyboard link. / BLE yayınını durdurur ve mevcut HID bağlantılarını sonlandırır.
+*   **Run DuckyScript / Script Çalıştır (`hid_run_script`):**
+    *   *Usage / Kullanım:* `{"cmd":"hid_run_script", "params":{"path":"/scripts/pay.txt","ble":true}}`
+    *   *Params / Parametre:* `path` (String: SD card absolute file path), `ble` (Boolean: `true` for BLE, `false` for USB). / SD karttaki script dosyasının tam konumu ve BLE/USB seçimi.
+*   **Abort Script / Script İptali (`hid_abort_script`):**
+    *   *Usage / Kullanım:* `{"cmd":"hid_abort_script"}`
+    *   *Description / Açıklama:* Immediately stops any running DuckyScript execution. / Çalışmakta olan DuckyScript (BadUSB/BadBLE) payload'ını anında durdurur.
+*   **Get HID Status / HID Durumu (`hid_status`):**
+    *   *Usage / Kullanım:* `{"cmd":"hid_status"}`
+    *   *Description / Açıklama:* Returns active state, BLE link connection status, USB link connection status, name, and if a payload is currently executing. / HID modülünün aktifliğini, BLE ve USB bağlantı durumlarını, yayın adını ve çalışan script durumunu döner.
+
+---
+
+### 5. 🏷️ HF NFC Transceiver Commands / NFC Komutları
+
+*   **Start NFC Scan / Kart Okuma Başlat (`nfc_scan`):**
+    *   *Usage / Kullanım:* `{"cmd":"nfc_scan"}`
+    *   *Description / Açıklama:* Powers up ST25R3916 RF field to listen for ISO-14443A HF tags or NDEF payloads. / NFC modülünü aktif hale getirerek yakındaki kart veya etiketleri taramaya başlar.
+*   **Stop NFC Scan / Kart Okumayı Durdur (`nfc_stop`):**
+    *   *Usage / Kullanım:* `{"cmd":"nfc_stop"}`
+    *   *Description / Açıklama:* Turns off HF reader field to save power. / NFC okuyucu alanını kapatarak güç tasarrufu moduna geçer.
+*   **Save Tag / Kartı Kaydet (`nfc_save`):**
+    *   *Usage / Kullanım:* `{"cmd":"nfc_save"}`
+    *   *Description / Açıklama:* Saves the last scanned tag metadata to the internal SD card storage. / En son okunan NFC kart bilgilerini dahili SD kart belleğine kaydeder.
+*   **List Tags / Kartları Listele (`nfc_list`):**
+    *   *Usage / Kullanım:* `{"cmd":"nfc_list"}`
+    *   *Description / Açıklama:* Returns a list of all saved card profiles stored on the SD card. / SD karta kaydedilmiş tüm NFC kart profillerini listeler.
+*   **Delete Tag / Kart Sil (`nfc_delete`):**
+    *   *Usage / Kullanım:* `{"cmd":"nfc_delete", "params":{"idx":0}}`
+    *   *Params / Parametre:* `idx` (Integer: Index of target tag in list). / Silinecek kartın listedeki sıra indeksi.
+*   **Download Tag / Kart İndir (`nfc_download`):**
+    *   *Usage / Kullanım:* `{"cmd":"nfc_download", "params":{"idx":0}}`
+    *   *Description / Açıklama:* Returns base64-encoded file contents of the selected NFC tag in Flipper NFC format. / Seçilen NFC kartının içeriğini Flipper NFC formatında Base64 şifrelemeyle bilgisayar/telefona indirir.
+*   **Export Tags / Flipper Dışa Aktarma (`nfc_export`):**
+    *   *Usage / Kullanım:* `{"cmd":"nfc_export"}`
+    *   *Description / Açıklama:* Processes saved tag files and exports them directly into the `/nfc/` directory structure. / Kaydedilmiş NFC dosyalarını Flipper Zero cihazlarının okuyabileceği formatta dışa aktarır.
+
+---
+
+### 6. 🌌 LoRa MeshCore Commands / LoRa Komutları
+
+*   **Start LoRa / LoRa Başlat (`lora_start`):**
+    *   *Usage / Kullanım:* `{"cmd":"lora_start"}`
+    *   *Description / Açıklama:* Turns on the SX1262 LoRa module on frequency `869.618 MHz`. / SX1262 LoRa modülünü `869.618 MHz` frekansında dinleme moduna alır.
+*   **Stop LoRa / LoRa Durdur (`lora_stop`):**
+    *   *Usage / Kullanım:* `{"cmd":"lora_stop"}`
+    *   *Description / Açıklama:* Puts the SX1262 radio into sleep mode to conserve power. / LoRa modülünü güç tasarrufu için uyku moduna alır.
+*   **Send Message / Mesaj Gönder (`lora_send`):**
+    *   *Usage / Kullanım:* `{"cmd":"lora_send", "params":{"text":"hello"}}`
+    *   *Params / Parametre:* `text` (String: Broadcast chat message text). / LoRa mesh kanalı üzerinden gönderilecek genel sohbet mesajı.
+*   **Send Advertisement / Reklam Paketi Gönder (`lora_advert`):**
+    *   *Usage / Kullanım:* `{"cmd":"lora_advert"}`
+    *   *Description / Açıklama:* Dispatches an Ed25519-signed node presence packet detailing coordinates, public key, and name. / Konum, kullanıcı adı ve Ed25519 genel anahtarı içeren imzalı bir varlık bildirimi paketi yayınlar.
+*   **Get History / Sohbet Geçmişi (`lora_history`):**
+    *   *Usage / Kullanım:* `{"cmd":"lora_history"}`
+    *   *Description / Açıklama:* Retrieves the last 20 public messages parsed from the SD card storage file. / SD kartta kayıtlı olan son 20 LoRa mesaj geçmişini listeler.
+
+---
+
+### 7. 🛜 WiFi & BLE Recon Commands / Keşif & Ağ Komutları
+
+*   **WiFi Scan / WiFi Tarama (`recon_wifi`):**
+    *   *Usage / Kullanım:* `{"cmd":"recon_wifi"}`
+    *   *Description / Açıklama:* Scans 2.4GHz WiFi networks, gathering SSID, RSSI, BSSID, channel, and authentication type. / Çevredeki 2.4GHz WiFi ağlarını taramaya başlar.
+*   **BLE Scan / BLE Tarama (`recon_ble`):**
+    *   *Usage / Kullanım:* `{"cmd":"recon_ble", "params":{"duration":15}}`
+    *   *Params / Parametre:* `duration` (Integer: Scan window duration in seconds. Default: `10`). / Saniye cinsinden BLE tarama penceresi süresi.
+*   **Get Results / Tarama Sonuçları (`recon_results`):**
+    *   *Usage / Kullanım:* `{"cmd":"recon_results"}`
+    *   *Description / Açıklama:* Returns gathered WiFi networks and BLE devices from the last scanning cycle. / Son taramadan elde edilen WiFi ve BLE cihaz listesini döner.
+*   **Stop Scan / Taramayı Durdur (`recon_stop`):**
+    *   *Usage / Kullanım:* `{"cmd":"recon_stop"}`
+    *   *Description / Açıklama:* Cancels any active WiFi scan, BLE scan, deauth attack, or sniffing activity. / Devam eden tarama, deauth veya koklama faaliyetlerini durdurur.
+*   **Targeted Deauth / Hedefli Deauth (`recon_deauth`):**
+    *   *Usage / Kullanım:* `{"cmd":"recon_deauth", "params":{"bssid":"AA:BB:CC:DD:EE:FF","ch":6}}`
+    *   *Params / Parametre:* `bssid` (String: Target network BSSID), `ch` (Integer: Channel). / Hedef ağın BSSID adresi ve yayın kanalı.
+*   **Blackout / Genel Deauth (`deauth_all`):**
+    *   *Usage / Kullanım:* `{"cmd":"deauth_all"}`
+    *   *Description / Açıklama:* Iterates through all channels, broadcasting deauth frames to audit nearby Wi-Fi endpoints. / Tüm kanallarda deauth paketleri yayınlayarak genel bir sinyal karartma testi başlatır.
+*   **Packet Sniffer / Paket Koklama (`sniffer_start`):**
+    *   *Usage / Kullanım:* `{"cmd":"sniffer_start", "params":{"ch":11}}`
+    *   *Params / Parametre:* `ch` (Integer: Wi-Fi channel to monitor. `0` for hopping). / İzlenecek WiFi kanalı (atlama modu için `0`).
+*   **Stop Sniffer / Koklamayı Durdur (`sniffer_stop`):**
+    *   *Usage / Kullanım:* `{"cmd":"sniffer_stop"}`
+    *   *Description / Açıklama:* Stops the passive frame monitoring engine. / Pasif paket koklama motorunu kapatır.
+*   **Deauth Detect / Deauth Algılayıcı (`deauth_detect`):**
+    *   *Usage / Kullanım:* `{"cmd":"deauth_detect"}`
+    *   *Description / Açıklama:* Puts the radio into passive monitoring, triggering event warnings if deauth bursts are detected. / Çevre kaynaklı deauth saldırılarını pasif olarak tarar ve algıladığında uyarır.
+*   **Evil Twin AP / Sahte Erişim Noktası (`evil_twin`):**
+    *   *Usage / Kullanım:* `{"cmd":"evil_twin", "params":{"ssid":"MyFreeWiFi","ch":1}}`
+    *   *Params / Parametre:* `ssid` (String: AP Name), `ch` (Integer: Wi-Fi Channel). / Sahte ağ adı ve yayın yapacağı WiFi kanalı.
+*   **Stop Evil Twin / Sahte Erişimi Kapat (`evil_twin_stop`):**
+    *   *Usage / Kullanım:* `{"cmd":"evil_twin_stop"}`
+    *   *Description / Açıklama:* Turns off the rogue access point. / Sahte Wi-Fi erişim noktasını kapatır.
 
 ---
 
