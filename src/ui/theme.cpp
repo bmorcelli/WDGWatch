@@ -10,19 +10,16 @@ void pipboy_theme_init(void) {
     if (initialized) return;
     initialized = true;
 
-    // Default style - green on black
     lv_style_init(&style_default);
     lv_style_set_bg_color(&style_default, PIPBOY_BG_16);
     lv_style_set_text_color(&style_default, PIPBOY_GREEN_16);
     lv_style_set_border_color(&style_default, PIPBOY_GREEN_DIM_16);
     lv_style_set_line_color(&style_default, PIPBOY_GREEN_16);
 
-    // Title style
     lv_style_init(&style_title);
     lv_style_set_text_color(&style_title, PIPBOY_GREEN_16);
     lv_style_set_text_font(&style_title, &lv_font_montserrat_20);
 
-    // Panel style - bordered box
     lv_style_init(&style_panel);
     lv_style_set_bg_color(&style_panel, PIPBOY_BG_16);
     lv_style_set_bg_opa(&style_panel, LV_OPA_COVER);
@@ -31,7 +28,6 @@ void pipboy_theme_init(void) {
     lv_style_set_radius(&style_panel, 2);
     lv_style_set_pad_all(&style_panel, 4);
 
-    // Button style
     lv_style_init(&style_btn);
     lv_style_set_bg_color(&style_btn, PIPBOY_BG_16);
     lv_style_set_bg_opa(&style_btn, LV_OPA_COVER);

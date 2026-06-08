@@ -1,13 +1,12 @@
 #pragma once
 
-// HTML/CSS/JS for the web interface (stored in PROGMEM)
 const char WEB_INDEX_HTML[] = R"rawliteral(
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
-<title>PipBoy-3000</title>
+<title>SCR Terminal</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:#000;color:#00e5ff;font-family:'Courier New',monospace;font-size:14px;padding:8px}
@@ -51,7 +50,7 @@ button:active,.btn:active{background:#007280}
 </style>
 </head>
 <body>
-<h1>[ PIPBOY-3000 ]</h1>
+<h1>[ SCR TERMINAL ]</h1>
 
 <div class="tabs">
 <button class="tab active" onclick="showTab('dash')">DASH</button>
@@ -261,7 +260,7 @@ async function loraSend(){
  if(!t.value)return;
  let r=await api('/api/lora/send','POST',{text:t.value});
  t.value='';
- // Don't add to msgs here - WS push will handle it (avoids duplicates)
+
 }
 function wifiScan(){log('Scanning...');api('/api/wifi/scan','POST')}
 function startEvilTwin(){
@@ -273,7 +272,7 @@ function startDeauth(){
  let c=document.getElementById('deauth-ch').value;
  if(b&&c) api('/api/recon/deauth','POST',{bssid:b,ch:c});
 }
-// Auto-refresh recon results when tab is active
+
 setInterval(async()=>{
  let p=document.getElementById('recon');
  if(!p||!p.classList.contains('active'))return;

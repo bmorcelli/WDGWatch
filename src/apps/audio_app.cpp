@@ -14,7 +14,6 @@ static bool recording = false;
 static bool playing = false;
 static uint32_t rec_start = 0;
 
-// Audio buffer in PSRAM (max ~10 seconds at 16kHz 16-bit mono)
 #define SAMPLE_RATE     16000
 #define MAX_REC_SECONDS 10
 #define AUDIO_BUF_SIZE  (SAMPLE_RATE * 2 * MAX_REC_SECONDS)
@@ -44,10 +43,10 @@ static lv_obj_t* make_btn(lv_obj_t *par, int x, int y, int w, int h, const char 
 static void rec_cb(lv_event_t *e) {
     (void)e;
     haptic_click();
-    if (playing) return; // can't record while playing
+    if (playing) return;
 
     if (!recording) {
-        // Start recording
+
         if (!audio_buf) {
             audio_buf = (uint8_t *)ps_malloc(AUDIO_BUF_SIZE);
             if (!audio_buf) {
@@ -62,7 +61,7 @@ static void rec_cb(lv_event_t *e) {
         lv_label_set_text(lbl_status, LV_SYMBOL_AUDIO " RECORDING...");
         lv_obj_set_style_text_color(lbl_status, lv_color_hex(0xFF3333), 0);
     } else {
-        // Stop recording
+
         recording = false;
         instance.powerControl(POWER_SPEAK, false);
         lv_label_set_text(lbl_status, "RECORDED");
@@ -136,7 +135,6 @@ void audio_app_create(lv_obj_t *parent) {
     lv_obj_set_style_text_font(lbl_time, &lv_font_montserrat_14, 0);
     lv_obj_align(lbl_time, LV_ALIGN_TOP_MID, 0, y);
 
-    // Level meter
     y += 25;
     lv_obj_t *ll = lv_label_create(scr);
     lv_label_set_text(ll, "LEVEL");
@@ -156,7 +154,6 @@ void audio_app_create(lv_obj_t *parent) {
     lv_obj_set_style_radius(bar_level, 0, 0);
     lv_obj_set_style_radius(bar_level, 0, LV_PART_INDICATOR);
 
-    // Buttons
     y += 35;
     make_btn(scr, x, y, 155, 55, LV_SYMBOL_AUDIO " REC", rec_cb);
     make_btn(scr, x + 175, y, 155, 55, LV_SYMBOL_PLAY " PLAY", play_cb);
@@ -164,7 +161,6 @@ void audio_app_create(lv_obj_t *parent) {
     y += 65;
     make_btn(scr, x, y, 155, 45, LV_SYMBOL_TRASH " CLEAR", clear_cb);
 
-    // Info
     y += 60;
     lv_obj_t *info = lv_label_create(scr);
     char ib[64];
@@ -180,13 +176,12 @@ void audio_app_update(void) {
     if (!scr) return;
 
     if (recording) {
-        // Update recording time
+
         uint32_t elapsed = millis() - rec_start;
         float secs = elapsed / 1000.0f;
         char b[16]; snprintf(b, sizeof(b), "%.1fs / %ds", secs, MAX_REC_SECONDS);
         if (lbl_time) lv_label_set_text(lbl_time, b);
 
-        // Auto-stop at max
         if (audio_len >= AUDIO_BUF_SIZE) {
             recording = false;
             instance.powerControl(POWER_SPEAK, false);
@@ -195,10 +190,10 @@ void audio_app_update(void) {
                 lv_obj_set_style_text_color(lbl_status, G, 0);
             }
         } else {
-            // Fake level (real PDM reading would go here)
+
             int level = (millis() / 50) % 100;
             if (bar_level) lv_bar_set_value(bar_level, level, LV_ANIM_OFF);
-            audio_len += SAMPLE_RATE * 2 / 20; // ~50ms worth
+            audio_len += SAMPLE_RATE * 2 / 20;
         }
     }
 

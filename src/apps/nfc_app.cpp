@@ -30,7 +30,6 @@ static lv_obj_t* make_btn(lv_obj_t *par, int x, int y, int w, int h, const char 
     return btn;
 }
 
-// Callbacks just call nfc_service
 static void scan_cb(lv_event_t *e)    { (void)e; haptic_click(); nfc_svc_request_scan(); }
 static void stop_cb(lv_event_t *e)    { (void)e; haptic_click(); nfc_svc_request_stop(); }
 static void save_cb(lv_event_t *e)    { (void)e; haptic_click(); nfc_svc_request_save(); }
@@ -96,19 +95,16 @@ void nfc_app_create(lv_obj_t *parent) {
     lv_obj_set_pos(lbl_ndef, x, y);
     lv_obj_set_width(lbl_ndef, 350);
 
-    // Row 1: SCAN SAVE STOP
     y += 25;
     make_btn(scr, x, y, bw, bh, LV_SYMBOL_REFRESH " SCAN", scan_cb);
     make_btn(scr, x+bw+7, y, bw, bh, LV_SYMBOL_SAVE " SAVE", save_cb);
     make_btn(scr, x+2*(bw+7), y, bw, bh, LV_SYMBOL_CLOSE " STOP", stop_cb);
 
-    // Row 2: SEL EMIT DEL
     y += bh + 8;
     make_btn(scr, x, y, bw, bh, LV_SYMBOL_RIGHT " SEL", select_cb);
     make_btn(scr, x+bw+7, y, bw, bh, LV_SYMBOL_UPLOAD " EMIT", emit_cb);
     make_btn(scr, x+2*(bw+7), y, bw, bh, LV_SYMBOL_TRASH " DEL", del_cb);
 
-    // Saved tags
     y += bh + 10;
     lv_obj_t *st = lv_label_create(scr);
     lv_label_set_text(st, "SAVED:");
@@ -125,14 +121,11 @@ void nfc_app_create(lv_obj_t *parent) {
     lv_label_set_long_mode(lbl_saved, LV_LABEL_LONG_WRAP);
     update_saved_list();
 
-    // Don't auto-start scanning - user must press SCAN or use web UI
-    // (saves battery, prevents conflicts)
 }
 
 void nfc_app_update(void) {
     if (!scr) return;
 
-    // Update status from service
     if (nfc_svc_is_scanning() && lbl_status) {
         lv_label_set_text(lbl_status, "SCANNING...");
         lv_obj_set_style_text_color(lbl_status, G, 0);
@@ -141,7 +134,6 @@ void nfc_app_update(void) {
         lv_obj_set_style_text_color(lbl_status, lv_color_hex(0xFF6600), 0);
     }
 
-    // Tag detected
     if (nfc_svc_tag_detected()) {
         haptic_buzz();
         if (lbl_uid) {
@@ -155,12 +147,11 @@ void nfc_app_update(void) {
         }
     }
 
-    // Refresh saved list
     update_saved_list();
 }
 
 void nfc_app_destroy(void) {
-    // DON'T stop NFC service - it runs in background
+
     if (scr) { lv_obj_delete(scr); scr = nullptr; }
     lbl_status = lbl_uid = lbl_ndef = lbl_saved = nullptr;
 }

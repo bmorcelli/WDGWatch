@@ -11,16 +11,16 @@ static void play_effect(uint8_t e1, uint8_t e2 = 0, uint8_t e3 = 0) {
     instance.drv.setWaveform(0, e1);
     instance.drv.setWaveform(1, e2);
     instance.drv.setWaveform(2, e3);
-    instance.drv.setWaveform(e2 ? (e3 ? 3 : 2) : 1, 0); // terminator
+    instance.drv.setWaveform(e2 ? (e3 ? 3 : 2) : 1, 0);
     instance.drv.run();
 }
 
-void haptic_click(void)        { play_effect(17); }       // Short click
-void haptic_double_click(void) { play_effect(10); }       // Double click
-void haptic_buzz(void)         { play_effect(15, 15); }   // Strong buzz
-void haptic_alarm(void)        { play_effect(16, 16, 16); } // Triple strong
-void haptic_success(void)      { play_effect(14); }       // Soft bump
-void haptic_error(void)        { play_effect(54); }       // Sharp tick
+void haptic_click(void)        { play_effect(17); }
+void haptic_double_click(void) { play_effect(10); }
+void haptic_buzz(void)         { play_effect(15, 15); }
+void haptic_alarm(void)        { play_effect(16, 16, 16); }
+void haptic_success(void)      { play_effect(14); }
+void haptic_error(void)        { play_effect(54); }
 
 void haptic_play(uint8_t effect) { play_effect(effect); }
 

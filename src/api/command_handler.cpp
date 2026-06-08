@@ -13,15 +13,15 @@
 #include "../hal/lora_service.h"
 #include "../hal/recon_service.h"
 #include "../ui/watchface.h"
+#include "../hal/rf_service.h"
+#include "../hal/hid_service.h"
+#include "../apps/pet_app.h"
 
 static api_event_cb_t event_cb = nullptr;
 
-// Push event to all listeners (BLE + WebSocket)
 static void push_event(const char *json) {
     if (event_cb) event_cb(json);
 }
-
-// ---- Command handlers ----
 
 static char* cmd_status(void) {
     JsonDocument doc;
@@ -60,11 +60,10 @@ static char* cmd_status(void) {
 
 static char* cmd_version(void) {
     char *buf = (char*)malloc(192);
-    snprintf(buf, 192, "{\"version\":\"WDGWatch v0.1.1\",\"codename\":\"PipBoy-3000\",\"hw\":\"T-Watch Ultra ESP32-S3\",\"features\":[\"nfc\",\"lora\",\"gps\",\"recon\",\"compass\"]}");
+    snprintf(buf, 192, "{\"version\":\"WDGWatch v0.1.1\",\"codename\":\"SCR Terminal\",\"hw\":\"T-Watch Ultra ESP32-S3\",\"features\":[\"nfc\",\"lora\",\"gps\",\"recon\",\"compass\"]}");
     return buf;
 }
 
-// NFC commands
 static char* cmd_nfc_scan(void)    { nfc_svc_request_scan(); return strdup("{\"ok\":true,\"msg\":\"nfc scanning\"}"); }
 static char* cmd_nfc_stop(void)    { nfc_svc_request_stop(); return strdup("{\"ok\":true}"); }
 static char* cmd_nfc_save(void)    { nfc_svc_request_save(); return strdup("{\"ok\":true,\"msg\":\"tag saved\"}"); }
@@ -88,7 +87,6 @@ static char* cmd_nfc_delete(int idx) {
 }
 
 static char* cmd_nfc_download(int idx) {
-    // Read .nfc file from SD and return as base64
     char fn[32]; snprintf(fn, sizeof(fn), "/nfc/tag_%d.nfc", idx);
     File f = SD.open(fn, FILE_READ);
     if (!f) return strdup("{\"error\":\"file not found\"}");
@@ -99,7 +97,6 @@ static char* cmd_nfc_download(int idx) {
     uint8_t *raw = (uint8_t*)malloc(fsize);
     f.read(raw, fsize); f.close();
 
-    // Base64 encode
     size_t b64_len = 0;
     mbedtls_base64_encode(nullptr, 0, &b64_len, raw, fsize);
     char *b64 = (char*)malloc(b64_len + 1);
@@ -118,7 +115,6 @@ static char* cmd_nfc_download(int idx) {
     return buf;
 }
 
-// LoRa commands
 static char* cmd_lora_start(void)  { lora_svc_start(); return strdup("{\"ok\":true,\"msg\":\"meshcore started\"}"); }
 static char* cmd_lora_stop(void)   { lora_svc_stop(); return strdup("{\"ok\":true}"); }
 static char* cmd_lora_advert(void) { lora_svc_send_advert(); return strdup("{\"ok\":true}"); }
@@ -145,7 +141,6 @@ static char* cmd_lora_history(void) {
     return buf;
 }
 
-// Recon commands
 static char* cmd_recon_wifi(void)    { recon_request_wifi_scan(); return strdup("{\"ok\":true,\"msg\":\"wifi scanning\"}"); }
 static char* cmd_recon_ble(int dur)  { recon_request_ble_scan(dur); return strdup("{\"ok\":true,\"msg\":\"ble scanning\"}"); }
 static char* cmd_recon_stop(void)    { recon_request_stop(); return strdup("{\"ok\":true}"); }
@@ -178,7 +173,6 @@ static char* cmd_recon_results(void) {
     return buf;
 }
 
-// System commands
 static char* cmd_brightness(int v) {
     instance.setBrightness(v);
     return strdup("{\"ok\":true}");
@@ -196,7 +190,6 @@ static char* cmd_watchface(const char *action) {
 }
 
 static char* cmd_reboot(void) {
-    // Caller should send response before reboot
     return strdup("{\"ok\":true,\"msg\":\"rebooting\"}");
 }
 
@@ -205,7 +198,6 @@ static char* cmd_gps_off(void) { instance.powerControl(POWER_GPS, false); return
 
 static char* cmd_compass(void) {
     char *buf = (char*)malloc(128);
-    // Note: heading only available when sensor app has been opened (IMU started)
     snprintf(buf, 128, "{\"heading\":0,\"roll\":0,\"pitch\":0}");
     return buf;
 }
@@ -227,8 +219,6 @@ static char* cmd_sensor_data(void) {
     return buf;
 }
 
-// ---- Main dispatcher ----
-
 char* api_handle_command(const char *json_cmd) {
     JsonDocument doc;
     DeserializationError err = deserializeJson(doc, json_cmd);
@@ -236,7 +226,6 @@ char* api_handle_command(const char *json_cmd) {
 
     const char *cmd = doc["cmd"] | "";
 
-    // System
     if (strcmp(cmd, "status") == 0)     return cmd_status();
     if (strcmp(cmd, "version") == 0)    return cmd_version();
     if (strcmp(cmd, "brightness") == 0) return cmd_brightness(doc["params"]["v"] | 128);
@@ -248,7 +237,6 @@ char* api_handle_command(const char *json_cmd) {
     if (strcmp(cmd, "compass") == 0)    return cmd_compass();
     if (strcmp(cmd, "sensor_data") == 0) return cmd_sensor_data();
 
-    // NFC
     if (strcmp(cmd, "nfc_scan") == 0)   return cmd_nfc_scan();
     if (strcmp(cmd, "nfc_stop") == 0)   return cmd_nfc_stop();
     if (strcmp(cmd, "nfc_save") == 0)   return cmd_nfc_save();
@@ -257,14 +245,12 @@ char* api_handle_command(const char *json_cmd) {
     if (strcmp(cmd, "nfc_delete") == 0) return cmd_nfc_delete(doc["params"]["idx"] | 0);
     if (strcmp(cmd, "nfc_download") == 0) return cmd_nfc_download(doc["params"]["idx"] | 0);
 
-    // LoRa MeshCore
     if (strcmp(cmd, "lora_start") == 0)   return cmd_lora_start();
     if (strcmp(cmd, "lora_stop") == 0)    return cmd_lora_stop();
     if (strcmp(cmd, "lora_send") == 0)    return cmd_lora_send(doc["params"]["text"] | "");
     if (strcmp(cmd, "lora_advert") == 0)  return cmd_lora_advert();
     if (strcmp(cmd, "lora_history") == 0) return cmd_lora_history();
 
-    // Recon
     if (strcmp(cmd, "recon_wifi") == 0)   return cmd_recon_wifi();
     if (strcmp(cmd, "recon_ble") == 0)    return cmd_recon_ble(doc["params"]["duration"] | 10);
     if (strcmp(cmd, "recon_stop") == 0)   return cmd_recon_stop();
@@ -276,6 +262,89 @@ char* api_handle_command(const char *json_cmd) {
     if (strcmp(cmd, "deauth_detect") == 0) { recon_request_deauth_detect(); return strdup("{\"ok\":true,\"msg\":\"deauth detector started\"}"); }
     if (strcmp(cmd, "evil_twin") == 0)     { recon_request_evil_twin(doc["params"]["ssid"] | "FreeWiFi", doc["params"]["ch"] | 6); return strdup("{\"ok\":true,\"msg\":\"evil twin started\"}"); }
     if (strcmp(cmd, "evil_twin_stop") == 0) { recon_request_stop(); return strdup("{\"ok\":true}"); }
+
+    if (strcmp(cmd, "rf_jammer_start") == 0) {
+        uint32_t freq = doc["params"]["freq"] | 433920000;
+        rf_jammer_start(freq);
+        return strdup("{\"ok\":true,\"msg\":\"rf jammer active\"}");
+    }
+    if (strcmp(cmd, "rf_jammer_stop") == 0) {
+        rf_jammer_stop();
+        return strdup("{\"ok\":true,\"msg\":\"rf jammer stopped\"}");
+    }
+    if (strcmp(cmd, "rf_tesla_send") == 0) {
+        rf_tesla_send();
+        return strdup("{\"ok\":true,\"msg\":\"tesla signal sent\"}");
+    }
+    if (strcmp(cmd, "rf_status") == 0) {
+        JsonDocument rdoc;
+        rdoc["type"] = "rf_status";
+        rdoc["active"] = rf_jammer_is_active();
+        rdoc["freq"] = rf_jammer_get_freq();
+        rdoc["tesla_sending"] = rf_tesla_is_sending();
+        char *buf = (char*)malloc(128);
+        serializeJson(rdoc, buf, 128);
+        return buf;
+    }
+
+    if (strcmp(cmd, "hid_start") == 0) {
+        hid_svc_start();
+        return strdup("{\"ok\":true,\"msg\":\"hid advertising started\"}");
+    }
+    if (strcmp(cmd, "hid_stop") == 0) {
+        hid_svc_stop();
+        return strdup("{\"ok\":true,\"msg\":\"hid stopped\"}");
+    }
+    if (strcmp(cmd, "hid_run_script") == 0) {
+        const char *path = doc["params"]["path"] | "";
+        bool ble = doc["params"]["ble"] | false;
+        hid_svc_run_script(path, ble);
+        return strdup("{\"ok\":true,\"msg\":\"script started\"}");
+    }
+    if (strcmp(cmd, "hid_abort_script") == 0) {
+        hid_svc_abort_script();
+        return strdup("{\"ok\":true,\"msg\":\"script aborted\"}");
+    }
+    if (strcmp(cmd, "hid_status") == 0) {
+        JsonDocument hdoc;
+        hdoc["type"] = "hid_status";
+        hdoc["active"] = hid_svc_is_active();
+        hdoc["connected"] = hid_svc_is_connected();
+        hdoc["usb_connected"] = hid_svc_is_usb_connected();
+        hdoc["running_script"] = hid_svc_is_running_script();
+        hdoc["name"] = hid_svc_get_name();
+        char *buf = (char*)malloc(192);
+        serializeJson(hdoc, buf, 192);
+        return buf;
+    }
+
+    if (strcmp(cmd, "pet_feed") == 0) {
+        pet_feed_action();
+        return strdup("{\"ok\":true,\"msg\":\"pet fed\"}");
+    }
+    if (strcmp(cmd, "pet_heal") == 0) {
+        pet_heal_action();
+        return strdup("{\"ok\":true,\"msg\":\"pet healed\"}");
+    }
+    if (strcmp(cmd, "pet_clean") == 0) {
+        pet_clean_action();
+        return strdup("{\"ok\":true,\"msg\":\"pet cleaned\"}");
+    }
+    if (strcmp(cmd, "pet_status") == 0) {
+        uint32_t lvl = 0, xp = 0, eng = 0, hp = 0, cln = 0, pps = 0;
+        pet_get_stats(&lvl, &xp, &eng, &hp, &cln, &pps);
+        JsonDocument pdoc;
+        pdoc["type"] = "pet_status";
+        pdoc["level"] = lvl;
+        pdoc["xp"] = xp;
+        pdoc["energy"] = eng;
+        pdoc["health"] = hp;
+        pdoc["cleanliness"] = cln;
+        pdoc["poops"] = pps;
+        char *buf = (char*)malloc(192);
+        serializeJson(pdoc, buf, 192);
+        return buf;
+    }
 
     return strdup("{\"error\":\"unknown command\"}");
 }
@@ -289,7 +358,6 @@ void api_set_event_callback(api_event_cb_t cb) {
 }
 
 void api_loop(void) {
-    // Notify on scan complete (lightweight - no big payload to avoid heap/BLE issues)
     static bool was_scanning = false;
     bool scanning_now = recon_is_scanning();
     if (was_scanning && !scanning_now) {
@@ -300,7 +368,6 @@ void api_loop(void) {
     }
     was_scanning = scanning_now;
 
-    // Push deauth detect events
     static int last_deauth_count = 0;
     int dc = recon_deauth_detect_count();
     if (dc > last_deauth_count) {
@@ -310,7 +377,6 @@ void api_loop(void) {
         last_deauth_count = dc;
     }
 
-    // Push NFC tag events
     if (nfc_svc_tag_detected_ble()) {
         JsonDocument doc;
         doc["event"] = "nfc_tag";
@@ -321,7 +387,6 @@ void api_loop(void) {
         push_event(buf);
     }
 
-    // Push LoRa message events
     if (lora_svc_has_new_message_ble()) {
         const MeshMsg *m = lora_svc_last_message();
         if (m) {

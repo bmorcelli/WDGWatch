@@ -1,278 +1,305 @@
-# WDGWatch (aka PipBoy-3000) — T-Watch Ultra Firmware
+# 📟 SCR Terminal (formerly WDGWatch) — LilyGO T-Watch Ultra Custom Firmware
 
-Custom firmware for **LilyGO T-Watch Ultra** (ESP32-S3, 410×502 AMOLED) turning
-it into a Pip-Boy-styled multi-role device and wearable companion for the
-**Watch Dogs Go** uConsole game.
+```text
+===================================================
+||   ___   ___  ___    _____  ___  ___  __  __   ||
+||  / __| / __|| _ \  |_   _|| __|| _ \|  \/  |  ||
+||  \__ \| (__ |   /    | |  | _| |   /| |\/| |  ||
+||  |___/ \___||_|_\    |_|  |___||_|\\|_|  |_|  ||
+===================================================
+```
 
-- Standalone smartwatch (time, battery, GPS, compass, sensors)
-- Security research tool (WiFi recon, BLE scan with AirTag detection, NFC reader, LoRa MeshCore)
-- Wearable companion for the **Watch Dogs Go** uConsole game (BLE NUS link)
-- Remote-controllable from phone via built-in SoftAP + web UI on `192.168.4.1`
+![Theme](https://img.shields.io/badge/Theme-Retro%20Cyan-00E5FF?style=for-the-badge&logoColor=black)
+![Device](https://img.shields.io/badge/Hardware-T--Watch%20Ultra-blue?style=for-the-badge)
+![Purpose](https://img.shields.io/badge/Purpose-Security%20%26%20Research-red?style=for-the-badge)
+![Licence](https://img.shields.io/badge/Licence-MIT-green?style=for-the-badge)
 
-Codename / SoftAP name stays **`PipBoy-3000`** (password `pip12345`). Project
-name **WDGWatch** — Watch Dogs Go Watch.
-
-Theme colour: `#00E5FF` cyan (matches [WatchDogsGo portal](https://locosp.github.io/WatchDogsGo/)).
-
----
-
-## Feature Status
-
-### Working
-
-| Feature | Watch UI | Web UI | BLE API |
-|---|---|---|---|
-| Watchface + time/date/NTP | yes | n/a | `status` |
-| Haptic feedback | yes | yes | `haptic` |
-| Brightness control | — | yes (slider) | `brightness` |
-| Battery / charging | yes | yes | included in `status` |
-| GPS on/off + fix | yes | yes | `gps_on/off`, `status` |
-| Compass (BHI260 + manual calibration) | yes | — | `compass` |
-| WiFi 2.4G scan | — | yes (WiFi tab + RECON tab) | `recon_wifi` |
-| BLE scan (+ AirTag detect) | yes (RECON app) | yes (RECON tab) | `recon_ble` |
-| Deauth targeted / blackout | yes | yes | `recon_deauth`, `deauth_all` |
-| Packet sniffer + deauth detector | yes | yes | `sniffer_start`, `deauth_detect` |
-| Evil twin AP | yes | yes | `evil_twin` |
-| NFC read (ISO-14443A, NDEF) | yes | yes | event push |
-| NFC save to SD + Flipper `.nfc` export | yes | yes | `nfc_save`, `nfc_export` |
-| LoRa MeshCore RX/TX on public channel | yes | yes | `lora_send`, `lora_advert` |
-| MeshCore advert signing (Orlp Ed25519) | auto | — | — |
-| Message history on SD (20 msgs) | yes | yes (HTTP `/api/lora/history`) | — |
-| WatchDogs Connect (skull overlay, dimmed) | yes | — | on connect |
-| Unified JSON command API | — | `/api/cmd` | Nordic UART |
-
-### Unstable / known limitations
-
-- **NFC card emulation** — ST25R3916 chip supports it but LilyGO antenna design is
-  reader-only; tag emulation code is present but does not transmit. Do not use.
-- **Evil Twin captive portal** — AP starts but there is no captive portal HTML
-  yet. Credentials not captured.
-- **LoRa range at SF8 BW62.5k** — tuned for MeshCore compatibility, not long-range.
-  Typical urban range ~200 m LOS.
-- **Compass drift** — uses `GAME_ROTATION_VECTOR` (no magnetometer fusion); manual
-  one-time north calibration required, saved in NVS.
-- **BLE scan + WiFi AP concurrency** — stable in short bursts; don't run BLE scan
-  while heavy Web UI traffic is going.
-- **PIN pairing on MacOS** — macOS auto-prompts, but on some versions the prompt
-  appears on Bluetooth preference pane, not inline.
+An advanced, feature-rich custom firmware for the **LilyGO T-Watch S3 Ultra** (ESP32-S3, 410×502 AMOLED), rebranded as the **SCR Terminal**. It turns your wearable into a retro-cybernetic terminal device, serving as a tactical security research tool, a virtual pet keeper, and a companion for the **Watch Dogs Go** mesh ecosystem.
 
 ---
 
-## Hardware
+## 🚀 Key Features in Detail
 
-- LilyGO T-Watch Ultra (ESP32-S3, 8 MB PSRAM, 16 MB flash)
-- Touch AMOLED 410×502
-- ST25R3916 NFC
-- SX1262 LoRa @ 869.618 MHz
-- BHI260AP IMU (+ compass)
-- GPS module
-- DRV2605 haptic driver
-- Li-ion battery + charger via AXP2101 PMU
+### 1. 🔒 Retro Boot Sequence & Gesture Lock
+When the device boots, it initiates a high-fidelity **Retro Terminal Sequence** simulating:
+*   RAM and ROM integrity tests.
+*   Hardware peripheral discovery (NFC transceiver, LoRa transceiver, BHI260AP IMU, GPS).
+*   SD card mount checks.
+*   **Safety Lock:** Touchscreen swipe gestures are completely disabled during the boot animation, preventing menu access until all systems are checked and initialized.
+
+### 2. 👾 SCR-Bit Virtual Pet (Terminal Droid)
+A Tamagotchi-style virtual pet living directly on your wrist:
+*   **Evolutionary Path:** Starts as a basic **Microchip** (Level 1) with gold contact pins. Upon reaching 100% XP, it evolves into an animated **Droid** (Level 2) featuring tread tracks, a flashing LED antenna, and dynamic arms.
+*   **0% Background Battery Usage:** Rather than using blocking loops or CPU tasks that drain the watch battery, SCR-Bit uses **RTC Time-Delta Calculations**. When the application is closed or the watch is sleeping, parameters (Health, Energy, Cleanliness) decay mathematically based on elapsed time saved in NVS preferences.
+*   **Interactive Controls:** 
+    *   `FEED`: Injects code packets to restore energy.
+    *   `HEAL`: Calibrates the kernel to restore health.
+    *   `CLEAN`: Sweeps up wire poop scraps (`~=`) that spawn when cleanliness drops below 50%.
+    *   `STATUS`: Prints real-time system logs to the scrollable green terminal console at the bottom.
+
+### 3. 📡 Tactical RF Jammer & Tesla Port
+Leverages the onboard SX1262 transceiver to provide RF security research tools:
+*   **Locked Preset Timers:** The RF Jammer cannot be launched without first selecting a duration preset (`10s`, `20s`, `30s`, `1m`, `3m`, or `5m`).
+*   **Dynamic Countdown:** When active, the screen locks onto a glowing red warning status displaying a real-time countdown timer.
+*   **Tesla Port:** Sends a single-pass RF burst signal mapped to common automotive diagnostic frequencies for authorized testing.
+
+### 4. 🛜 WiFi Recon & BLE AirTag Hunting
+*   **WiFi Sniffing & Deauth:** Scans 2.4GHz channels, lists active BSSIDs, displays RSSI, and allows targeting individual APs for authorized deauthentication or broad blackout tests.
+*   **BLE Tracker:** Searches for nearby Bluetooth Low Energy devices and actively checks manufacturer data payloads to flag Apple AirTags or other trackers.
+
+### 5. 🌌 LoRa MeshCore Node ("SCRW")
+*   Tunes to `869.618 MHz` (SF8 / BW62.5 / CR5) to act as a wearable node.
+*   Secures transmissions using per-packet HMAC-SHA256 authentication.
+*   Supports Ed25519-signed presence advertisements and logs the last 20 public messages directly to the SD card.
 
 ---
 
-## Build & flash
+## 📊 Feature Matrix
+
+| Feature | Watch UI | Web UI | BLE API | Status |
+| :--- | :---: | :---: | :---: | :---: |
+| 🕰️ **Watchface + System Info** | 🟢 Yes | 🟢 Yes | `status` | Stable |
+| 📳 **Haptic Feedback (DRV2605)** | 🟢 Yes | 🟢 Yes | `haptic` | Stable |
+| ☀️ **AMOLED Brightness Slider** | 🟢 Yes | 🟢 Yes | `brightness` | Stable |
+| 🧭 **Compass (BHI260AP Vector)** | 🟢 Yes | 🔴 No | `compass` | Calibratable |
+| 📍 **GPS Location & Sats** | 🟢 Yes | 🟢 Yes | `gps_on/off` | Stable |
+| 📶 **WiFi Recon (2.4GHz Scan)** | 🟢 Yes | 🟢 Yes | `recon_wifi` | Stable |
+| 🛜 **BLE Recon + AirTag Hunt** | 🟢 Yes | 🟢 Yes | `recon_ble` | Stable |
+| ⚡ **WiFi Deauth Targeted/Blackout** | 🟢 Yes | 🟢 Yes | `recon_deauth` | Working |
+| 🕵️ **Packet Sniffer & Detect** | 🟢 Yes | 🟢 Yes | `sniffer_start` | Passive |
+| 😈 **Evil Twin AP Creator** | 🟢 Yes | 🟢 Yes | `evil_twin` | Basic AP |
+| 🏷️ **NFC Scan (ISO-14443A/NDEF)** | 🟢 Yes | 🟢 Yes | `nfc_scan` | Stable |
+| 💾 **NFC Save & Flipper Export** | 🟢 Yes | 🟢 Yes | `nfc_export` | Stable |
+| 🌌 **LoRa MeshCore Node ("SCRW")** | 🟢 Yes | 🟢 Yes | `lora_send` | 869.618 MHz |
+| 🔐 **LoRa Ed25519 Adverts** | 🟢 Auto | 🔴 No | — | Cryptographic |
+| 👾 **SCR-Bit Virtual Pet** | 🟢 Yes | 🟢 Yes | `pet_status` | 0% Battery Idle |
+| 📻 **SX1262 Jammer + Countdown** | 🟢 Yes | 🟢 Yes | `rf_status` | Timer-Locked |
+| ⚡ **Tesla Port RF Signal** | 🟢 Yes | 🟢 Yes | `rf_tesla_send` | 1-Pass Burst |
+| ⌨️ **BadUSB/BadBLE Keyboard** | 🟢 Yes | 🟢 Yes | `hid_status` | SCR-Keyboard |
+| 🔒 **Retro Boot Sequence** | 🟢 Yes | 🔴 No | — | Gesture Locked |
+
+---
+
+## ⚙️ Hardware Specifications
+
+*   **SoC:** ESP32-S3 (8MB PSRAM, 16MB Flash)
+*   **Display:** 1.96-inch Touch AMOLED (410×502)
+*   **NFC:** ST25R3916 HF transceiver (Reader/Writer only)
+*   **Sub-GHz RF:** SX1262 LoRa @ 869.618 MHz (Public MeshCore frequency)
+*   **Sensors:** BHI260AP Smart IMU + GPS module
+*   **Haptics:** LRA motor driven by DRV2605
+*   **Power:** Li-Ion Battery & AXP2101 PMU
+
+---
+
+## 🛠️ Build & Flash Instructions
+
+Ensure you have **PlatformIO** installed (VSCode extension or CLI).
 
 ```bash
+# Clone the repository
 git clone https://github.com/LOCOSP/WDGWatch.git
 cd WDGWatch
-pio run --target upload          # builds + flashes via USB
+
+# Setup WiFi Credentials (Optional)
+# Copy src/wifi_config.example.h to src/wifi_config.h and fill SSID/Passwords
+
+# Build & upload firmware via USB
+pio run --target upload --upload-port /dev/ttyACM0
+
+# Start serial monitor
 pio device monitor --baud 115200
 ```
 
-Default serial device on macOS: `/dev/cu.usbmodem101`. On Linux typically
-`/dev/ttyACM0`.
+---
 
-If the watch boots into ROM download mode (rst reason `0x15` + `boot:0x23`),
-press the side button (RST) or re-run `pio run --target upload`.
+## 🔌 Unified JSON Command API Reference
+
+Both BLE Nordic UART and HTTP `POST /api/cmd` accept the following JSON schema:
+
+### 1. System Commands
+*   **Get Status:** `{"cmd":"status"}`
+    *   *Response:* `{"type":"status","time":"12:34:56","date":"2026-06-08","bat":92,"bat_v":4.15,"charging":false,"ntp":true,"heap":185,"lora":false,"nfc":false}`
+*   **Haptic Test:** `{"cmd":"haptic"}`
+*   **Set Brightness:** `{"cmd":"brightness", "params":{"v":150}}` (v: 10 - 255)
+*   **Reboot Device:** `{"cmd":"reboot"}`
+
+### 2. Virtual Pet Commands
+*   **Get Stats:** `{"cmd":"pet_status"}`
+    *   *Response:* `{"type":"pet_status","level":2,"xp":45,"energy":80,"health":95,"cleanliness":70,"poops":1}`
+*   **Feed Pet:** `{"cmd":"pet_feed"}`
+*   **Heal Pet:** `{"cmd":"pet_heal"}`
+*   **Clean Cage:** `{"cmd":"pet_clean"}`
+
+### 3. RF & Jammer Commands
+*   **Start Jammer:** `{"cmd":"rf_jammer_start", "params":{"freq":433920000}}` (frequency in Hz)
+*   **Stop Jammer:** `{"cmd":"rf_jammer_stop"}`
+*   **Send Tesla Burst:** `{"cmd":"rf_tesla_send"}`
+*   **Get RF Status:** `{"cmd":"rf_status"}`
+    *   *Response:* `{"type":"rf_status","active":false,"freq":433920000,"tesla_sending":false}`
+
+### 4. HID / BadUSB Commands
+*   **Start Advertising:** `{"cmd":"hid_start"}`
+*   **Stop Advertising:** `{"cmd":"hid_stop"}`
+*   **Get HID Status:** `{"cmd":"hid_status"}`
+*   **Run Script from SD:** `{"cmd":"hid_run_script", "params":{"path":"/scripts/payload.txt","ble":true}}`
 
 ---
 
-## Flow: enable Web Interface from phone
+<br>
 
-1. On the watch, navigate to the app menu (swipe from watchface).
-2. Open **WiFi** app.
-3. Tap **WEB SERVER** button → watch starts SoftAP `PipBoy-3000` with WPA2
-   password `pip12345`.
-4. Status bar shows `WEB SERVER ON` + AP IP (always `192.168.4.1`).
-5. On phone, connect to WiFi `PipBoy-3000` (ignore "no internet" warning).
-6. Open browser → `http://192.168.4.1`.
-7. Tabs: **DASH / NFC / LORA / WiFi / RECON / SET**.
-8. To turn off: return to WiFi app on watch, tap button again.
+# 📟 SCR Terminal (eski adıyla WDGWatch) — LilyGO T-Watch Ultra Özel Yazılımı
 
-The web server survives backgrounding; NTP, GPS, NFC and LoRa keep working
-while web UI is up.
-
----
-
-## Flow: calibrate the compass
-
-The T-Watch Ultra IMU (BHI260AP) does **not** include a magnetometer fusion
-mode that survives the watch sleeping/rebooting. The compass uses
-`GAME_ROTATION_VECTOR` (gyro + accel only), so on every cold boot the heading
-is **relative to whatever orientation the watch happened to wake up in** — it
-will drift until you tell it where north is.
-
-Calibration is a one-shot offset stored in NVS (namespace `compass`, key
-`offset`). It survives reboots until you do `pio run -t erase` or re-calibrate.
-Drift over a few hours of normal use is small but noticeable; recalibrate when
-the heading no longer matches reality.
-
-**How to calibrate:**
-
-1. Open the **Sensor** app on the watch (menu → Sensor).
-2. Get a reference compass:
-   - iPhone built-in **Compass** app (works great), or
-   - Any Android compass app, or
-   - A real magnetic compass.
-3. Lay both devices flat next to each other on a non-metal surface, screens
-   up, **pointing the same direction**. Avoid laptops, speakers, anything with
-   a magnet or thick steel underneath.
-4. Slowly rotate both together until the **reference** reads **0° / N**
-   (north). Hold still for a second to let the gyro settle.
-5. On the watch, tap the **"POINT N + CALIBRATE"** button at the bottom of
-   the Sensor screen.
-6. The button hides itself — calibration saved. The watch dial now reads ~0°
-   when pointed north.
-7. Rotate the watch and verify the heading tracks (E should read ~90°, S
-   ~180°, W ~270°).
-
-**To recalibrate later:** the button is hidden after first calibration. Reset
-NVS to bring it back: hold the side button to reboot, or rebuild + flash with
-`pio run -t erase -t upload`. Easier alternative: add a "force recalibrate"
-gesture later (TODO).
-
-**Tip:** calibrate near a window or outdoors — phone compasses (the reference)
-are themselves easily fooled by buildings' steel framing. If iPhone keeps
-asking you to "wave it in a figure-8", do that first, then calibrate the
-watch against the freshly-calibrated phone.
-
----
-
-## Flow: pair with Watch Dogs Go game (uConsole, BLE)
-
-**First connection (PIN required):**
-
-1. On the watch, open **WiFi** app → tap **WATCH DOGS CONNECT** (BLE toggle).
-2. Watch advertises as `PipBoy-xxxxx` (unique 5-char suffix from MAC), prints
-   `[BLE] Advertising` and `[BLE] PIN: 123456` on serial.
-3. In the game on uConsole, start pairing / scan.
-4. When the game attempts to subscribe or write to the NUS service, it gets
-   **Insufficient Authentication (0x05)**. BlueZ then requests a passkey.
-5. Watch shows a full-screen **BLE PAIRING** overlay with huge 48px PIN digits
-   (6 digits, max brightness).
-6. User reads PIN, enters it on the uConsole.
-7. Bond is stored on both sides. Watch serial: `[BLE] Auth OK - encrypted`.
-8. Watch switches to **WATCH_DOGS** overlay (skull + "L I N K E D" + clock,
-   brightness dimmed to 20).
-
-**Subsequent connections:**
-
-Silent — bond is reused. Skull overlay appears immediately after the game
-connects. Disconnect (range, crash, deliberate) hides the overlay and restores
-default brightness.
-
-**Bond reset:** `pio run -t erase` on the watch, or `bluetoothctl remove <MAC>`
-on uConsole — either side triggers fresh pairing on next connection.
-
-Detailed integration recipe for the game developer: see
-[`BLE_PAIRING_CHANGE.md`](BLE_PAIRING_CHANGE.md) (BlueZ Agent example,
-bluetoothctl pre-pair workflow, IO capability requirements).
-
----
-
-## Flow: send LoRa MeshCore message
-
-1. On watch LoRa app or web UI LORA tab: tap **START RX**.
-2. Radio powers up, tunes to 869.618 MHz / SF8 / BW62.5 / CR5 / sync 0x1424
-   (MeshCore public channel).
-3. Type message → **SEND** (watch) or textarea + SEND button (web).
-4. TX packet: group text with per-message HMAC-SHA256 auth (32-byte PSK
-   padded to 32). Unix epoch timestamp. TX complete in 200–400 ms.
-5. Other MeshCore nodes on the same PSK decode and display.
-6. Received messages buzz the haptic, append to on-watch list, and push to web
-   chat via WebSocket.
-7. Last 20 messages persisted to `/meshcore_log.txt` on SD, reloaded on boot.
-
-**Advertise node presence:** tap **ADVERTISE** — sends signed advert with node
-name, optional GPS, Ed25519 pubkey. Signed with Orlp ed25519 (same stack as
-stock MeshCore firmware).
-
----
-
-## Web UI tabs — brief
-
-- **DASH** — time, date, battery, GPS fix, NTP status, free heap, uptime,
-  HAPTIC TEST + MAX BRIGHT shortcuts.
-- **NFC** — SCAN TAG (enables reader), shows last UID / NDEF text, SAVE TAG
-  (persists to SD + auto-export Flipper Zero v4 `.nfc`), list of saved tags
-  with DELETE, EXPORT ALL button.
-- **LORA** — MeshCore START/STOP, public channel chat (type + SEND),
-  ADVERTISE button, message list loaded from SD history.
-- **WiFi** — basic 2.4 GHz network list (SSID / RSSI / channel). Force NTP
-  sync button.
-- **RECON** — SCAN WiFi (with auth type, BSSID), SCAN BLE (with AirTag
-  flag), BLACKOUT (deauth all channels), SNIFFER, DEAUTH DETECT (passive),
-  EVIL TWIN (custom SSID AP), targeted DEAUTH (click network to autofill
-  BSSID/channel).
-- **SET** — brightness slider, GPS/NFC/Haptic toggles, watchface next/prev,
-  REBOOT WATCH.
-
----
-
-## Unified JSON API
-
-Same command vocabulary over **BLE UART** (Nordic UART Service,
-`6E400001-B5A3-F393-E0A9-E50E24DCCA9E`) and **HTTP** (`POST /api/cmd` with
-`cmd=<JSON string>` form-encoded body).
-
-```json
-{"cmd":"status"}                          → {"type":"status","time":...,"bat":87,...}
-{"cmd":"version"}                         → {"version":"PipBoy-3000 v0.3",...}
-{"cmd":"haptic"}                          → {"ok":true}
-{"cmd":"brightness","params":{"v":200}}   → {"ok":true}
-{"cmd":"recon_wifi"}                      → {"ok":true,"msg":"wifi scanning"}
-{"cmd":"recon_ble","params":{"duration":10}} → {"ok":true,"msg":"ble scanning"}
-{"cmd":"recon_results"}                   → {"wifi":[...],"ble":[...]}
-{"cmd":"nfc_scan"} / nfc_stop / nfc_save  → {"ok":true}
-{"cmd":"lora_send","params":{"text":"hi"}} → {"ok":true}
-{"cmd":"compass"}                         → {"heading":123.4,"calibrated":true}
-{"cmd":"sensor_data"}                     → {"accel":[...],"gyro":[...],...}
+```text
+===================================================
+||   ___   ___  ___    _____  ___  ___  __  __   ||
+||  / __| / __|| _ \  |_   _|| __|| _ \|  \/  |  ||
+||  \__ \| (__ |   /    | |  | _| |   /| |\/| |  ||
+||  |___/ \___||_|_\    |_|  |___||_|\\|_|  |_|  ||
+===================================================
 ```
 
-Events auto-pushed from watch to both BLE and Web clients:
+![Tema](https://img.shields.io/badge/Tema-Retro%20Camg%C3%B6be%C4%9Fi-00E5FF?style=for-the-badge&logoColor=black)
+![Cihaz](https://img.shields.io/badge/Donan%C4%B1m-T--Watch%20Ultra-blue?style=for-the-badge)
+![Amaç](https://img.shields.io/badge/Ama%C3%A7-G%C3%BCvenlik%20ve%20Ara%C5%9Ft%C4%B1rma-red?style=for-the-badge)
+![Lisans](https://img.shields.io/badge/Lisans-MIT-green?style=for-the-badge)
 
-```json
-{"event":"scan_done","wifi":26,"ble":24}
-{"event":"lora_msg","channel":"public","text":"...","hops":1,"rssi":-87,"ts":...}
-{"event":"nfc_tag","uid":"04:AB:...","ndef":"..."}
-{"event":"deauth_detected","count":3}
-```
-
-Full list: [`BLE_API_GUIDE.md`](BLE_API_GUIDE.md).
+**LilyGO T-Watch S3 Ultra** (ESP32-S3, 410×502 AMOLED) için geliştirilmiş, **SCR Terminal** olarak yeniden markalanan gelişmiş ve zengin özellikli özel yazılımdır. Giyilebilir cihazınızı retro-siberbiyotik bir terminal arayüzüne dönüştürerek güvenlik araştırması, sanal pet yetiştiriciliği ve **Watch Dogs Go** mesh ekosistemi için bir companion sunar.
 
 ---
 
-## Key files
+## 🚀 Detaylı Önemli Özellikler
 
-```
-src/main.cpp              - init + main loop (LVGL, services, power)
-src/app_manager.cpp       - app routing (watchface, menu, per-app)
-src/hal/nfc_service.cpp   - ST25R3916 reader, flag-based commands
-src/hal/lora_service.cpp  - SX1262 MeshCore protocol impl
-src/hal/recon_service.cpp - WiFi scan / deauth / sniffer / evil twin
-src/hal/ble_uart_service.cpp - NimBLE NUS with MITM PIN pairing
-src/hal/power_hal.cpp     - cached PMU I2C reads, screen sleep
-src/web/web_server.cpp    - ESPAsyncWebServer + WebSocket on 80/ws
-src/web/web_ui.h          - PROGMEM HTML/CSS/JS for phone UI
-src/api/command_handler.cpp - unified JSON API (BLE + HTTP)
-src/apps/*.cpp            - per-feature LVGL screens
-src/ui/action_overlay.cpp - IN ACTION / WATCH_DOGS / PAIRING overlays
+### 1. 🔒 Retro Boot Ekranı & Hareket Kilidi
+Cihaz başlatıldığında aşağıdaki adımları simüle eden bir **Retro Terminal Açılış Ekranı** devreye girer:
+*   RAM ve ROM bütünlük testleri.
+*   Donanım bileşenleri taraması (NFC, LoRa, IMU, GPS).
+*   SD kart bağlantı kontrolü.
+*   **Güvenlik Kilidi:** Animasyon oynatılırken ekran kaydırma (gesture) hareketleri tamamen kilitlenir; böylece sistem güvenli şekilde yüklenene kadar menülere geçilmesi engellenir.
+
+### 2. 👾 SCR-Bit Sanal Pet (Terminal Droid)
+Bileğinizde yaşayan retro piksel tarza sahip bir sanal robot:
+*   **Evrim Sistemi:** Hayata Level 1 (altın pinli yeşil bir **Microchip**) olarak başlar. 100% XP'ye ulaştığında Level 2 (paletli, yanıp sönen anten LED'li ve hareketli kolları olan bir **Droid**) ünitesine evrimleşir.
+*   **%0 Arka Plan Pil Tüketimi:** Saat pilini hızlıca tüketecek arka plan döngüleri (loop/task) yerine **RTC Zaman Farkı Hesaplaması** kullanılır. Uygulama kapalıyken geçen zaman NVS hafızası üzerinden hesaplanır; böylece açlık, sağlık ve temizlik durumları arka planda sıfır güç tüketimi ile güncellenir.
+*   **Etkileşimli Butonlar:**
+    *   `FEED`: Kod paketleri enjekte ederek enerjiyi yeniler.
+    *   `HEAL`: Kernel kalibrasyonu gerçekleştirerek sağlığı iyileştirir.
+    *   `CLEAN`: Temizlik %50'nin altına düştüğünde yerde biriken kablo dışkılarını (`~=`) temizler.
+    *   `STATUS`: Alt kısımdaki kaydırılabilir terminal ekranına detaylı sistem durum loglarını yazdırır.
+
+### 3. 📡 Taktiksel RF Jammer & Tesla Sinyali
+SX1262 alıcı-vericisini kullanarak güvenlik araştırması araçları sunar:
+*   **Süre Sınırı Güvenliği:** Bir çalışma süresi (`10sn`, `20sn`, `30sn`, `1dk`, `3dk`, `5dk`) seçilmeden Jammer başlatılamaz.
+*   **Geri Sayım Ekranı:** Jammer aktifleştiğinde ekran kırmızı renkli uyarı moduna geçer ve canlı bir geri sayım sayacı gösterir. Süre bitince otomatik olarak durur.
+*   **Tesla Port:** Yetkili araç testleri için yaygın otomotiv teşhis frekanslarında tek geçişli bir RF sinyal patlaması gönderir.
+
+### 4. 🛜 WiFi Recon & BLE AirTag Algılama
+*   **WiFi Tarama & Deauth:** 2.4GHz kanallarını tarar, BSSID ve RSSI değerlerini listeler. Yetkili deauth veya genel sinyal karartma (blackout) testleri için hedef seçimini sağlar.
+*   **BLE Tracker:** Çevredeki Bluetooth Low Energy cihazlarını tarar ve Apple AirTag gibi takip cihazlarını tespit etmek için üretici veri paketlerini analiz eder.
+
+### 5. 🌌 LoRa MeshCore Düğümü ("SCRW")
+*   `869.618 MHz` (SF8 / BW62.5 / CR5) frekansında çalışarak mesh ağına bağlanır.
+*   Veri paketlerini HMAC-SHA256 kimlik doğrulamasıyla şifreler.
+*   Ed25519 imzalı reklam paketleri gönderir ve gelen son 20 mesajı SD kartta saklar.
+
+---
+
+## 📊 Özellik Tablosu
+
+| Özellik | Saat Arayüzü | Web Arayüzü | BLE API | Durum |
+| :--- | :---: | :---: | :---: | :---: |
+| 🕰️ **Saat Arayüzü & Sistem Bilgisi** | 🟢 Evet | 🟢 Evet | `status` | Kararlı |
+| 📳 **Haptik Titreşim Geri Bildirimi** | 🟢 Evet | 🟢 Evet | `haptic` | Kararlı |
+| ☀️ **AMOLED Parlaklık Ayarı** | 🟢 Evet | 🟢 Evet | `brightness` | Kararlı |
+| 🧭 **Pusula (BHI260AP Vektör)** | 🟢 Evet | 🔴 Hayır | `compass` | Kalibre Edilebilir |
+| 📍 **GPS Konum ve Uydu Bilgisi** | 🟢 Evet | 🟢 Evet | `gps_on/off` | Kararlı |
+| 📶 **WiFi Recon (2.4GHz Tarama)** | 🟢 Evet | 🟢 Evet | `recon_wifi` | Kararlı |
+| 🛜 **BLE Tarama + AirTag Bulucu** | 🟢 Evet | 🟢 Evet | `recon_ble` | Kararlı |
+| ⚡ **Hedefli WiFi Deauth / Blackout** | 🟢 Evet | 🟢 Evet | `recon_deauth` | Çalışıyor |
+| 🕵️ **Paket Koklayıcı & Deauth Algılayıcı** | 🟢 Evet | 🟢 Evet | `sniffer_start` | Pasif |
+| 😈 **Evil Twin AP Oluşturucu** | 🟢 Evet | 🟢 Evet | `evil_twin` | Temel AP |
+| 🏷️ **NFC Tarama (ISO-14443A/NDEF)** | 🟢 Evet | 🟢 Evet | `nfc_scan` | Kararlı |
+| 💾 **NFC Kaydetme ve Flipper Dışa Aktarma** | 🟢 Evet | 🟢 Evet | `nfc_export` | Kararlı |
+| 🌌 **LoRa MeshCore Düğümü ("SCRW")** | 🟢 Evet | 🟢 Evet | `lora_send` | 869.618 MHz |
+| 🔐 **LoRa Ed25519 İmzalı Reklamlar** | 🟢 Oto | 🔴 Hayır | — | Kriptografik |
+| 👾 **SCR-Bit Sanal Pet** | 🟢 Evet | 🟢 Evet | `pet_status` | Sıfır Güç Tüketimi |
+| 📻 **SX1262 Jammer + Geri Sayım** | 🟢 Evet | 🟢 Evet | `rf_status` | Süre Kilitli |
+| ⚡ **Tesla Port RF Sinyali** | 🟢 Evet | 🟢 Evet | `rf_tesla_send` | Tek Geçişli Sinyal |
+| ⌨️ **BadUSB/BadBLE Klavye (HID)** | 🟢 Evet | 🟢 Evet | `hid_status` | SCR-Keyboard |
+| 🔒 **Retro Boot Ekranı** | 🟢 Evet | 🔴 Hayır | — | El Hareketi Kilitli |
+
+---
+
+## ⚙️ Donanım Özellikleri
+
+*   **İşlemci:** ESP32-S3 (8MB PSRAM, 16MB Flash)
+*   **Ekran:** 1.96 inç Dokunmatik AMOLED (410×502)
+*   **NFC:** ST25R3916 HF Alıcı-Verici (Yalnızca Okuyucu/Yazıcı)
+*   **Sub-GHz RF:** SX1262 LoRa @ 869.618 MHz (Ortak MeshCore Frekansı)
+*   **Sensörler:** BHI260AP Akıllı IMU + GPS Modülü
+*   **Haptik:** DRV2605 Sürücülü LRA Motoru
+*   **Güç:** Lityum İyon Batarya & AXP2101 Güç Yönetim Çipi (PMU)
+
+---
+
+## 🛠️ Derleme ve Yükleme Kılavuzu
+
+Sisteminizde **PlatformIO**'nun (VSCode eklentisi veya CLI) yüklü olduğundan emin olun.
+
+```bash
+# Depoyu klonlayın
+git clone https://github.com/LOCOSP/WDGWatch.git
+cd WDGWatch
+
+# Wi-Fi Ağ Ayarları (İsteğe Bağlı)
+# src/wifi_config.example.h dosyasını src/wifi_config.h olarak kopyalayın ve Wi-Fi bilgilerinizi doldurun.
+
+# USB üzerinden firmware derleyin ve yükleyin
+pio run --target upload --upload-port /dev/ttyACM0
+
+# Seri haberleşme ekranını başlatın
+pio device monitor --baud 115200
 ```
 
 ---
 
-## License
+## 🔌 Birleşik JSON Komut API Referansı
 
-MIT. Check individual third-party libraries (LilyGoLib, NimBLE-Arduino,
-RadioLib, ArduinoJson, Orlp ed25519) for their licenses.
+Hem BLE Nordic UART hem de HTTP `POST /api/cmd` istekleri aşağıdaki JSON formatını kabul eder:
+
+### 1. Sistem Komutları
+*   **Durum Sorgula:** `{"cmd":"status"}`
+    *   *Dönen Yanıt:* `{"type":"status","time":"12:34:56","date":"2026-06-08","bat":92,"bat_v":4.15,"charging":false,"ntp":true,"heap":185,"lora":false,"nfc":false}`
+*   **Haptik Testi:** `{"cmd":"haptic"}`
+*   **Parlaklık Ayarla:** `{"cmd":"brightness", "params":{"v":150}}` (v: 10 - 255)
+*   **Cihazı Yeniden Başlat:** `{"cmd":"reboot"}`
+
+### 2. Sanal Pet Komutları
+*   **Durum Sorgula:** `{"cmd":"pet_status"}`
+    *   *Dönen Yanıt:* `{"type":"pet_status","level":2,"xp":45,"energy":80,"health":95,"cleanliness":70,"poops":1}`
+*   **Besle:** `{"cmd":"pet_feed"}`
+*   **Kernel Kalibre Et (İyileştir):** `{"cmd":"pet_heal"}`
+*   **Temizle:** `{"cmd":"pet_clean"}`
+
+### 3. RF & Jammer Komutları
+*   **Jammer Başlat:** `{"cmd":"rf_jammer_start", "params":{"freq":433920000}}` (Hz cinsinden frekans)
+*   **Jammer Durdur:** `{"cmd":"rf_jammer_stop"}`
+*   **Tesla Sinyali Gönder:** `{"cmd":"rf_tesla_send"}`
+*   **RF Durumu Sorgula:** `{"cmd":"rf_status"}`
+    *   *Dönen Yanıt:* `{"type":"rf_status","active":false,"freq":433920000,"tesla_sending":false}`
+
+### 4. HID / BadUSB Komutları
+*   **Yayın Başlat:** `{"cmd":"hid_start"}`
+*   **Yayın Durdur:** `{"cmd":"hid_stop"}`
+*   **HID Durumu Sorgula:** `{"cmd":"hid_status"}`
+*   **SD Karttan Payload Çalıştır:** `{"cmd":"hid_run_script", "params":{"path":"/scripts/payload.txt","ble":true}}`
+
+---
+
+<br>
+
+> [!WARNING]
+> ## ⚠️ EDUCATIONAL PURPOSES ONLY / SADECE EĞİTİM AMAÇLIDIR
+> **English:** This firmware and its features (such as RF transmission, Wi-Fi deauthentication, packet sniffing, etc.) are developed strictly for educational, testing, and authorized security research purposes. The developers and contributors take no responsibility for any misuse, damage, or legal consequences resulting from illegal operations of this software. Always comply with local radio communication and cybersecurity laws.
+> 
+> **Türkçe:** Bu yazılım ve içerdiği özellikler (RF sinyal gönderimi, Wi-Fi deauth, paket koklama vb.) yalnızca eğitim, test ve yetkili güvenlik araştırmaları amacıyla geliştirilmiştir. Geliştiriciler ve katkıda bulunanlar, bu yazılımın yasal olmayan veya zararlı amaçlarla kullanılmasından ötürü hiçbir sorumluluk veya yasal yükümlülük kabul etmez. Her zaman yerel radyo frekansı ve siber güvenlik yasalarına uyunuz.

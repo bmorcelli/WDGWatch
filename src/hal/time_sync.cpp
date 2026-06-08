@@ -2,13 +2,14 @@
 #include <WiFi.h>
 #include <esp_sntp.h>
 #include <time.h>
+#include <Preferences.h>
 #include "../config.h"
 #include "../web/web_server.h"
 
 static void wifi_shutdown_safe(void) {
-    // Don't kill WiFi if web server is running - just drop STA
+
     if (web_server_is_active()) {
-        WiFi.disconnect(false);  // keep AP
+        WiFi.disconnect(false);
     } else {
         WiFi.disconnect(true);
         WiFi.mode(WIFI_OFF);
@@ -25,7 +26,7 @@ static const WiFiNetwork *networks = nullptr;
 static int network_count = 0;
 static int current_network = 0;
 static uint32_t wifi_start_time = 0;
-static const uint32_t WIFI_TIMEOUT_PER_NET = 15000; // 15s per network
+static const uint32_t WIFI_TIMEOUT_PER_NET = 15000;
 
 static void ntp_time_sync_cb(struct timeval *tv) {
     Serial.println("[TIME] NTP callback fired!");
@@ -36,7 +37,7 @@ static void try_next_network(void) {
     WiFi.disconnect(true);
 
     if (current_network >= network_count) {
-        // Tried all networks, start over
+
         current_network = 0;
     }
 
@@ -46,7 +47,7 @@ static void try_next_network(void) {
 
     WiFi.mode(WIFI_STA);
     if (net.hidden) {
-        // For hidden networks, pass SSID explicitly with channel=0, bssid=nullptr
+
         WiFi.begin(net.ssid, net.password, 0, nullptr, true);
     } else {
         WiFi.begin(net.ssid, net.password);
@@ -54,8 +55,6 @@ static void try_next_network(void) {
     wifi_enabled = true;
     wifi_start_time = millis();
 }
-
-// ---- Public API ----
 
 void time_sync_init(const WiFiNetwork *nets, int count) {
     networks = nets;
@@ -67,11 +66,24 @@ void time_sync_init(const WiFiNetwork *nets, int count) {
     ntp_configured = false;
     ntp_got_time = false;
 
-    // Register NTP callback
     sntp_set_time_sync_notification_cb(ntp_time_sync_cb);
 
-    // Start connecting to first network
+    Preferences prefs;
+    prefs.begin("timesync", true);
+    bool previously_synced = prefs.getBool("synced", false);
+    prefs.end();
+
+    if (previously_synced) {
+
+        synced = true;
+        Serial.println("[TIME] RTC valid from NVS — skipping WiFi, no IMU conflict.");
+        return;
+    }
+
+    wifi_start_time = millis() + 3000;
     if (count > 0) {
+
+        delay(500);
         try_next_network();
     }
 }
@@ -79,7 +91,6 @@ void time_sync_init(const WiFiNetwork *nets, int count) {
 void time_sync_loop(void) {
     if (synced) return;
 
-    // NTP callback fired - write to hardware RTC
     if (ntp_got_time) {
         ntp_got_time = false;
         instance.rtc.hwClockWrite();
@@ -91,11 +102,16 @@ void time_sync_loop(void) {
                 timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec);
         }
 
+        Preferences prefs;
+        prefs.begin("timesync", false);
+        prefs.putBool("synced", true);
+        prefs.end();
+
         synced = true;
         wifi_shutdown_safe();
         wifi_enabled = false;
         wifi_connected = false;
-        Serial.println("[TIME] Done, WiFi off");
+        Serial.println("[TIME] Done, WiFi off — NVS flag saved.");
         return;
     }
 
@@ -103,45 +119,41 @@ void time_sync_loop(void) {
 
     wl_status_t st = WiFi.status();
 
-    // Connected!
     if (st == WL_CONNECTED && !wifi_connected) {
         wifi_connected = true;
         Serial.printf("[TIME] WiFi connected: %s (IP: %s)\n",
             networks[current_network].ssid, WiFi.localIP().toString().c_str());
 
-        configTzTime("CET-1CEST,M3.5.0/2,M10.5.0/3",
+        configTzTime("GST-4",
                      "pool.ntp.org", "time.nist.gov", "time.google.com");
         ntp_configured = true;
         Serial.println("[TIME] NTP request sent...");
     }
 
-    // Timeout for this network - try next
     if (!wifi_connected && (millis() - wifi_start_time > WIFI_TIMEOUT_PER_NET)) {
         Serial.printf("[TIME] WiFi #%d timeout (status=%d)\n", current_network, st);
         current_network++;
         if (current_network < network_count) {
             try_next_network();
         } else {
-            // All networks failed, retry from first after delay
+
             Serial.println("[TIME] All networks failed, retrying in 10s...");
             wifi_shutdown_safe();
             wifi_enabled = false;
             current_network = 0;
-            wifi_start_time = millis(); // reuse as retry timer
+            wifi_start_time = millis();
         }
     }
 
-    // NTP timeout - connected but no NTP response after 30s
     if (wifi_connected && ntp_configured && (millis() - wifi_start_time > 45000)) {
         Serial.println("[TIME] NTP timeout");
         wifi_shutdown_safe();
         wifi_enabled = false;
         wifi_connected = false;
         ntp_configured = false;
-        // Will retry on next call if not synced
+
     }
 
-    // Retry after all networks failed (10s cooldown)
     if (!wifi_enabled && !synced && (millis() - wifi_start_time > 10000)) {
         try_next_network();
     }
@@ -158,6 +170,11 @@ void time_sync_force_retry(void) {
     ntp_configured = false;
     ntp_got_time = false;
     current_network = 0;
-    Serial.println("[TIME] Force retry");
+
+    Preferences prefs;
+    prefs.begin("timesync", false);
+    prefs.putBool("synced", false);
+    prefs.end();
+    Serial.println("[TIME] Force retry — NVS flag cleared.");
     if (network_count > 0) try_next_network();
 }

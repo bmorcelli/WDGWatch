@@ -12,12 +12,10 @@
 #include "nfc_emu.h"
 #endif
 
-// ---- State ----
 enum NfcSvcMode { SVC_IDLE, SVC_SCANNING, SVC_EMULATING };
 static NfcSvcMode svc_mode = SVC_IDLE;
 static uint32_t last_poll = 0;
 
-// Command flags (set from any context, processed in loop)
 static volatile bool cmd_scan = false;
 static volatile bool cmd_stop = false;
 static volatile bool cmd_save = false;
@@ -26,17 +24,15 @@ static volatile bool cmd_emulate = false;
 static volatile bool cmd_select_next = false;
 static volatile int  cmd_delete_idx = -1;
 
-// Tag data
 static char last_uid[64] = "";
 static char last_ndef_text[256] = "";
 static uint8_t last_nfcid[10] = {};
 static uint8_t last_nfcid_len = 0;
-static volatile bool tag_found = false;       // watch UI
-static volatile bool tag_found_web = false;   // web server
-static volatile bool tag_found_ble = false;   // api_loop / BLE
+static volatile bool tag_found = false;
+static volatile bool tag_found_web = false;
+static volatile bool tag_found_ble = false;
 static int tag_count = 0;
 
-// Saved tags
 #define MAX_SAVED_TAGS 8
 struct SavedTag {
     char name[32];
@@ -49,7 +45,6 @@ static int saved_count = 0;
 static int selected_tag = -1;
 static Preferences nfc_prefs;
 
-// ---- NVS ----
 static void load_tags(void) {
     nfc_prefs.begin("nfc_tags", true);
     saved_count = nfc_prefs.getInt("count", 0);
@@ -72,7 +67,6 @@ static void save_tags(void) {
     nfc_prefs.end();
 }
 
-// ---- Flipper export ----
 static bool export_flipper(const SavedTag &tag, int idx) {
     if (!SD.exists("/nfc")) SD.mkdir("/nfc");
     char fn[64]; snprintf(fn, sizeof(fn), "/nfc/tag_%d.nfc", idx);
@@ -124,7 +118,6 @@ static bool export_flipper(const SavedTag &tag, int idx) {
     return true;
 }
 
-// ---- NFC callbacks ----
 #if defined(USING_ST25R3916)
 static void on_tag_found(void) {
     rfalNfcDevice *dev;
@@ -159,7 +152,6 @@ static void on_ndef(ndefTypeId id, void *data) {
 }
 #endif
 
-// ---- Stop current operation ----
 static void stop_current(void) {
 #if defined(USING_ST25R3916)
     if (svc_mode == SVC_SCANNING) deinitNFC();
@@ -168,13 +160,11 @@ static void stop_current(void) {
     svc_mode = SVC_IDLE;
 }
 
-// ---- Public API ----
 void nfc_service_init(void) {
     load_tags();
     Serial.printf("[NFC-SVC] Loaded %d tags\n", saved_count);
 }
 
-// Internal implementations (called only from loop context)
 static void do_start_scan(void);
 static void do_stop(void);
 static void do_save(void);
@@ -184,7 +174,7 @@ static void do_emulate(void);
 static void check_nfc_init(void);
 
 void nfc_service_loop(void) {
-    // Process command flags first (safe - we're in main loop)
+
     if (cmd_scan)        { cmd_scan = false; do_start_scan(); }
     if (cmd_stop)        { cmd_stop = false; do_stop(); }
     if (cmd_save)        { cmd_save = false; do_save(); }
@@ -194,7 +184,6 @@ void nfc_service_loop(void) {
         if (saved_count > 0) selected_tag = (selected_tag + 1) % saved_count; }
     if (cmd_delete_idx >= 0) { int i = cmd_delete_idx; cmd_delete_idx = -1; do_delete(i); }
 
-    // Non-blocking staged NFC init
     check_nfc_init();
 
 #if defined(USING_ST25R3916)
@@ -210,8 +199,6 @@ void nfc_service_loop(void) {
 #endif
 }
 
-// ---- Internal do_ functions (run in main loop only) ----
-// Staged NFC init (non-blocking power cycle)
 static uint8_t nfc_init_stage = 0;
 static uint32_t nfc_init_time = 0;
 
@@ -224,7 +211,6 @@ static void do_start_scan(void) {
 #endif
 }
 
-// Called from nfc_service_loop to complete staged init
 static void check_nfc_init(void) {
 #if defined(USING_ST25R3916)
     if (nfc_init_stage == 0) return;
@@ -266,7 +252,7 @@ static void do_save(void) {
     save_tags();
     export_flipper(saved_tags[saved_count-1], saved_count-1);
     haptic_success();
-    // Clear buffer
+
     last_uid[0] = 0; last_ndef_text[0] = 0; last_nfcid_len = 0;
     Serial.printf("[NFC-SVC] Saved tag #%d\n", saved_count);
 }
@@ -298,7 +284,6 @@ static void do_emulate(void) {
 #endif
 }
 
-// ---- Public API (safe from any context - just sets flags) ----
 void nfc_svc_request_scan(void)          { cmd_scan = true; }
 void nfc_svc_request_stop(void)          { cmd_stop = true; }
 void nfc_svc_request_save(void)          { cmd_save = true; }

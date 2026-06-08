@@ -2,11 +2,10 @@
 #include <lvgl.h>
 #include "../config.h"
 
-// Watchface types
 enum WatchfaceStyle {
-    WF_PIPBOY = 0,   // Big digital, Pip-Boy style
-    WF_MINIMAL,      // Clean minimal, just time + date
-    WF_ANALOG,       // Analog clock face
+    WF_PIPBOY = 0,
+    WF_MINIMAL,
+    WF_ANALOG,
     WF_COUNT
 };
 
@@ -14,12 +13,10 @@ void watchface_create(lv_obj_t *parent);
 void watchface_update(void);
 void watchface_destroy(void);
 
-// Switch face (swipe left/right on watchface)
 void watchface_next(void);
 void watchface_prev(void);
 WatchfaceStyle watchface_get_style(void);
 
-// Update individual components
 void watchface_set_time(uint8_t hour, uint8_t min);
 void watchface_set_seconds(uint8_t sec);
 void watchface_set_date(uint8_t day, uint8_t month, uint8_t weekday, uint8_t week_num);

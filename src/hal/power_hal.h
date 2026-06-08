@@ -15,7 +15,6 @@ uint8_t power_hal_battery_percent(void);
 bool power_hal_is_charging(void);
 float power_hal_battery_voltage(void);
 
-// Power profiles
 enum PowerProfile { PROFILE_PERFORMANCE, PROFILE_BALANCED, PROFILE_POWERSAVE };
 void power_hal_set_profile(PowerProfile profile);
 PowerProfile power_hal_get_profile(void);

@@ -20,13 +20,10 @@ static uint32_t boot_time_ms = 0;
 #define DK  lv_color_hex(PIPBOY_GREEN_DARK)
 #define BG  lv_color_hex(PIPBOY_BG)
 
-// Content area within safe zone
 #define CX      SAFE_LEFT
 #define CY      SAFE_TOP
 #define CW      (SCREEN_WIDTH - SAFE_LEFT - SAFE_RIGHT)
 #define CH      (SCREEN_HEIGHT - SAFE_TOP - SAFE_BOTTOM)
-
-// ---- Callbacks ----
 
 static void brightness_cb(lv_event_t *e) {
     uint32_t now = millis();
@@ -71,7 +68,7 @@ static void refresh_info_cb(lv_timer_t *t) {
     char uptime_str[32];
     format_uptime(millis() - boot_time_ms, uptime_str, sizeof(uptime_str));
 
-    float batt_v = power_hal_battery_voltage();  // cached, no I2C
+    float batt_v = power_hal_battery_voltage();
     int batt_pct = power_hal_battery_percent();
 
     char info[320];
@@ -88,7 +85,6 @@ static void refresh_info_cb(lv_timer_t *t) {
     );
     lv_label_set_text(info_label, info);
 
-    // Update WiFi status
     if (wifi_label) {
         if (time_sync_wifi_connected()) {
             char wbuf[64];
@@ -99,14 +95,11 @@ static void refresh_info_cb(lv_timer_t *t) {
         }
     }
 
-    // Update NTP status
     if (ntp_status_label) {
         lv_label_set_text(ntp_status_label,
             time_sync_is_synced() ? "NTP: SYNCED" : "NTP: NOT SYNCED");
     }
 }
-
-// ---- Helpers to build styled widgets ----
 
 static lv_obj_t *make_section_label(lv_obj_t *parent, const char *text,
                                      lv_coord_t x, lv_coord_t y) {
@@ -130,8 +123,6 @@ static lv_obj_t *make_body_label(lv_obj_t *parent, const char *text,
     return lbl;
 }
 
-// ---- Create / Destroy ----
-
 void settings_app_create(lv_obj_t *parent) {
     if (boot_time_ms == 0) boot_time_ms = millis();
 
@@ -142,7 +133,6 @@ void settings_app_create(lv_obj_t *parent) {
     lv_obj_set_style_bg_opa(scr, LV_OPA_COVER, 0);
     lv_obj_center(scr);
 
-    // Scrollable content container inside safe area
     lv_obj_t *cont = lv_obj_create(scr);
     lv_obj_remove_style_all(cont);
     lv_obj_set_size(cont, CW, CH);
@@ -154,9 +144,7 @@ void settings_app_create(lv_obj_t *parent) {
     lv_obj_set_style_pad_row(cont, 4, 0);
     lv_obj_set_scroll_dir(cont, LV_DIR_VER);
     lv_obj_set_scrollbar_mode(cont, LV_SCROLLBAR_MODE_AUTO);
-    // Scrollbar style not available in LVGL v9 - skip
 
-    // ---- Title ----
     lv_obj_t *title = lv_label_create(cont);
     lv_label_set_text(title, "[ SETTINGS ]");
     lv_obj_set_style_text_color(title, G, 0);
@@ -165,9 +153,6 @@ void settings_app_create(lv_obj_t *parent) {
     lv_obj_set_style_text_align(title, LV_TEXT_ALIGN_CENTER, 0);
     lv_obj_set_style_pad_bottom(title, 6, 0);
 
-    // ============================================================
-    // 1. BRIGHTNESS
-    // ============================================================
     make_section_label(cont, "BRIGHTNESS", 0, 0);
 
     lv_obj_t *slider = lv_slider_create(cont);
@@ -183,9 +168,6 @@ void settings_app_create(lv_obj_t *parent) {
     lv_obj_add_event_cb(slider, brightness_cb, LV_EVENT_VALUE_CHANGED, nullptr);
     lv_obj_set_style_pad_bottom(slider, 6, 0);
 
-    // ============================================================
-    // 2. HAPTIC TOGGLE
-    // ============================================================
     lv_obj_t *haptic_row = lv_obj_create(cont);
     lv_obj_remove_style_all(haptic_row);
     lv_obj_set_size(haptic_row, CW, 30);
@@ -201,7 +183,7 @@ void settings_app_create(lv_obj_t *parent) {
     lv_obj_t *sw = lv_switch_create(haptic_row);
     lv_obj_set_size(sw, 50, 24);
     lv_obj_align(sw, LV_ALIGN_RIGHT_MID, 0, 0);
-    // Style: green when on, dark when off
+
     lv_obj_set_style_bg_color(sw, DK, 0);
     lv_obj_set_style_bg_color(sw, G, LV_PART_INDICATOR | LV_STATE_CHECKED);
     lv_obj_set_style_bg_color(sw, DK, LV_PART_INDICATOR);
@@ -214,9 +196,6 @@ void settings_app_create(lv_obj_t *parent) {
     }
     lv_obj_add_event_cb(sw, haptic_toggle_cb, LV_EVENT_VALUE_CHANGED, nullptr);
 
-    // ============================================================
-    // 3. WIFI INFO
-    // ============================================================
     make_section_label(cont, "WIFI", 0, 0);
 
     wifi_label = make_body_label(cont,
@@ -224,9 +203,6 @@ void settings_app_create(lv_obj_t *parent) {
         0, 0, CW);
     lv_obj_set_style_pad_bottom(wifi_label, 6, 0);
 
-    // ============================================================
-    // 4. NTP SYNC
-    // ============================================================
     lv_obj_t *ntp_row = lv_obj_create(cont);
     lv_obj_remove_style_all(ntp_row);
     lv_obj_set_size(ntp_row, CW, 34);
@@ -256,15 +232,11 @@ void settings_app_create(lv_obj_t *parent) {
     lv_obj_set_style_text_font(ntp_btn_lbl, &lv_font_montserrat_12, 0);
     lv_obj_center(ntp_btn_lbl);
 
-    // ============================================================
-    // 5. SYSTEM INFO (auto-refreshing)
-    // ============================================================
     make_section_label(cont, "SYSTEM INFO", 0, 0);
 
     info_label = make_body_label(cont, "", 0, 0, CW);
 
-    // Refresh system info every 2 seconds
-    refresh_info_cb(nullptr);  // populate immediately
+    refresh_info_cb(nullptr);
     refresh_timer = lv_timer_create(refresh_info_cb, 2000, nullptr);
 }
 

@@ -14,18 +14,15 @@
 #include "../config.h"
 #include "haptic.h"
 
-// MeshCore protocol
 #define MC_FREQ         869.618f
 #define MC_BW           62.5f
 #define MC_SF           8
-#define MC_CR           5  // MeshCore default (matching WatchDogs + standard nodes)
+#define MC_CR           5
 #define MC_SYNC_WORD    0x1424
 #define MC_PREAMBLE     16
 #define MC_PUBLIC_HASH  0x11
 #define MC_TCXO_VOLTAGE 3.0f
 
-// Public channel: 16-byte PSK padded to 32 bytes with zeros
-// MeshCore uses 32-byte secret for HMAC, 16-byte for AES
 static const uint8_t MC_PUBLIC_SECRET[32] = {
     0x8b, 0x33, 0x87, 0xe9, 0xc5, 0xcd, 0xea, 0x6a,
     0xc9, 0xe5, 0xed, 0xba, 0xa1, 0x15, 0xcd, 0x72,
@@ -36,71 +33,63 @@ static const uint8_t MC_PUBLIC_SECRET[32] = {
 #define MC_TYPE_ADVERT   0x04
 #define MC_TYPE_GRPTXT   0x05
 
-// State
 static bool running = false;
 static bool radio_ok = false;
-static char node_name[32] = ""; // generated on init from device MAC
+static char node_name[32] = "";
 static volatile bool new_msg_flag = false;
 static volatile bool new_msg_web_flag = false;
 static volatile bool new_msg_ble_flag = false;
 static volatile bool rx_flag = false;
 
-// ISR callback
 ICACHE_RAM_ATTR void lora_rx_isr(void) { rx_flag = true; }
 
-// Message ring buffer
 #define MAX_MESSAGES 20
 static MeshMsg messages[MAX_MESSAGES];
 static int msg_count = 0;
 static int msg_write = 0;
 
-// Nodes
 #define MAX_NODES 16
 static MeshNode nodes[MAX_NODES];
 static int node_count = 0;
 
-// Dedup
 #define DEDUP_SIZE 32
 static uint32_t dedup_hashes[DEDUP_SIZE];
 static int dedup_idx = 0;
 
-// TX
 static volatile bool tx_pending = false;
 static uint8_t tx_buf[256];
 static int tx_len = 0;
 
-// Pending requests (set from any context, processed in loop)
 static char pending_msg[200] = "";
 static volatile bool msg_send_requested = false;
 static volatile bool advert_requested = false;
 static volatile bool start_requested = false;
 static volatile bool stop_requested = false;
 
-// Ed25519 keypair (persisted in NVS)
-static uint8_t ed25519_pk[32];  // public key
-static uint8_t ed25519_sk[64];  // secret key (64 bytes in libsodium format)
+static uint8_t ed25519_pk[32];
+static uint8_t ed25519_sk[64];
 static bool keypair_loaded = false;
 
 static void load_or_create_keypair(void) {
     if (keypair_loaded) return;
     Preferences prefs;
     prefs.begin("meshcore", true);
-    // Check for key format marker (v2 = Orlp ed25519)
+
     if (prefs.getBytesLength("sk") == 64 && prefs.getUChar("kv", 0) == 2) {
         prefs.getBytes("sk", ed25519_sk, 64);
         prefs.getBytes("pk", ed25519_pk, 32);
         Serial.println("[MC] Keypair loaded from NVS");
     } else {
         prefs.end();
-        // Generate 32-byte random seed
+
         uint8_t seed[32];
         esp_fill_random(seed, 32);
-        // Create keypair using Orlp ed25519 (same as MeshCore)
+
         ed25519_create_keypair(ed25519_pk, ed25519_sk, seed);
         prefs.begin("meshcore", false);
         prefs.putBytes("sk", ed25519_sk, 64);
         prefs.putBytes("pk", ed25519_pk, 32);
-        prefs.putUChar("kv", 2); // mark as Orlp format
+        prefs.putUChar("kv", 2);
         Serial.println("[MC] New keypair generated (Orlp ed25519)");
     }
     prefs.end();
@@ -109,7 +98,6 @@ static void load_or_create_keypair(void) {
         ed25519_pk[0], ed25519_pk[1], ed25519_pk[2], ed25519_pk[3]);
 }
 
-// ---- Crypto ----
 static void aes_ecb_decrypt(const uint8_t *key, const uint8_t *in, uint8_t *out, int len) {
     mbedtls_aes_context ctx;
     mbedtls_aes_init(&ctx);
@@ -140,8 +128,6 @@ static void hmac_sha256(const uint8_t *key, int kl, const uint8_t *data, int dl,
 
 static uint32_t dedup_times[DEDUP_SIZE];
 
-// Dedup: hash header(1) + payload (skip path bytes)
-// Retransmissions have different path but same header+payload
 static bool is_duplicate_hp(uint8_t header, const uint8_t *payload, int plen) {
     uint32_t h = 0x811c9dc5;
     h ^= header; h *= 0x01000193;
@@ -157,13 +143,12 @@ static bool is_duplicate_hp(uint8_t header, const uint8_t *payload, int plen) {
     return false;
 }
 
-// Pre-seed dedup with own TX (header + payload, skip path_byte at [1])
 static void dedup_preseed(const uint8_t *pkt, int len) {
     if (len < 3) return;
     is_duplicate_hp(pkt[0], &pkt[2], len - 2);
 }
 
-static uint32_t get_unix_timestamp(void);  // defined below
+static uint32_t get_unix_timestamp(void);
 
 static void store_message(const char *ch, const char *txt, float rssi, int hops) {
     MeshMsg &m = messages[msg_write];
@@ -179,7 +164,6 @@ static void store_message(const char *ch, const char *txt, float rssi, int hops)
     haptic_buzz();
     Serial.printf("[MC] MSG [%s] %dhop: %s\n", ch, hops, txt);
 
-    // Append to SD history
     File f = SD.open("/meshcore_log.txt", FILE_APPEND);
     if (f) {
         f.printf("%lu|%s|%d|%.0f|%s\n", (unsigned long)m.timestamp, ch, hops, rssi, txt);
@@ -187,7 +171,6 @@ static void store_message(const char *ch, const char *txt, float rssi, int hops)
     }
 }
 
-// ---- Decode ----
 static void decode_packet(uint8_t *data, int len, float rssi, float snr) {
     if (len < 3) return;
 
@@ -195,25 +178,22 @@ static void decode_packet(uint8_t *data, int len, float rssi, float snr) {
     uint8_t route = header & 0x03;
     uint8_t ptype = (header >> 2) & 0x0F;
 
-    // Parse offset: TFlood(0) and TDirect(3) have 4 transport bytes after header
     int offset = 1;
     if (route == 0 || route == 3) offset += 4;
 
     if (offset >= len) return;
 
-    // Path byte
     uint8_t path_byte = data[offset];
     int hash_size = ((path_byte >> 6) & 0x03) + 1;
     int hash_count = path_byte & 0x3F;
     offset += 1;
-    offset += hash_count * hash_size; // skip path hashes
+    offset += hash_count * hash_size;
 
     int hops = hash_count;
     uint8_t *payload = &data[offset];
     int plen = len - offset;
     if (plen <= 0) return;
 
-    // Dedup: header + payload (skip path) - same as WatchDogs, 30s window
     if (is_duplicate_hp(header, payload, plen)) return;
 
     Serial.printf("[MC] RX: %d bytes, type=%d, hops=%d, RSSI=%.0f\n", len, ptype, hops, rssi);
@@ -230,7 +210,6 @@ static void decode_packet(uint8_t *data, int len, float rssi, float snr) {
             return;
         }
 
-        // Verify MAC
         uint8_t hmac_out[32];
         hmac_sha256(MC_PUBLIC_SECRET, 32, ct, ct_len, hmac_out);
         if (hmac_out[0] != mac[0] || hmac_out[1] != mac[1]) {
@@ -238,7 +217,6 @@ static void decode_packet(uint8_t *data, int len, float rssi, float snr) {
             return;
         }
 
-        // Decrypt
         int pad = (16 - ct_len % 16) % 16;
         int dec_len = ct_len + pad;
         if (dec_len > 256) return;
@@ -247,7 +225,6 @@ static void decode_packet(uint8_t *data, int len, float rssi, float snr) {
         memset(padded + ct_len, 0, pad);
         aes_ecb_decrypt(MC_PUBLIC_SECRET, padded, plain, dec_len);
 
-        // Parse: ts(4) + flags(1) + "name: msg\0"
         char *msg = (char*)&plain[5];
         int ml = 0;
         for (int i = 5; i < dec_len && plain[i]; i++) ml++;
@@ -300,11 +277,10 @@ static void decode_packet(uint8_t *data, int len, float rssi, float snr) {
     }
 }
 
-// ---- Build TX ----
 static uint32_t get_unix_timestamp(void) {
     time_t now; time(&now);
-    if (now > 1700000000) return (uint32_t)now; // valid epoch (after 2023)
-    // Fallback: construct from RTC
+    if (now > 1700000000) return (uint32_t)now;
+
     RTC_DateTime dt = instance.rtc.getDateTime();
     struct tm t = {};
     t.tm_year = dt.getYear() - 1900;
@@ -337,7 +313,7 @@ static int build_group_text(const char *text, uint8_t *out) {
     uint8_t hm[32];
     hmac_sha256(MC_PUBLIC_SECRET, 32, ct, ptl, hm);
 
-    out[0] = 0x15; // Flood GrpTxt
+    out[0] = 0x15;
     out[1] = 0x00;
     out[2] = MC_PUBLIC_HASH;
     out[3] = hm[0]; out[4] = hm[1];
@@ -345,23 +321,19 @@ static int build_group_text(const char *text, uint8_t *out) {
     return 5 + ptl;
 }
 
-// ---- Configure radio for MeshCore ----
 static bool configure_radio(void) {
-    // Use begin() like official MeshCore CustomSX1262.h:
-    // begin(freq, bw, sf, cr, syncWord, power, preamble, tcxo)
-    // RADIOLIB_SX126X_SYNC_WORD_PRIVATE = 0x12 → registers 0x1424
+
     int err = radio.begin(MC_FREQ, MC_BW, MC_SF, MC_CR,
                           RADIOLIB_SX126X_SYNC_WORD_PRIVATE,
                           14, MC_PREAMBLE, 1.6f);
 
-    // If SPI fails (wrong TCXO), retry with 0.0
     if (err == RADIOLIB_ERR_SPI_CMD_FAILED || err == RADIOLIB_ERR_SPI_CMD_INVALID) {
         Serial.println("[MC] Retry with TCXO=0");
         err = radio.begin(MC_FREQ, MC_BW, MC_SF, MC_CR,
                           RADIOLIB_SX126X_SYNC_WORD_PRIVATE,
                           14, MC_PREAMBLE, 0.0f);
     }
-    // If still fails, try with 3.0V (T-Watch Ultra uses this in examples)
+
     if (err != RADIOLIB_ERR_NONE) {
         Serial.printf("[MC] Retry with TCXO=3.0 (prev err=%d)\n", err);
         err = radio.begin(MC_FREQ, MC_BW, MC_SF, MC_CR,
@@ -374,32 +346,27 @@ static bool configure_radio(void) {
         return false;
     }
 
-    // CRC ON (MeshCore uses CRC!)
     radio.setCRC(1);
 
-    // DIO2 as RF switch (required for SX1262)
     radio.setDio2AsRfSwitch(true);
 
-    // Boosted RX gain
     radio.setRxBoostedGainMode(true);
 
     Serial.printf("[MC] Radio OK: %.3fMHz SF%d BW%.1fk CR%d\n", MC_FREQ, MC_SF, MC_BW, MC_CR);
     return true;
 }
 
-// ---- Public API ----
-// Forward declarations
 static void do_start(void);
 static void do_stop(void);
 static void do_send_advert(void);
 static void check_lora_init(void);
 
 static void generate_node_name(void) {
-    if (node_name[0]) return; // already set
-    // Generate unique name from device MAC: PipBoy-XXXXX
+    if (node_name[0]) return;
+
     uint8_t mac[6];
     esp_efuse_mac_get_default(mac);
-    // 5-char alphanumeric from last 4 MAC bytes
+
     const char charset[] = "0123456789abcdefghjkmnpqrstuvwxyz";
     uint32_t seed = (mac[2] << 24) | (mac[3] << 16) | (mac[4] << 8) | mac[5];
     char suffix[6];
@@ -408,7 +375,7 @@ static void generate_node_name(void) {
         seed /= 32;
     }
     suffix[5] = 0;
-    snprintf(node_name, sizeof(node_name), "PipBoy-%s", suffix);
+    snprintf(node_name, sizeof(node_name), "SCRW-%s", suffix);
 }
 
 void lora_service_init(void) {
@@ -420,16 +387,14 @@ void lora_service_init(void) {
 }
 
 void lora_service_loop(void) {
-    // Process start/stop (must be in main loop)
+
     if (start_requested) { start_requested = false; do_start(); }
     if (stop_requested)  { stop_requested = false; do_stop(); }
 
-    // Non-blocking staged init
     check_lora_init();
 
     if (!running || !radio_ok) return;
 
-    // Process send requests (from web/UI, safe in main loop)
     if (msg_send_requested) {
         msg_send_requested = false;
         tx_len = build_group_text(pending_msg, tx_buf);
@@ -442,24 +407,19 @@ void lora_service_loop(void) {
         do_send_advert();
     }
 
-    // Handle TX
     if (tx_pending) {
         tx_pending = false;
 
-        // Add own packet to dedup (header + payload, skip path)
         dedup_preseed(tx_buf, tx_len);
 
-        // Debug: dump FULL TX packet
         Serial.printf("[MC] TX %d bytes: ", tx_len);
         for (int i = 0; i < tx_len; i++) Serial.printf("%02X", tx_buf[i]);
         Serial.println();
 
-        // Blocking transmit (short - SF8 BW62.5k = ~100ms max)
         radio.clearPacketReceivedAction();
         int err = radio.transmit(tx_buf, tx_len);
         Serial.printf("[MC] TX: %d\n", err);
 
-        // Nuclear reconfigure after TX
         radio.setFrequency(MC_FREQ);
         radio.setBandwidth(MC_BW);
         radio.setSpreadingFactor(MC_SF);
@@ -472,7 +432,6 @@ void lora_service_loop(void) {
         radio.startReceive();
     }
 
-    // Handle RX via ISR flag
     if (rx_flag) {
         rx_flag = false;
 
@@ -487,7 +446,6 @@ void lora_service_loop(void) {
             }
         }
 
-        // Restart RX
         radio.startReceive();
     }
 }
@@ -505,7 +463,7 @@ static void do_start(void) {
 
 static void check_lora_init(void) {
     if (lora_init_stage == 0) return;
-    if (millis() - lora_init_time < 60) return; // wait 60ms for radio power up
+    if (millis() - lora_init_time < 60) return;
 
     lora_init_stage = 0;
     if (!configure_radio()) {
@@ -513,10 +471,8 @@ static void check_lora_init(void) {
         return;
     }
 
-    // Set ISR callback
     radio.setPacketReceivedAction(lora_rx_isr);
 
-    // Start continuous RX
     int err = radio.startReceive();
     if (err == RADIOLIB_ERR_NONE) {
         radio_ok = true;
@@ -534,7 +490,6 @@ static void do_stop(void) {
     running = false; radio_ok = false;
 }
 
-// Public API - just set flags (safe from any context)
 void lora_svc_start(void) { start_requested = true; }
 void lora_svc_stop(void)  { stop_requested = true; }
 
@@ -549,11 +504,10 @@ static void do_send_advert(void) {
     if (!running) return;
     load_or_create_keypair();
 
-    // Build appdata: flags + optional GPS + name\0
     uint8_t appdata[64];
     int alen = 0;
-    uint8_t flags = 0x01; // type=Client
-    flags |= 0x80; // has name
+    uint8_t flags = 0x01;
+    flags |= 0x80;
 
     float lat = 0, lon = 0;
     if (instance.gps.location.isValid()) {
@@ -575,7 +529,6 @@ static void do_send_advert(void) {
     uint8_t ts_bytes[4];
     memcpy(ts_bytes, &ts, 4);
 
-    // Sign: pubkey(32) + timestamp(4) + appdata
     uint8_t sign_data[128];
     memcpy(sign_data, ed25519_pk, 32);
     memcpy(sign_data + 32, ts_bytes, 4);
@@ -583,14 +536,13 @@ static void do_send_advert(void) {
     int sign_len = 36 + alen;
 
     uint8_t signature[64];
-    // Sign using Orlp ed25519 (same library as MeshCore)
+
     ed25519_sign(signature, sign_data, sign_len, ed25519_pk, ed25519_sk);
 
-    // Build packet: header(1) + path(1) + pubkey(32) + ts(4) + sig(64) + appdata
     uint8_t pkt[180];
     int pos = 0;
-    pkt[pos++] = 0x11; // Flood Advert
-    pkt[pos++] = 0x00; // path byte
+    pkt[pos++] = 0x11;
+    pkt[pos++] = 0x00;
     memcpy(pkt + pos, ed25519_pk, 32); pos += 32;
     memcpy(pkt + pos, ts_bytes, 4); pos += 4;
     memcpy(pkt + pos, signature, 64); pos += 64;
@@ -617,7 +569,7 @@ const MeshMsg* lora_svc_last_message(void) {
     return &messages[(msg_write - 1 + MAX_MESSAGES) % MAX_MESSAGES];
 }
 const MeshMsg* lora_svc_get_message(int idx) {
-    // idx 0 = newest, 1 = second newest, etc.
+
     if (idx < 0 || idx >= msg_count) return nullptr;
     int pos = (msg_write - 1 - idx + MAX_MESSAGES * 2) % MAX_MESSAGES;
     return &messages[pos];
@@ -626,7 +578,7 @@ int lora_svc_message_count(void) { return msg_count; }
 int lora_svc_node_count(void) { return node_count; }
 
 void lora_svc_save_history(void) {
-    // Already saved on each store_message() call
+
 }
 
 void lora_svc_load_history(void) {
@@ -638,7 +590,6 @@ void lora_svc_load_history(void) {
         String line = f.readStringUntil('\n');
         if (line.length() < 5) continue;
 
-        // Parse: timestamp|channel|hops|rssi|text
         int p1 = line.indexOf('|');
         int p2 = line.indexOf('|', p1 + 1);
         int p3 = line.indexOf('|', p2 + 1);

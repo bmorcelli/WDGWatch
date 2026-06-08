@@ -125,7 +125,6 @@ void wifi_app_create(lv_obj_t *parent) {
 void wifi_app_update(void) {
     if (!scr) return;
 
-    // Process toggle in update (main loop, not LVGL callback)
     if (web_toggle_requested) {
         web_toggle_requested = false;
         if (web_server_is_active()) {
@@ -135,7 +134,7 @@ void wifi_app_update(void) {
             if (lbl_clients) lv_label_set_text(lbl_clients, "");
         } else {
             if (lbl_status) lv_label_set_text(lbl_status, "STARTING AP...");
-            lv_timer_handler(); // show status before blocking
+            lv_timer_handler();
             web_server_init();
             if (lbl_status) lv_label_set_text(lbl_status, "WEB SERVER ON");
             if (lbl_ip) {
@@ -145,7 +144,6 @@ void wifi_app_update(void) {
         }
     }
 
-    // BLE toggle
     if (ble_toggle_requested) {
         ble_toggle_requested = false;
         if (ble_uart_is_active()) {
@@ -155,7 +153,6 @@ void wifi_app_update(void) {
         }
     }
 
-    // Update BLE status
     if (lbl_ble_status) {
         if (!ble_uart_is_active())
             lv_label_set_text(lbl_ble_status, "BLE: OFF");
@@ -172,6 +169,6 @@ void wifi_app_update(void) {
 }
 
 void wifi_app_destroy(void) {
-    // Keep web server running in background
+
     if (scr) { lv_obj_delete(scr); scr = nullptr; }
 }

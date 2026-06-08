@@ -12,14 +12,14 @@
 #include "hal/recon_service.h"
 #include "hal/ble_uart_service.h"
 #include "api/command_handler.h"
+#include "hal/rf_service.h"
+#include "hal/hid_service.h"
 
-// WiFi networks for NTP (tried in order)
-// Create src/wifi_config.h from src/wifi_config.example.h
 #if __has_include("wifi_config.h")
 #include "wifi_config.h"
 #else
 static const WiFiNetwork wifi_networks[] = {
-    // No wifi_config.h found - copy wifi_config.example.h to wifi_config.h
+
     {"", "", false},
 };
 #endif
@@ -27,9 +27,8 @@ static const WiFiNetwork wifi_networks[] = {
 static uint32_t last_update_ms = 0;
 static const uint32_t UPDATE_INTERVAL = 500;
 
-// Boot button (GPIO0) for navigation
 #define BOOT_BUTTON_PIN 0
-static bool boot_btn_last = true; // pull-up, active low
+static bool boot_btn_last = true;
 
 static void update_watchface_data(void);
 
@@ -40,30 +39,22 @@ void setup() {
     Serial.println("  T-Watch Ultra | ESP32-S3");
     Serial.println("=================================\n");
 
-    // Initialize all hardware via LilyGoLib
     instance.begin();
     Serial.println("[INIT] Hardware OK");
 
-    // Initialize LVGL
     beginLvglHelper(instance);
     Serial.println("[INIT] LVGL OK");
 
-    // App manager (watchface + menu)
     app_manager_init();
 
-    // Power management
     power_hal_init();
 
-    // Time sync - starts WiFi + NTP immediately
     time_sync_init(wifi_networks, sizeof(wifi_networks) / sizeof(wifi_networks[0]));
 
-    // Brightness
     instance.setBrightness(PIPBOY_DEFAULT_BRIGHTNESS);
 
-    // Boot button as input
     pinMode(BOOT_BUTTON_PIN, INPUT_PULLUP);
 
-    // Power button handler - toggle screen
     instance.onEvent([](DeviceEvent_t event, void *params, void *user_data) {
         if (event == POWER_EVENT) {
             PMUEventType_t pmu = instance.getPMUEventType(params);
@@ -73,20 +64,18 @@ void setup() {
         }
     });
 
-    // Background services
     nfc_service_init();
     lora_service_init();
     recon_service_init();
+    rf_service_init();
+
     api_init();
-    // API events go to both BLE and WebSocket
+
     api_set_event_callback([](const char *json) {
         ble_uart_send(json);
-        web_push_log(json); // WebSocket push
+        web_push_log(json);
     });
-    // BLE NOT started by default (battery saving)
-    // User enables via WiFi app or web UI
 
-    // Haptic boot confirmation
     haptic_init();
     haptic_success();
 
@@ -94,47 +83,43 @@ void setup() {
 }
 
 void loop() {
-    // Process device events (PMU, sensors, etc.)
+
     instance.loop();
 
-    // LVGL timer - MUST be called frequently
     lv_timer_handler();
 
-    // Periodic watchface update
     uint32_t now = millis();
     if (now - last_update_ms >= UPDATE_INTERVAL) {
         last_update_ms = now;
         update_watchface_data();
     }
 
-    // Time sync (non-blocking)
     time_sync_loop();
 
-    // Background services (always run)
     nfc_service_loop();
     lora_service_loop();
     recon_service_loop();
+    rf_service_loop();
+    hid_service_loop();
     ble_uart_loop();
     api_loop();
 
-    // Web server (if active)
+    instance.gps.loop();
+
     web_server_loop();
 
-    // Update active app
     app_manager_update();
 
-    // Reset activity on touch - also wake screen
     int16_t tx, ty;
     if (instance.getPoint(&tx, &ty, 1) > 0) {
         if (power_hal_screen_is_off()) {
-            power_hal_screen_toggle(); // wake on touch
+            power_hal_screen_toggle();
         }
         power_hal_reset_activity();
     }
 
-    // Boot button = back to watchface
     bool boot_btn = digitalRead(BOOT_BUTTON_PIN);
-    if (!boot_btn && boot_btn_last) { // falling edge = pressed
+    if (!boot_btn && boot_btn_last) {
         if (power_hal_screen_is_off()) {
             power_hal_screen_toggle();
         } else {
@@ -144,32 +129,29 @@ void loop() {
     }
     boot_btn_last = boot_btn;
 
-    // Screen off after 10s inactivity
     power_hal_check_sleep();
 
-    // Sync status on watchface
     watchface_set_sync_status(
         time_sync_wifi_connected(),
         time_sync_is_synced(),
         instance.gps.location.isValid()
     );
 
-    // Small delay for LVGL timing
     delay(5);
 }
 
 static void update_watchface_data(void) {
-    // Read time - prefer system clock if NTP synced, else RTC hardware
+
     struct tm timeinfo;
     if (time_sync_is_synced() && getLocalTime(&timeinfo, 0)) {
-        // System clock is authoritative after NTP sync
+
         watchface_set_time(timeinfo.tm_hour, timeinfo.tm_min);
         watchface_set_seconds(timeinfo.tm_sec);
-        // tm_wday: 0=Sunday, 1=Monday, ...
+
         watchface_set_date(timeinfo.tm_mday, timeinfo.tm_mon + 1,
                           timeinfo.tm_wday, 0);
     } else {
-        // Before NTP sync - read from RTC hardware
+
         RTC_DateTime dt = instance.rtc.getDateTime();
         watchface_set_time(dt.getHour(), dt.getMinute());
         watchface_set_seconds(dt.getSecond());
@@ -177,12 +159,10 @@ static void update_watchface_data(void) {
         watchface_set_date(dt.getDay(), dt.getMonth(), wd, 0);
     }
 
-    // Battery
     uint8_t bat = power_hal_battery_percent();
     bool charging = power_hal_is_charging();
     watchface_set_battery(bat, charging);
 
-    // GPS
     if (instance.gps.location.isValid()) {
         watchface_set_gps(
             instance.gps.location.lat(),
@@ -191,7 +171,6 @@ static void update_watchface_data(void) {
         );
     }
 
-    // Steps placeholder
     watchface_set_steps(0, 5000);
     watchface_set_distance(0.0f);
 }

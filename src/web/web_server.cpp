@@ -20,18 +20,15 @@ static AsyncWebSocket ws("/ws");
 static bool active = false;
 static char ap_ip[20] = "";
 
-// Service states
 static bool svc_wifi = false;
 static bool svc_bt = false;
 static bool svc_gps = false;
 static bool svc_nfc = false;
 
-// Action overlay flags (set from async, processed in loop)
 static volatile bool show_overlay_scan = false;
 static volatile bool show_overlay_emit = false;
 static volatile bool hide_overlay_flag = false;
 
-// Hardware action flags (set from async handlers, executed in main loop)
 static volatile bool flag_haptic = false;
 static volatile bool flag_brightness = false;
 static volatile int  pending_brightness = 128;
@@ -49,7 +46,6 @@ static volatile bool flag_lora_advert = false;
 static volatile bool flag_lora_send = false;
 static char pending_lora_text[240] = "";
 
-// WiFi scan cache (populated in main loop, read by GET handler)
 struct CachedWiFi {
     char ssid[33];
     char bssid[18];
@@ -60,7 +56,6 @@ static CachedWiFi scan_cache[30];
 static int scan_cache_count = 0;
 static uint32_t scan_cache_ts = 0;
 
-// ---- WebSocket broadcast ----
 static void ws_broadcast(const char *json) {
     ws.textAll(json);
 }
@@ -74,7 +69,6 @@ static void push_status(void) {
     JsonDocument doc;
     doc["type"] = "status";
 
-    // Time
     struct tm ti;
     char tbuf[12], dbuf[20];
     if (getLocalTime(&ti, 0)) {
@@ -94,17 +88,15 @@ static void push_status(void) {
     doc["lora"] = lora_svc_is_running();
     doc["nfc"] = nfc_svc_is_scanning();
 
-    // GPS - check if powered on
     if (instance.gps.location.isValid()) {
         char g[32]; snprintf(g, sizeof(g), "%.4f,%.4f", instance.gps.location.lat(), instance.gps.location.lng());
         doc["gps"] = g;
-    } else if (instance.gps.charsProcessed() > 10) {
+    } else if (svc_gps || instance.gps.charsProcessed() > 10) {
         doc["gps"] = "NO FIX";
     } else {
         doc["gps"] = "OFF";
     }
 
-    // Uptime
     uint32_t s = millis() / 1000;
     char up[16]; snprintf(up, sizeof(up), "%dh%02dm", s/3600, (s%3600)/60);
     doc["uptime"] = up;
@@ -114,7 +106,6 @@ static void push_status(void) {
     ws_broadcast(buf);
 }
 
-// ---- WS event handler ----
 static void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client,
                        AwsEventType type, void *arg, uint8_t *data, size_t len) {
     if (type == WS_EVT_CONNECT) {
@@ -124,20 +115,17 @@ static void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client,
     }
 }
 
-// ---- REST API handlers ----
 static void setup_routes(void) {
-    // Serve main page
+
     server.on("/", HTTP_GET, [](AsyncWebServerRequest *req) {
         req->send(200, "text/html", WEB_INDEX_HTML);
     });
 
-    // Haptic test - set flag, execute in main loop (I2C safe)
     server.on("/api/haptic", HTTP_POST, [](AsyncWebServerRequest *req) {
         flag_haptic = true;
         req->send(200, "application/json", "{\"msg\":\"Haptic OK\"}");
     });
 
-    // Brightness - set flag
     server.on("/api/brightness", HTTP_POST, [](AsyncWebServerRequest *req) {
         if (req->hasParam("v", true)) {
             pending_brightness = req->getParam("v", true)->value().toInt();
@@ -146,13 +134,11 @@ static void setup_routes(void) {
         req->send(200, "application/json", "{\"msg\":\"OK\"}");
     });
 
-    // NTP sync
     server.on("/api/ntp", HTTP_POST, [](AsyncWebServerRequest *req) {
         flag_ntp_retry = true;
         req->send(200, "application/json", "{\"msg\":\"NTP sync requested\"}");
     });
 
-    // Watchface switch
     server.on("/api/watchface", HTTP_POST, [](AsyncWebServerRequest *req) {
         if (req->hasParam("style", true)) {
             String s = req->getParam("style", true)->value();
@@ -162,7 +148,6 @@ static void setup_routes(void) {
         req->send(200, "application/json", "{\"msg\":\"OK\"}");
     });
 
-    // Service toggle - flag-based
     server.on("/api/service", HTTP_POST, [](AsyncWebServerRequest *req) {
         String svc = req->hasParam("service", true) ? req->getParam("service", true)->value() : "";
         bool en = req->hasParam("enable", true) ? req->getParam("enable", true)->value() == "true" : false;
@@ -174,13 +159,11 @@ static void setup_routes(void) {
         req->send(200, "application/json", r);
     });
 
-    // WiFi scan - flag-based, AP teardown pattern
     server.on("/api/wifi/scan", HTTP_POST, [](AsyncWebServerRequest *req) {
         flag_wifi_scan = true;
         req->send(200, "application/json", "{\"msg\":\"Scan started - AP will restart in ~5s\"}");
     });
 
-    // Last WiFi scan results (poll after reconnect)
     server.on("/api/wifi/scan/last", HTTP_GET, [](AsyncWebServerRequest *req) {
         JsonDocument doc;
         doc["ts"] = scan_cache_ts;
@@ -198,7 +181,6 @@ static void setup_routes(void) {
         req->send(200, "application/json", buf);
     });
 
-    // NFC - calls background service directly
     server.on("/api/nfc/scan", HTTP_POST, [](AsyncWebServerRequest *req) {
         nfc_svc_request_scan();
         show_overlay_scan = true;
@@ -224,7 +206,6 @@ static void setup_routes(void) {
         req->send(200, "application/json", "{\"msg\":\"Deleted\"}");
     });
 
-    // Recon - WiFi scan, BLE scan, Deauth
     server.on("/api/recon/wifi", HTTP_POST, [](AsyncWebServerRequest *req) {
         recon_request_wifi_scan();
         req->send(200, "application/json", "{\"msg\":\"WiFi scan started\"}");
@@ -288,8 +269,6 @@ static void setup_routes(void) {
         req->send(200, "application/json", buf);
     });
 
-    // Unified API endpoint - same as BLE UART
-    // POST /api/cmd with JSON body (form-encoded: cmd=JSON_STRING)
     server.on("/api/cmd", HTTP_POST, [](AsyncWebServerRequest *req) {
         String json = req->hasParam("cmd", true) ? req->getParam("cmd", true)->value() : "{}";
         char *resp = api_handle_command(json.c_str());
@@ -297,13 +276,11 @@ static void setup_routes(void) {
         if (resp) free(resp);
     });
 
-    // Reboot - flag-based so response ships before restart
     server.on("/api/reboot", HTTP_POST, [](AsyncWebServerRequest *req) {
         flag_reboot = true;
         req->send(200, "application/json", "{\"msg\":\"Rebooting...\"}");
     });
 
-    // LoRa MeshCore - all flag-based (SPI is not async-safe)
     server.on("/api/lora/start", HTTP_POST, [](AsyncWebServerRequest *req) {
         flag_lora_start = true;
         req->send(200, "application/json", "{\"msg\":\"MeshCore started\"}");
@@ -326,7 +303,6 @@ static void setup_routes(void) {
         req->send(200, "application/json", "{\"msg\":\"Advert sent\"}");
     });
 
-    // LoRa message history (load on web UI start)
     server.on("/api/lora/history", HTTP_GET, [](AsyncWebServerRequest *req) {
         JsonDocument doc;
         JsonArray arr = doc["messages"].to<JsonArray>();
@@ -347,15 +323,12 @@ static void setup_routes(void) {
     });
 }
 
-// ---- Public API ----
-
 void web_server_init(void) {
     if (active) return;
 
-    // Start SoftAP with retry
     WiFi.mode(WIFI_AP_STA);
     for (int attempt = 0; attempt < 3; attempt++) {
-        if (WiFi.softAP("PipBoy-3000", "pip12345")) break;
+        if (WiFi.softAP("SCR Terminal", "pip12345")) break;
         Serial.printf("[WEB] AP attempt %d failed, retrying...\n", attempt);
         WiFi.softAPdisconnect(true);
         delay(500);
@@ -363,29 +336,24 @@ void web_server_init(void) {
     delay(200);
     IPAddress ip = WiFi.softAPIP();
     snprintf(ap_ip, sizeof(ap_ip), "%s", ip.toString().c_str());
-    Serial.printf("[WEB] AP started: PipBoy-3000, IP: %s\n", ap_ip);
+    Serial.printf("[WEB] AP started: SCR Terminal, IP: %s\n", ap_ip);
 
-    // Setup WebSocket
     ws.onEvent(onWsEvent);
     server.addHandler(&ws);
 
-    // Setup routes
     setup_routes();
 
-    // Start server
     server.begin();
     active = true;
     Serial.println("[WEB] Server started on port 80");
 }
 
-// Simple blocking scan in AP_STA mode - this was the version that worked.
-// Safe because we execute from main loop, not async task.
 static void process_wifi_scan(void) {
     if (!flag_wifi_scan) return;
     flag_wifi_scan = false;
 
     Serial.println("[WEB] WiFi scan (AP_STA mode)...");
-    int n = WiFi.scanNetworks(false, true, false, 300);  // sync, hidden, active, 300ms/ch
+    int n = WiFi.scanNetworks(false, true, false, 300);
 
     JsonDocument doc;
     doc["type"] = "wifi_scan";
@@ -416,7 +384,6 @@ static void process_wifi_scan(void) {
     Serial.printf("[WEB] Scan done: %d networks\n", scan_cache_count);
 }
 
-// ---- Process deferred hardware actions ----
 static void process_hw_flags(void) {
     if (flag_haptic) {
         flag_haptic = false;
@@ -454,16 +421,14 @@ void web_server_loop(void) {
     ws.cleanupClients();
     push_status();
 
-    // Process all deferred operations (safe from main loop, not async task)
     process_hw_flags();
     process_wifi_scan();
 
-    // Process overlay flags (must be in main loop for LVGL safety)
     if (show_overlay_scan) {
         show_overlay_scan = false;
         action_overlay_show("NFC SCAN");
         action_overlay_set_status("Hold tag near watch...");
-        power_hal_reset_activity(); // prevent screen off
+        power_hal_reset_activity();
     }
     if (show_overlay_emit) {
         show_overlay_emit = false;
@@ -476,20 +441,17 @@ void web_server_loop(void) {
         action_overlay_hide();
     }
 
-    // Push NFC tag detection to web clients + update overlay
     if (nfc_svc_tag_detected_web()) {
         const char *uid = nfc_svc_last_uid();
         const char *ndef = nfc_svc_last_ndef();
         web_push_nfc_tag(uid, ndef);
 
-        // Update overlay with found tag
         if (action_overlay_is_active()) {
             char b[80]; snprintf(b, sizeof(b), "TAG FOUND!\nUID: %s", uid);
             action_overlay_set_status(b);
         }
     }
 
-    // Push LoRa messages to web clients (separate flag from watch UI)
     if (lora_svc_has_new_message_web()) {
         const MeshMsg *m = lora_svc_last_message();
         if (m) {
@@ -506,7 +468,6 @@ void web_server_loop(void) {
         }
     }
 
-    // Keep screen alive during overlay
     if (action_overlay_is_active()) {
         power_hal_reset_activity();
     }
@@ -528,9 +489,6 @@ const char* web_server_get_ip(void) {
     return ap_ip;
 }
 
-// ---- NFC request polling (consumed on read) ----
-// Old flag-based NFC functions removed - nfc_service handles everything directly
-
 void web_push_nfc_tag(const char *uid, const char *ndef) {
     if (!active) return;
     JsonDocument doc;
@@ -544,9 +502,8 @@ void web_push_nfc_tag(const char *uid, const char *ndef) {
 
 void web_push_log(const char *msg) {
     if (!active || !msg) return;
-    // msg may already be valid JSON (events from api_loop). Just broadcast it directly.
-    // Cap at WS frame limit to avoid stack/heap overflow.
+
     size_t len = strlen(msg);
-    if (len > 3800) return;  // AsyncWebSocket default max frame
+    if (len > 3800) return;
     ws_broadcast(msg);
 }

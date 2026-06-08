@@ -77,7 +77,6 @@ void recon_app_update(void) {
     if (recon_is_scanning()) {
         lv_label_set_text(lbl_status, "SCANNING...");
 
-        // Build results list
         char buf[1024] = "";
         int pos = 0;
         int wc = recon_wifi_count();

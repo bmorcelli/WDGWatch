@@ -1,11 +1,3 @@
-/**
- * @file      nfc_reader.cpp
- * @author    Lewis He (lewishe@outlook.com)
- * @license   MIT
- * @copyright Copyright (c) 2024  ShenZhen XinYuan Electronic Technology Co., Ltd
- * @date      2024-10-11
- *
- */
 
 #include "nfc_hal.h"
 
@@ -47,7 +39,6 @@ static void ndefClassHandler()
     }
     Serial.println();
 
-    // Try NDEF read - but bail out quickly if tag doesn't support it
     ReturnCode err = ndef.ndefPollerContextInitialization(nfcDev);
     if (err != ST_ERR_NONE) {
         Serial.println("[NFC] No NDEF support on this tag");
@@ -103,8 +94,7 @@ static void demoNotif(rfalNfcState st )
         if (ndef_notify_cb) {
             ndef_notify_cb();
         }
-        // Try NDEF read but with safety - don't block forever
-        // ndefClassHandler() can block on slow/unresponsive tags
+
         ndefClassHandler();
         NFCReader.rfalNfcDeactivate(true);
         NFCReader.rfalNfcaPollerSleep();
@@ -114,7 +104,7 @@ static void demoNotif(rfalNfcState st )
         rfalNfcaSelRes        selRes;
         rfalNfcDevice *nfcDev;
         NFCReader.rfalNfcGetActiveDevice(&nfcDev);
-        /* Loop until tag is removed from the field */
+
         Serial.print("Operation completed\r\nTag can be removed from the field\r\n");
         NFCReader.rfalNfcaPollerInitialize();
         while (NFCReader.rfalNfcaPollerCheckPresence(RFAL_14443A_SHORTFRAME_CMD_WUPA, &sensRes) == ST_ERR_NONE) {
@@ -132,8 +122,6 @@ static void demoNotif(rfalNfcState st )
 #endif
     }
 }
-
-
 
 uint32_t interval = 0;
 
@@ -158,16 +146,16 @@ void loopNFCReader()
                      (NFCReader.rfalNfcaPollerSelect(nfcDev->dev.nfca.nfcId1, nfcDev->dev.nfca.nfcId1Len, &selRes) != ST_ERR_NONE))) {
                 state = ST_POLLING;
                 Serial.println("Start discovery");
-                // break;
+
                 return ;
             }
             if (millis() > interval) {
                 Serial.println("Operation completed,Tag can be removed from the field");
                 interval = millis() + 1000;
             }
-            // Serial.println(".");
+
             NFCReader.rfalNfcaPollerSleep();
-            // delay(130);
+
         }
     }
     break;
@@ -225,22 +213,22 @@ static ReturnCode ndefBufferDumpLine(const uint8_t *buffer, const uint32_t offse
     Serial.print(" [");
     Serial.print(offset, HEX);
     Serial.print("] ");
-    /* Dump hex data */
+
     for (j = 0; j < remaining; j++) {
         Serial.print(buffer[offset + j], HEX);
         Serial.print(" ");
     }
-    /* Fill hex section if needed */
+
     for (j = 0; j < lineLength - remaining; j++) {
         Serial.print("   ");
     }
-    /* Dump characters */
+
     Serial.print("|");
     for (j = 0; j < remaining; j++) {
-        /* Dump only ASCII characters, otherwise replace with a '.' */
+
         Serial.print((isPrintableASCII(&buffer[offset + j], 1) ? (char)buffer[offset + j] : '.'));
     }
-    /* Fill ASCII section if needed */
+
     for (j = 0; j < lineLength - remaining; j++) {
         Serial.print("  ");
     }
@@ -272,7 +260,7 @@ static ReturnCode ndefBufferDump(const char *string, const ndefConstBuffer *bufP
         bufferLengthMax = 256;
     }
     if (bufPayload->length > bufferLengthMax) {
-        /* Truncate output */
+
         displayed = bufferLengthMax;
     }
     for (offset = 0; offset < displayed; offset += lineLength) {
@@ -369,13 +357,12 @@ static ReturnCode ndefRecordDump(const ndefRecord *record, bool verbose)
     Serial.print(index);
     Serial.print((char *)headerSR);
     Serial.print("\r\n");
-    /* Well-known type dump */
+
     err = ndefRecordDumpType(record);
 
 #ifdef DEBUG_NDEF
     if (verbose == true) {
-        /* Raw dump */
-        //Serial.print(" MB:%d ME:%d CF:%d SR:%d IL:%d TNF:%d\r\n", ndefHeaderMB(record), ndefHeaderME(record), ndefHeaderCF(record), ndefHeaderSR(record), ndefHeaderIL(record), ndefHeaderTNF(record));
+
         Serial.print(" MB ME CF SR IL TNF\r\n");
         Serial.print("  ");
         Serial.print(ndefHeaderMB(record));
@@ -405,7 +392,7 @@ static ReturnCode ndefRecordDump(const ndefRecord *record, bool verbose)
         }
 
         if (ndefHeaderIsSetIL(record)) {
-            /* ID Length bit set */
+
             ndefConstBuffer8 bufRecordId;
             ndef.ndefRecordGetId(record, &bufRecordId);
             ndefBuffer8Print(" ID: \"", &bufRecordId, "\"\r\n");
@@ -419,7 +406,6 @@ static ReturnCode ndefRecordDump(const ndefRecord *record, bool verbose)
 
     return ST_ERR_NONE;
 }
-
 
 static ReturnCode ndefRtdDeviceInfoDump(const ndefType *devInfo, ndefTypeRtdDeviceInfo *devInfoData)
 {
@@ -455,11 +441,11 @@ static ReturnCode ndefRtdDeviceInfoDump(const ndefType *devInfo, ndefTypeRtdDevi
             Serial.print(": ");
             if (type != NDEF_DEVICE_INFO_UUID) {
                 for (i = 0; i < devInfoData->devInfo[type].length; i++) {
-                    Serial.print(devInfoData->devInfo[type].buffer[i]); /* character */
+                    Serial.print(devInfoData->devInfo[type].buffer[i]);
                 }
             } else {
                 for (i = 0; i < devInfoData->devInfo[type].length; i++) {
-                    Serial.print(devInfoData->devInfo[type].buffer[i], HEX); /* hex number */
+                    Serial.print(devInfoData->devInfo[type].buffer[i], HEX);
                 }
             }
             Serial.print("\r\n");
@@ -603,25 +589,21 @@ static ReturnCode ndefMediaVCardDump(const ndefType *vCard)
     Serial.print(" vCard decoded: \r\n");
 
     for (i = 0; i < SIZEOF_ARRAY(bufVCardField); i++) {
-        /* Requesting vCard field */
+
         bufType = bufVCardField[i];
 
-        /* Get information from vCard */
         ndef.ndefGetVCard(vCard, bufType, &bufSubType, &bufValue);
 
         if (bufValue.buffer != NULL) {
             ndefConstBuffer bufTypeTranslate;
             ndefMediaVCardTranslate(bufType, &bufTypeTranslate);
 
-            /* Type */
             ndefBufferPrint(" ", &bufTypeTranslate, "");
 
-            /* Subtype, if any */
             if (bufSubType.buffer != NULL) {
                 ndefBufferPrint(" (", &bufSubType, ")");
             }
 
-            /* Value */
             if (ST_BYTECMP(bufType->buffer, bufTypePHOTO.buffer, bufTypePHOTO.length) != 0) {
                 ndefBufferPrint(": ", &bufValue, "\r\n");
             } else {
@@ -690,4 +672,4 @@ void deinitNFC()
     _nfc_running = false;
 }
 
-#endif /*ARDUINO*/
+#endif

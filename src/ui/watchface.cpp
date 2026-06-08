@@ -19,7 +19,6 @@ static lv_obj_t *scr = nullptr;
 static lv_obj_t *parent_scr = nullptr;
 static WatchfaceStyle current_style = WF_PIPBOY;
 
-// Cached time data for rebuild
 static uint8_t c_hour = 0, c_min = 0, c_sec = 0;
 static uint8_t c_day = 1, c_month = 1, c_wday = 0;
 static uint8_t c_bat = 0;
@@ -27,7 +26,6 @@ static bool c_charging = false;
 static bool c_ntp = false, c_wifi = false, c_gps = false;
 static uint32_t c_steps = 0;
 
-// Pip-Boy face widgets
 static lv_obj_t *lbl_time = nullptr;
 static lv_obj_t *lbl_seconds = nullptr;
 static lv_obj_t *lbl_month = nullptr;
@@ -40,13 +38,11 @@ static lv_obj_t *lbl_gps = nullptr;
 static lv_obj_t *day_labels[7] = {};
 static lv_obj_t *day_boxes[7] = {};
 
-// Minimal face widgets
 static lv_obj_t *m_time = nullptr;
 static lv_obj_t *m_date = nullptr;
 static lv_obj_t *m_bat = nullptr;
 static lv_obj_t *m_sync = nullptr;
 
-// Analog face widgets
 static lv_obj_t *a_canvas = nullptr;
 static lv_obj_t *a_time_lbl = nullptr;
 static lv_obj_t *a_date_lbl = nullptr;
@@ -57,11 +53,8 @@ static const char *month_names[] = {"JAN","FEB","MAR","APR","MAY","JUN",
 static const char *month_full[] = {"JANUARY","FEBRUARY","MARCH","APRIL","MAY","JUNE",
     "JULY","AUGUST","SEPTEMBER","OCTOBER","NOVEMBER","DECEMBER"};
 
-// ============================================================
-// FACE 1: PIP-BOY (big digital)
-// ============================================================
 static void create_pipboy(void) {
-    // Month + date
+
     lbl_month = lv_label_create(scr);
     lv_label_set_text(lbl_month, "MARCH");
     lv_obj_set_style_text_color(lbl_month, D, 0);
@@ -74,7 +67,6 @@ static void create_pipboy(void) {
     lv_obj_set_style_text_font(lbl_date, &lv_font_montserrat_14, 0);
     lv_obj_set_pos(lbl_date, XM - 65, Y0);
 
-    // Day boxes
     int dw = 42, dh = 18, dg = 4;
     int total_w = 7 * dw + 6 * dg;
     int dx0 = X0 + (SW - total_w) / 2;
@@ -92,7 +84,6 @@ static void create_pipboy(void) {
         lv_obj_center(lb); day_labels[i] = lb;
     }
 
-    // Battery
     bar_battery = lv_bar_create(scr);
     lv_obj_set_size(bar_battery, 100, 10); lv_obj_set_pos(bar_battery, X0+50, Y0+46);
     lv_bar_set_range(bar_battery, 0, 100); lv_bar_set_value(bar_battery, 80, LV_ANIM_OFF);
@@ -108,7 +99,6 @@ static void create_pipboy(void) {
     lv_obj_set_style_text_font(lbl_battery, &lv_font_montserrat_10, 0);
     lv_obj_set_pos(lbl_battery, X0 + 155, Y0+44);
 
-    // Big time
     lv_obj_t *tc = lv_obj_create(scr); lv_obj_remove_style_all(tc);
     lv_obj_set_size(tc, 360, 160); lv_obj_align(tc, LV_ALIGN_CENTER, 0, -20);
     lv_obj_set_style_bg_opa(tc, LV_OPA_TRANSP, 0);
@@ -122,7 +112,7 @@ static void create_pipboy(void) {
     lv_obj_center(lbl_time);
     lv_obj_set_style_transform_pivot_x(lbl_time, LV_PCT(50), 0);
     lv_obj_set_style_transform_pivot_y(lbl_time, LV_PCT(50), 0);
-    lv_obj_set_style_transform_scale(lbl_time, 640, 0); // 2.5x (~120px)
+    lv_obj_set_style_transform_scale(lbl_time, 640, 0);
 
     lbl_seconds = lv_label_create(scr);
     lv_label_set_text(lbl_seconds, ":00");
@@ -130,7 +120,6 @@ static void create_pipboy(void) {
     lv_obj_set_style_text_font(lbl_seconds, &lv_font_montserrat_18, 0);
     lv_obj_align(lbl_seconds, LV_ALIGN_CENTER, 0, 55);
 
-    // Bottom info
     lbl_steps_v = lv_label_create(scr);
     lv_label_set_text(lbl_steps_v, "STEPS: 0");
     lv_obj_set_style_text_color(lbl_steps_v, D, 0);
@@ -150,11 +139,8 @@ static void create_pipboy(void) {
     lv_obj_align(lbl_sync, LV_ALIGN_BOTTOM_MID, 0, -(SAFE_BOTTOM+5));
 }
 
-// ============================================================
-// FACE 2: MINIMAL (clean, elegant)
-// ============================================================
 static void create_minimal(void) {
-    // Big time centered
+
     m_time = lv_label_create(scr);
     lv_label_set_text(m_time, "00:00");
     lv_obj_set_style_text_color(m_time, G, 0);
@@ -163,23 +149,20 @@ static void create_minimal(void) {
     lv_obj_align(m_time, LV_ALIGN_CENTER, 0, -40);
     lv_obj_set_style_transform_pivot_x(m_time, LV_PCT(50), 0);
     lv_obj_set_style_transform_pivot_y(m_time, LV_PCT(50), 0);
-    lv_obj_set_style_transform_scale(m_time, 640, 0); // 2.5x
+    lv_obj_set_style_transform_scale(m_time, 640, 0);
 
-    // Date below
     m_date = lv_label_create(scr);
     lv_label_set_text(m_date, "THURSDAY, MARCH 26");
     lv_obj_set_style_text_color(m_date, D, 0);
     lv_obj_set_style_text_font(m_date, &lv_font_montserrat_16, 0);
     lv_obj_align(m_date, LV_ALIGN_CENTER, 0, 40);
 
-    // Battery top right
     m_bat = lv_label_create(scr);
     lv_label_set_text(m_bat, "80%");
     lv_obj_set_style_text_color(m_bat, D, 0);
     lv_obj_set_style_text_font(m_bat, &lv_font_montserrat_14, 0);
     lv_obj_align(m_bat, LV_ALIGN_TOP_RIGHT, -SAFE_RIGHT-5, Y0);
 
-    // Sync bottom
     m_sync = lv_label_create(scr);
     lv_label_set_text(m_sync, "");
     lv_obj_set_style_text_color(m_sync, D, 0);
@@ -187,9 +170,6 @@ static void create_minimal(void) {
     lv_obj_align(m_sync, LV_ALIGN_BOTTOM_MID, 0, -(SAFE_BOTTOM+5));
 }
 
-// ============================================================
-// FACE 3: ANALOG (clock with hands drawn via lines)
-// ============================================================
 static lv_point_precise_t hour_pts[2], min_pts[2], sec_pts[2];
 static lv_obj_t *line_hour = nullptr, *line_min = nullptr, *line_sec = nullptr;
 
@@ -210,7 +190,7 @@ static void draw_hand(lv_obj_t **line_obj, lv_point_precise_t *pts,
 }
 
 static void create_analog(void) {
-    // Hour markers
+
     for (int i = 0; i < 12; i++) {
         float rad = (i * 30.0f - 90.0f) * 3.14159f / 180.0f;
         int r1 = 170, r2 = (i % 3 == 0) ? 145 : 155;
@@ -226,13 +206,11 @@ static void create_analog(void) {
         lv_obj_set_style_line_color(l, (i%3==0)?G:D, 0);
     }
 
-    // Center dot
     lv_obj_t *dot = lv_obj_create(scr); lv_obj_remove_style_all(dot);
     lv_obj_set_size(dot, 10, 10); lv_obj_set_pos(dot, CX-5, CY-5);
     lv_obj_set_style_bg_color(dot, G, 0); lv_obj_set_style_bg_opa(dot, LV_OPA_COVER, 0);
     lv_obj_set_style_radius(dot, LV_RADIUS_CIRCLE, 0);
 
-    // Digital time small at bottom
     a_time_lbl = lv_label_create(scr);
     lv_label_set_text(a_time_lbl, "00:00:00");
     lv_obj_set_style_text_color(a_time_lbl, D, 0);
@@ -245,18 +223,14 @@ static void create_analog(void) {
     lv_obj_set_style_text_font(a_date_lbl, &lv_font_montserrat_14, 0);
     lv_obj_align(a_date_lbl, LV_ALIGN_CENTER, 0, 125);
 
-    // Draw initial hands
     draw_hand(&line_hour, hour_pts, 0, 100, 5, G);
     draw_hand(&line_min, min_pts, 0, 140, 3, G);
     draw_hand(&line_sec, sec_pts, 0, 155, 1, D);
 }
 
-// ============================================================
-// Common implementation
-// ============================================================
 static void rebuild_face(void) {
     if (scr) { lv_obj_delete(scr); scr = nullptr; }
-    // Reset all widget pointers
+
     lbl_time = lbl_seconds = lbl_month = lbl_date = lbl_sync = nullptr;
     bar_battery = lbl_battery = lbl_steps_v = lbl_gps = nullptr;
     m_time = m_date = m_bat = m_sync = nullptr;
@@ -303,7 +277,6 @@ void watchface_set_time(uint8_t hour, uint8_t min) {
     if (lbl_time) lv_label_set_text(lbl_time, b);
     if (m_time) lv_label_set_text(m_time, b);
 
-    // Analog hands
     if (line_hour) {
         float h_angle = (hour % 12) * 30.0f + min * 0.5f;
         float m_angle = min * 6.0f;
@@ -338,7 +311,6 @@ void watchface_set_date(uint8_t day, uint8_t month, uint8_t weekday, uint8_t wee
     (void)week_num;
     c_day = day; c_month = month; c_wday = weekday;
 
-    // Pip-Boy
     if (lbl_month && month >= 1 && month <= 12)
         lv_label_set_text(lbl_month, month_full[month-1]);
     if (lbl_date) {
@@ -358,14 +330,12 @@ void watchface_set_date(uint8_t day, uint8_t month, uint8_t weekday, uint8_t wee
         }
     }
 
-    // Minimal
     if (m_date && weekday < 7 && month >= 1 && month <= 12) {
         char b[32]; snprintf(b, sizeof(b), "%s, %s %d",
             weekday_names[weekday], month_full[month-1], day);
         lv_label_set_text(m_date, b);
     }
 
-    // Analog
     if (a_date_lbl && month >= 1 && month <= 12) {
         char b[12]; snprintf(b, sizeof(b), "%s %d", month_names[month-1], day);
         lv_label_set_text(a_date_lbl, b);
