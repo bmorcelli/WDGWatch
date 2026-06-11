@@ -46,14 +46,14 @@ void recon_app_create(lv_obj_t *parent) {
     lv_obj_t *title = lv_label_create(scr);
     lv_label_set_text(title, "[ RECON ]");
     lv_obj_set_style_text_color(title, G, 0);
-    lv_obj_set_style_text_font(title, &lv_font_montserrat_16, 0);
+    lv_obj_set_style_text_font(title, &lv_font_montserrat_20, 0);
     lv_obj_align(title, LV_ALIGN_TOP_MID, 0, y);
 
     y += 25;
     lbl_status = lv_label_create(scr);
     lv_label_set_text(lbl_status, "READY");
     lv_obj_set_style_text_color(lbl_status, G, 0);
-    lv_obj_set_style_text_font(lbl_status, &lv_font_montserrat_14, 0);
+    lv_obj_set_style_text_font(lbl_status, &lv_font_montserrat_18, 0);
     lv_obj_set_pos(lbl_status, x, y);
 
     y += 22;
@@ -65,7 +65,7 @@ void recon_app_create(lv_obj_t *parent) {
     lbl_results = lv_label_create(scr);
     lv_label_set_text(lbl_results, "Tap WiFi or BLE to scan\n\nDeauth via web interface only");
     lv_obj_set_style_text_color(lbl_results, D, 0);
-    lv_obj_set_style_text_font(lbl_results, &lv_font_montserrat_12, 0);
+    lv_obj_set_style_text_font(lbl_results, &lv_font_montserrat_16, 0);
     lv_obj_set_pos(lbl_results, x, y);
     lv_obj_set_width(lbl_results, 360);
     lv_label_set_long_mode(lbl_results, LV_LABEL_LONG_WRAP);

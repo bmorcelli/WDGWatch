@@ -13,3 +13,5 @@ void time_sync_loop(void);
 bool time_sync_is_synced(void);
 bool time_sync_wifi_connected(void);
 void time_sync_force_retry(void);
+void time_sync_set_timezone(const char *tz);
+String time_sync_get_timezone(void);

@@ -69,14 +69,14 @@ void nfc_app_create(lv_obj_t *parent) {
     lv_obj_t *title = lv_label_create(scr);
     lv_label_set_text(title, "[ NFC ]");
     lv_obj_set_style_text_color(title, G, 0);
-    lv_obj_set_style_text_font(title, &lv_font_montserrat_16, 0);
+    lv_obj_set_style_text_font(title, &lv_font_montserrat_20, 0);
     lv_obj_align(title, LV_ALIGN_TOP_MID, 0, y);
 
     y += 25;
     lbl_status = lv_label_create(scr);
     lv_label_set_text(lbl_status, nfc_svc_is_scanning() ? "SCANNING..." : "READY");
     lv_obj_set_style_text_color(lbl_status, G, 0);
-    lv_obj_set_style_text_font(lbl_status, &lv_font_montserrat_14, 0);
+    lv_obj_set_style_text_font(lbl_status, &lv_font_montserrat_18, 0);
     lv_obj_set_pos(lbl_status, x, y);
     lv_obj_set_width(lbl_status, 350);
 
@@ -84,14 +84,14 @@ void nfc_app_create(lv_obj_t *parent) {
     lbl_uid = lv_label_create(scr);
     lv_label_set_text(lbl_uid, "UID: --");
     lv_obj_set_style_text_color(lbl_uid, G, 0);
-    lv_obj_set_style_text_font(lbl_uid, &lv_font_montserrat_12, 0);
+    lv_obj_set_style_text_font(lbl_uid, &lv_font_montserrat_16, 0);
     lv_obj_set_pos(lbl_uid, x, y);
 
     y += 16;
     lbl_ndef = lv_label_create(scr);
     lv_label_set_text(lbl_ndef, "");
     lv_obj_set_style_text_color(lbl_ndef, D, 0);
-    lv_obj_set_style_text_font(lbl_ndef, &lv_font_montserrat_12, 0);
+    lv_obj_set_style_text_font(lbl_ndef, &lv_font_montserrat_16, 0);
     lv_obj_set_pos(lbl_ndef, x, y);
     lv_obj_set_width(lbl_ndef, 350);
 
@@ -109,13 +109,13 @@ void nfc_app_create(lv_obj_t *parent) {
     lv_obj_t *st = lv_label_create(scr);
     lv_label_set_text(st, "SAVED:");
     lv_obj_set_style_text_color(st, D, 0);
-    lv_obj_set_style_text_font(st, &lv_font_montserrat_12, 0);
+    lv_obj_set_style_text_font(st, &lv_font_montserrat_16, 0);
     lv_obj_set_pos(st, x, y);
 
     y += 16;
     lbl_saved = lv_label_create(scr);
     lv_obj_set_style_text_color(lbl_saved, G, 0);
-    lv_obj_set_style_text_font(lbl_saved, &lv_font_montserrat_12, 0);
+    lv_obj_set_style_text_font(lbl_saved, &lv_font_montserrat_16, 0);
     lv_obj_set_pos(lbl_saved, x, y);
     lv_obj_set_width(lbl_saved, 350);
     lv_label_set_long_mode(lbl_saved, LV_LABEL_LONG_WRAP);

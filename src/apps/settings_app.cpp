@@ -106,7 +106,7 @@ static lv_obj_t *make_section_label(lv_obj_t *parent, const char *text,
     lv_obj_t *lbl = lv_label_create(parent);
     lv_label_set_text(lbl, text);
     lv_obj_set_style_text_color(lbl, D, 0);
-    lv_obj_set_style_text_font(lbl, &lv_font_montserrat_14, 0);
+    lv_obj_set_style_text_font(lbl, &lv_font_montserrat_18, 0);
     lv_obj_set_pos(lbl, x, y);
     return lbl;
 }
@@ -116,7 +116,7 @@ static lv_obj_t *make_body_label(lv_obj_t *parent, const char *text,
     lv_obj_t *lbl = lv_label_create(parent);
     lv_label_set_text(lbl, text);
     lv_obj_set_style_text_color(lbl, G, 0);
-    lv_obj_set_style_text_font(lbl, &lv_font_montserrat_14, 0);
+    lv_obj_set_style_text_font(lbl, &lv_font_montserrat_18, 0);
     lv_obj_set_pos(lbl, x, y);
     lv_obj_set_width(lbl, w);
     lv_label_set_long_mode(lbl, LV_LABEL_LONG_WRAP);
@@ -148,7 +148,7 @@ void settings_app_create(lv_obj_t *parent) {
     lv_obj_t *title = lv_label_create(cont);
     lv_label_set_text(title, "[ SETTINGS ]");
     lv_obj_set_style_text_color(title, G, 0);
-    lv_obj_set_style_text_font(title, &lv_font_montserrat_18, 0);
+    lv_obj_set_style_text_font(title, &lv_font_montserrat_22, 0);
     lv_obj_set_width(title, CW);
     lv_obj_set_style_text_align(title, LV_TEXT_ALIGN_CENTER, 0);
     lv_obj_set_style_pad_bottom(title, 6, 0);
@@ -177,7 +177,7 @@ void settings_app_create(lv_obj_t *parent) {
     lv_obj_t *haptic_lbl = lv_label_create(haptic_row);
     lv_label_set_text(haptic_lbl, "HAPTIC FEEDBACK");
     lv_obj_set_style_text_color(haptic_lbl, D, 0);
-    lv_obj_set_style_text_font(haptic_lbl, &lv_font_montserrat_14, 0);
+    lv_obj_set_style_text_font(haptic_lbl, &lv_font_montserrat_18, 0);
     lv_obj_align(haptic_lbl, LV_ALIGN_LEFT_MID, 0, 0);
 
     lv_obj_t *sw = lv_switch_create(haptic_row);
@@ -213,7 +213,7 @@ void settings_app_create(lv_obj_t *parent) {
     lv_label_set_text(ntp_status_label,
         time_sync_is_synced() ? "NTP: SYNCED" : "NTP: NOT SYNCED");
     lv_obj_set_style_text_color(ntp_status_label, D, 0);
-    lv_obj_set_style_text_font(ntp_status_label, &lv_font_montserrat_14, 0);
+    lv_obj_set_style_text_font(ntp_status_label, &lv_font_montserrat_18, 0);
     lv_obj_align(ntp_status_label, LV_ALIGN_LEFT_MID, 0, 0);
 
     lv_obj_t *ntp_btn = lv_btn_create(ntp_row);
@@ -229,7 +229,7 @@ void settings_app_create(lv_obj_t *parent) {
     lv_obj_t *ntp_btn_lbl = lv_label_create(ntp_btn);
     lv_label_set_text(ntp_btn_lbl, "FORCE SYNC");
     lv_obj_set_style_text_color(ntp_btn_lbl, G, 0);
-    lv_obj_set_style_text_font(ntp_btn_lbl, &lv_font_montserrat_12, 0);
+    lv_obj_set_style_text_font(ntp_btn_lbl, &lv_font_montserrat_16, 0);
     lv_obj_center(ntp_btn_lbl);
 
     make_section_label(cont, "SYSTEM INFO", 0, 0);

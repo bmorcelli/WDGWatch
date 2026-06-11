@@ -10,6 +10,7 @@ bool power_hal_screen_is_off(void);
 void power_hal_screen_toggle(void);
 void power_hal_light_sleep(void);
 void power_hal_deep_sleep(void);
+uint32_t power_hal_last_wakeup_time(void);
 
 uint8_t power_hal_battery_percent(void);
 bool power_hal_is_charging(void);

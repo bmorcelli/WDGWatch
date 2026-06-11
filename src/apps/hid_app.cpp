@@ -24,6 +24,9 @@ static lv_obj_t *btn_layout    = nullptr;
 static lv_obj_t *btn_badusb    = nullptr;
 static lv_obj_t *btn_badble    = nullptr;
 static lv_obj_t *btn_airmouse  = nullptr;
+static lv_obj_t *btn_mouse_left  = nullptr;
+static lv_obj_t *btn_mouse_right = nullptr;
+static lv_obj_t *scroll_area     = nullptr;
 
 static bool show_badusb_list   = false;
 static bool show_badble_list   = false;
@@ -50,7 +53,7 @@ static lv_obj_t* make_btn(lv_obj_t *par, int x, int y, int w, int h,
     lv_obj_t *l = lv_label_create(btn);
     lv_label_set_text(l, txt);
     lv_obj_set_style_text_color(l, G, 0);
-    lv_obj_set_style_text_font(l, &lv_font_montserrat_14, 0);
+    lv_obj_set_style_text_font(l, &lv_font_montserrat_18, 0);
     lv_obj_center(l);
     return btn;
 }
@@ -59,7 +62,7 @@ static lv_obj_t* section_label(lv_obj_t *par, int x, int y, const char *txt) {
     lv_obj_t *l = lv_label_create(par);
     lv_label_set_text(l, txt);
     lv_obj_set_style_text_color(l, D, 0);
-    lv_obj_set_style_text_font(l, &lv_font_montserrat_14, 0);
+    lv_obj_set_style_text_font(l, &lv_font_montserrat_18, 0);
     lv_obj_set_pos(l, x, y);
     return l;
 }
@@ -144,7 +147,7 @@ static void show_layout_selector(void) {
     lv_obj_t *title = lv_label_create(script_list);
     lv_label_set_text(title, "SELECT KEYBOARD LAYOUT");
     lv_obj_set_style_text_color(title, G, 0);
-    lv_obj_set_style_text_font(title, &lv_font_montserrat_12, 0);
+    lv_obj_set_style_text_font(title, &lv_font_montserrat_16, 0);
 
     for (int i = 0; i < KB_LAYOUT_COUNT; i++) {
         lv_obj_t *btn = lv_button_create(script_list);
@@ -155,7 +158,7 @@ static void show_layout_selector(void) {
 
         lv_obj_t *lbl = lv_label_create(btn);
         lv_label_set_text(lbl, hid_svc_get_layout_name((KeyboardLayoutId)i));
-        lv_obj_set_style_text_font(lbl, &lv_font_montserrat_12, 0);
+        lv_obj_set_style_text_font(lbl, &lv_font_montserrat_16, 0);
         lv_obj_center(lbl);
 
         if ((KeyboardLayoutId)i == hid_svc_get_layout()) {
@@ -181,7 +184,7 @@ static void show_layout_selector(void) {
     lv_obj_t *cl = lv_label_create(close_btn);
     lv_label_set_text(cl, LV_SYMBOL_CLOSE "  CANCEL");
     lv_obj_set_style_text_color(cl, D, 0);
-    lv_obj_set_style_text_font(cl, &lv_font_montserrat_12, 0);
+    lv_obj_set_style_text_font(cl, &lv_font_montserrat_16, 0);
     lv_obj_center(cl);
 
     show_layout_list = true;
@@ -232,13 +235,13 @@ static void show_script_list(bool ble_mode) {
     lv_obj_t *title = lv_label_create(script_list);
     lv_label_set_text(title, ble_mode ? "SELECT SCRIPT — BAD BLE" : "SELECT SCRIPT — BAD USB");
     lv_obj_set_style_text_color(title, G, 0);
-    lv_obj_set_style_text_font(title, &lv_font_montserrat_12, 0);
+    lv_obj_set_style_text_font(title, &lv_font_montserrat_16, 0);
 
     if (script_count == 0) {
         lv_obj_t *empty = lv_label_create(script_list);
         lv_label_set_text(empty, "No .txt files found\non SD /badusb/");
         lv_obj_set_style_text_color(empty, D, 0);
-        lv_obj_set_style_text_font(empty, &lv_font_montserrat_12, 0);
+        lv_obj_set_style_text_font(empty, &lv_font_montserrat_16, 0);
     } else {
         for (int i = 0; i < script_count; i++) {
             lv_obj_t *btn = lv_button_create(script_list);
@@ -252,7 +255,7 @@ static void show_script_list(bool ble_mode) {
             lv_obj_t *lbl = lv_label_create(btn);
             lv_label_set_text(lbl, script_names[i]);
             lv_obj_set_style_text_color(lbl, G, 0);
-            lv_obj_set_style_text_font(lbl, &lv_font_montserrat_12, 0);
+            lv_obj_set_style_text_font(lbl, &lv_font_montserrat_16, 0);
             lv_label_set_long_mode(lbl, LV_LABEL_LONG_SCROLL_CIRCULAR);
             lv_obj_set_width(lbl, LV_PCT(90));
             lv_obj_align(lbl, LV_ALIGN_LEFT_MID, 4, 0);
@@ -269,7 +272,7 @@ static void show_script_list(bool ble_mode) {
     lv_obj_t *cl = lv_label_create(close_btn);
     lv_label_set_text(cl, LV_SYMBOL_CLOSE "  CANCEL");
     lv_obj_set_style_text_color(cl, D, 0);
-    lv_obj_set_style_text_font(cl, &lv_font_montserrat_12, 0);
+    lv_obj_set_style_text_font(cl, &lv_font_montserrat_16, 0);
     lv_obj_center(cl);
 
     if (ble_mode) show_badble_list = true;
@@ -322,6 +325,27 @@ static void screenshot_cb(lv_event_t *e) {
     hid_media_screenshot();
 }
 
+static void mouse_left_cb(lv_event_t *e) {
+    (void)e; haptic_click();
+    hid_mouse_click(0x01);
+}
+
+static void mouse_right_cb(lv_event_t *e) {
+    (void)e; haptic_click();
+    hid_mouse_click(0x02);
+}
+
+static void scroll_area_cb(lv_event_t *e) {
+    lv_event_code_t code = lv_event_get_code(e);
+    if (code == LV_EVENT_SHORT_CLICKED) {
+        haptic_click();
+        hid_mouse_scroll(1);
+    } else if (code == LV_EVENT_LONG_PRESSED || code == LV_EVENT_LONG_PRESSED_REPEAT) {
+        haptic_click();
+        hid_mouse_scroll(-1);
+    }
+}
+
 static void airmouse_cb(lv_event_t *e) {
     (void)e;
     haptic_click();
@@ -357,14 +381,14 @@ void hid_app_create(lv_obj_t *parent) {
     lbl_title = lv_label_create(btn_title);
     lv_label_set_text(lbl_title, "[ HID CONTROLLER ]");
     lv_obj_set_style_text_color(lbl_title, G, 0);
-    lv_obj_set_style_text_font(lbl_title, &lv_font_montserrat_14, 0);
+    lv_obj_set_style_text_font(lbl_title, &lv_font_montserrat_18, 0);
     lv_obj_center(lbl_title);
     y += 38;
 
     lbl_conn = lv_label_create(scr);
     lv_label_set_text(lbl_conn, LV_SYMBOL_BLUETOOTH " NOT CONNECTED");
     lv_obj_set_style_text_color(lbl_conn, D, 0);
-    lv_obj_set_style_text_font(lbl_conn, &lv_font_montserrat_12, 0);
+    lv_obj_set_style_text_font(lbl_conn, &lv_font_montserrat_16, 0);
     lv_obj_align(lbl_conn, LV_ALIGN_TOP_MID, 0, y);
     y += 18;
 
@@ -375,7 +399,7 @@ void hid_app_create(lv_obj_t *parent) {
     char kb_buf[32];
     snprintf(kb_buf, sizeof(kb_buf), "KEYBOARD: %s", hid_svc_get_layout_name(hid_svc_get_layout()));
     btn_layout = make_btn(scr, x + cw - 140, y - 4, 140, 26, kb_buf, layout_click_cb);
-    lv_obj_set_style_text_font(lv_obj_get_child(btn_layout, 0), &lv_font_montserrat_10, 0);
+    lv_obj_set_style_text_font(lv_obj_get_child(btn_layout, 0), &lv_font_montserrat_14, 0);
     y += 24;
 
     btn_badusb = make_btn(scr, x, y, cw / 2 - 4, 40,
@@ -387,7 +411,7 @@ void hid_app_create(lv_obj_t *parent) {
     lbl_status = lv_label_create(scr);
     lv_label_set_text(lbl_status, "SD: /badusb/*.txt");
     lv_obj_set_style_text_color(lbl_status, D, 0);
-    lv_obj_set_style_text_font(lbl_status, &lv_font_montserrat_12, 0);
+    lv_obj_set_style_text_font(lbl_status, &lv_font_montserrat_16, 0);
     lv_obj_set_pos(lbl_status, x, y);
     y += 18;
 
@@ -407,12 +431,49 @@ void hid_app_create(lv_obj_t *parent) {
 
     btn_airmouse = make_btn(scr, x, y, cw, 40,
              LV_SYMBOL_EYE_OPEN "  AIR MOUSE — START / STOP", airmouse_cb);
-    y += 48;
+    y += 45;
+
+    btn_mouse_left = make_btn(scr, x, y, 95, 45, "LEFT", mouse_left_cb);
+
+    scroll_area = lv_obj_create(scr);
+    lv_obj_set_size(scroll_area, 130, 45);
+    lv_obj_set_pos(scroll_area, x + 95 + 10, y);
+    lv_obj_set_style_bg_color(scroll_area, BG, 0);
+    lv_obj_set_style_border_color(scroll_area, G, 0);
+    lv_obj_set_style_border_width(scroll_area, 1, 0);
+    lv_obj_set_style_radius(scroll_area, 0, 0);
+    lv_obj_set_style_bg_color(scroll_area, G, LV_STATE_PRESSED);
+    lv_obj_set_style_bg_opa(scroll_area, 40, LV_STATE_PRESSED);
+    lv_obj_add_flag(scroll_area, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_clear_flag(scroll_area, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_add_event_cb(scroll_area, scroll_area_cb, LV_EVENT_ALL, nullptr);
+
+    lv_obj_t *lbl_scroll = lv_label_create(scroll_area);
+    lv_label_set_text(lbl_scroll, "SCROLL");
+    lv_obj_set_style_text_color(lbl_scroll, G, 0);
+    lv_obj_set_style_text_font(lbl_scroll, &lv_font_montserrat_18, 0);
+    lv_obj_center(lbl_scroll);
+
+    btn_mouse_right = make_btn(scr, x + 95 + 10 + 130 + 10, y, 95, 45, "RIGHT", mouse_right_cb);
+
+    lv_obj_set_style_bg_color(btn_mouse_left, BG, LV_STATE_DISABLED);
+    lv_obj_set_style_border_color(btn_mouse_left, D, LV_STATE_DISABLED);
+    lv_obj_set_style_text_color(lv_obj_get_child(btn_mouse_left, 0), D, LV_STATE_DISABLED);
+
+    lv_obj_set_style_bg_color(scroll_area, BG, LV_STATE_DISABLED);
+    lv_obj_set_style_border_color(scroll_area, D, LV_STATE_DISABLED);
+    lv_obj_set_style_text_color(lbl_scroll, D, LV_STATE_DISABLED);
+
+    lv_obj_set_style_bg_color(btn_mouse_right, BG, LV_STATE_DISABLED);
+    lv_obj_set_style_border_color(btn_mouse_right, D, LV_STATE_DISABLED);
+    lv_obj_set_style_text_color(lv_obj_get_child(btn_mouse_right, 0), D, LV_STATE_DISABLED);
+
+    y += 50;
 
     lbl_airmouse = lv_label_create(scr);
     lv_label_set_text(lbl_airmouse, "Gyro mouse  |  OFF");
     lv_obj_set_style_text_color(lbl_airmouse, D, 0);
-    lv_obj_set_style_text_font(lbl_airmouse, &lv_font_montserrat_12, 0);
+    lv_obj_set_style_text_font(lbl_airmouse, &lv_font_montserrat_16, 0);
     lv_obj_set_pos(lbl_airmouse, x, y);
 }
 
@@ -530,6 +591,19 @@ void hid_app_update(void) {
             if (lbl) lv_obj_set_style_text_color(lbl, G, 0);
         }
     }
+
+    bool airmouse_on = hid_airmouse_is_active();
+    if (btn_mouse_left && btn_mouse_right && scroll_area) {
+        if (airmouse_on) {
+            lv_obj_remove_state(btn_mouse_left, LV_STATE_DISABLED);
+            lv_obj_remove_state(btn_mouse_right, LV_STATE_DISABLED);
+            lv_obj_remove_state(scroll_area, LV_STATE_DISABLED);
+        } else {
+            lv_obj_add_state(btn_mouse_left, LV_STATE_DISABLED);
+            lv_obj_add_state(btn_mouse_right, LV_STATE_DISABLED);
+            lv_obj_add_state(scroll_area, LV_STATE_DISABLED);
+        }
+    }
 }
 
 void hid_app_destroy(void) {
@@ -544,5 +618,8 @@ void hid_app_destroy(void) {
     btn_badusb    = nullptr;
     btn_badble    = nullptr;
     btn_airmouse  = nullptr;
+    btn_mouse_left = nullptr;
+    btn_mouse_right = nullptr;
+    scroll_area   = nullptr;
     if (scr) { lv_obj_delete(scr); scr = nullptr; }
 }

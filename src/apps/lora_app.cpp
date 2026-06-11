@@ -33,13 +33,13 @@ void lora_app_create(lv_obj_t *parent) {
     lv_obj_t *title = lv_label_create(scr);
     lv_label_set_text(title, "[ MESHCORE ]");
     lv_obj_set_style_text_color(title, G, 0);
-    lv_obj_set_style_text_font(title, &lv_font_montserrat_16, 0);
+    lv_obj_set_style_text_font(title, &lv_font_montserrat_20, 0);
     lv_obj_align(title, LV_ALIGN_TOP_MID, 0, y);
 
     y += 25;
     lbl_status = lv_label_create(scr);
     lv_obj_set_style_text_color(lbl_status, D, 0);
-    lv_obj_set_style_text_font(lbl_status, &lv_font_montserrat_14, 0);
+    lv_obj_set_style_text_font(lbl_status, &lv_font_montserrat_18, 0);
     lv_obj_set_pos(lbl_status, x, y);
 
     y += 22;
@@ -58,14 +58,14 @@ void lora_app_create(lv_obj_t *parent) {
     lv_obj_t *ml = lv_label_create(scr);
     lv_label_set_text(ml, "MESSAGES:");
     lv_obj_set_style_text_color(ml, D, 0);
-    lv_obj_set_style_text_font(ml, &lv_font_montserrat_12, 0);
+    lv_obj_set_style_text_font(ml, &lv_font_montserrat_16, 0);
     lv_obj_set_pos(ml, x, y);
 
     y += 16;
     lbl_msgs = lv_label_create(scr);
     lv_label_set_text(lbl_msgs, msg_buf[0] ? msg_buf : "No messages\n\nSend via web interface");
     lv_obj_set_style_text_color(lbl_msgs, G, 0);
-    lv_obj_set_style_text_font(lbl_msgs, &lv_font_montserrat_12, 0);
+    lv_obj_set_style_text_font(lbl_msgs, &lv_font_montserrat_16, 0);
     lv_obj_set_pos(lbl_msgs, x, y);
     lv_obj_set_width(lbl_msgs, 350);
     lv_label_set_long_mode(lbl_msgs, LV_LABEL_LONG_WRAP);

@@ -1,11 +1,19 @@
 #include "power_hal.h"
+#include <WiFi.h>
 #include "ble_uart_service.h"
 #include "../web/web_server.h"
+#include "../apps/gps_app.h"
+#include "../app_manager.h"
+#include "lora_service.h"
+#include "rf_service.h"
+#include "nfc_service.h"
+#include "hid_service.h"
 
 static uint32_t last_activity_ms = 0;
 static uint32_t sleep_timeout_ms = SLEEP_TIMEOUT_MS;
 static uint32_t deep_sleep_timeout_ms = DEEP_SLEEP_TIMEOUT;
 static bool screen_off = false;
+static uint32_t last_wakeup_ms = 0;
 
 void power_hal_init(void) {
     last_activity_ms = millis();
@@ -22,6 +30,15 @@ void power_hal_init(void) {
 
 void power_hal_check_sleep(void) {
     if (screen_off) return;
+
+
+    if (app_manager_current() == APP_HID) {
+        if (hid_svc_is_active() || hid_airmouse_is_active() || hid_svc_is_running_script()) {
+            power_hal_reset_activity();
+            return;
+        }
+    }
+
     uint32_t elapsed = millis() - last_activity_ms;
     if (elapsed > sleep_timeout_ms) {
         power_hal_screen_toggle();
@@ -32,15 +49,76 @@ void power_hal_reset_activity(void) {
     last_activity_ms = millis();
 }
 
+uint32_t power_hal_last_wakeup_time(void) {
+    return last_wakeup_ms;
+}
+
 void power_hal_light_sleep(void) {
+    if (gps_app_is_enabled() || instance.pmu.isVbusIn()) {
+        screen_off = true;
+        instance.setBrightness(0);
+        return;
+    }
+
+    screen_off = true;
     instance.setBrightness(0);
+
+
+    if (rf_jammer_is_active()) {
+        rf_jammer_stop();
+    }
+
+    if (nfc_svc_is_scanning() || nfc_svc_is_emulating()) {
+        nfc_svc_request_stop();
+    }
+
+
+    bool was_hid_active = hid_svc_is_active();
+    if (was_hid_active) {
+        hid_svc_stop();
+    }
+    bool was_ble_uart_active = ble_uart_is_active();
+    if (was_ble_uart_active) {
+        ble_uart_stop();
+    }
+
 
     instance.powerControl(POWER_GPS, false);
     instance.powerControl(POWER_NFC, false);
+    instance.powerControl(POWER_RADIO, false);
+    instance.powerControl(POWER_SPEAK, false);
 
-    instance.lightSleep((WakeupSource_t)(WAKEUP_SRC_POWER_KEY | WAKEUP_SRC_TOUCH_PANEL));
 
-    instance.powerControl(POWER_GPS, true);
+    WiFi.mode(WIFI_OFF);
+
+
+    instance.lightSleep((WakeupSource_t)(WAKEUP_SRC_POWER_KEY | WAKEUP_SRC_TOUCH_PANEL | WAKEUP_SRC_BOOT_BUTTON));
+
+
+    last_wakeup_ms = millis();
+    screen_off = false;
+
+
+    if (gps_app_is_enabled()) {
+        instance.powerControl(POWER_GPS, true);
+    }
+
+    AppId current = app_manager_current();
+    if (current == APP_NFC) {
+        instance.powerControl(POWER_NFC, true);
+    }
+    if (current == APP_RF || current == APP_LORA || lora_svc_is_running()) {
+        instance.powerControl(POWER_RADIO, true);
+    }
+
+
+    if (was_hid_active) {
+        hid_svc_start();
+    }
+    if (was_ble_uart_active) {
+        ble_uart_init();
+    }
+
     instance.setBrightness(PIPBOY_DEFAULT_BRIGHTNESS);
     power_hal_reset_activity();
 }
@@ -117,11 +195,11 @@ bool power_hal_screen_is_off(void) {
 }
 
 void power_hal_screen_toggle(void) {
-    screen_off = !screen_off;
     if (screen_off) {
-        instance.setBrightness(0);
-    } else {
+        screen_off = false;
         instance.setBrightness(PIPBOY_DEFAULT_BRIGHTNESS);
         power_hal_reset_activity();
+    } else {
+        power_hal_light_sleep();
     }
 }

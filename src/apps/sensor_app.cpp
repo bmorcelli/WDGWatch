@@ -154,7 +154,7 @@ void sensor_app_create(lv_obj_t *parent) {
     lv_obj_t *title = lv_label_create(scr);
     lv_label_set_text(title, "[ SENSOR ]");
     lv_obj_set_style_text_color(title, G, 0);
-    lv_obj_set_style_text_font(title, &lv_font_montserrat_16, 0);
+    lv_obj_set_style_text_font(title, &lv_font_montserrat_20, 0);
     lv_obj_align(title, LV_ALIGN_TOP_MID, 0, y);
 
     y += 25;
@@ -162,7 +162,7 @@ void sensor_app_create(lv_obj_t *parent) {
     lbl_batt = lv_label_create(scr);
     lv_label_set_text(lbl_batt, "BAT: --");
     lv_obj_set_style_text_color(lbl_batt, G, 0);
-    lv_obj_set_style_text_font(lbl_batt, &lv_font_montserrat_14, 0);
+    lv_obj_set_style_text_font(lbl_batt, &lv_font_montserrat_18, 0);
     lv_obj_set_pos(lbl_batt, x, y);
 
     y += 20;
@@ -170,7 +170,7 @@ void sensor_app_create(lv_obj_t *parent) {
     lbl_gps_sats = lv_label_create(scr);
     lv_label_set_text(lbl_gps_sats, "GPS: --");
     lv_obj_set_style_text_color(lbl_gps_sats, D, 0);
-    lv_obj_set_style_text_font(lbl_gps_sats, &lv_font_montserrat_14, 0);
+    lv_obj_set_style_text_font(lbl_gps_sats, &lv_font_montserrat_18, 0);
     lv_obj_set_pos(lbl_gps_sats, x, y);
 
     y += 20;
@@ -178,28 +178,28 @@ void sensor_app_create(lv_obj_t *parent) {
     lbl_heap = lv_label_create(scr);
     lv_label_set_text(lbl_heap, "HEAP: --");
     lv_obj_set_style_text_color(lbl_heap, D, 0);
-    lv_obj_set_style_text_font(lbl_heap, &lv_font_montserrat_12, 0);
+    lv_obj_set_style_text_font(lbl_heap, &lv_font_montserrat_16, 0);
     lv_obj_set_pos(lbl_heap, x, y);
 
     y += 16;
     lbl_uptime = lv_label_create(scr);
     lv_label_set_text(lbl_uptime, "UP: --");
     lv_obj_set_style_text_color(lbl_uptime, D, 0);
-    lv_obj_set_style_text_font(lbl_uptime, &lv_font_montserrat_12, 0);
+    lv_obj_set_style_text_font(lbl_uptime, &lv_font_montserrat_16, 0);
     lv_obj_set_pos(lbl_uptime, x, y);
 
     y += 25;
     lv_obj_t *imu_title = lv_label_create(scr);
     lv_label_set_text(imu_title, "IMU (BHI260AP)");
     lv_obj_set_style_text_color(imu_title, D, 0);
-    lv_obj_set_style_text_font(imu_title, &lv_font_montserrat_12, 0);
+    lv_obj_set_style_text_font(imu_title, &lv_font_montserrat_16, 0);
     lv_obj_set_pos(imu_title, x, y);
 
     y += 16;
     lbl_imu = lv_label_create(scr);
     lv_label_set_text(lbl_imu, "Roll: --  Pitch: --");
     lv_obj_set_style_text_color(lbl_imu, G, 0);
-    lv_obj_set_style_text_font(lbl_imu, &lv_font_montserrat_14, 0);
+    lv_obj_set_style_text_font(lbl_imu, &lv_font_montserrat_18, 0);
     lv_obj_set_pos(lbl_imu, x, y);
     lv_obj_set_width(lbl_imu, 360);
 
@@ -207,7 +207,7 @@ void sensor_app_create(lv_obj_t *parent) {
     lbl_compass_val = lv_label_create(scr);
     lv_label_set_text(lbl_compass_val, "HDG: --");
     lv_obj_set_style_text_color(lbl_compass_val, G, 0);
-    lv_obj_set_style_text_font(lbl_compass_val, &lv_font_montserrat_18, 0);
+    lv_obj_set_style_text_font(lbl_compass_val, &lv_font_montserrat_22, 0);
     lv_obj_set_pos(lbl_compass_val, x, y);
 
     y += 15;
@@ -242,7 +242,7 @@ void sensor_app_create(lv_obj_t *parent) {
         char db[5]; snprintf(db, sizeof(db), "%d", i * 30);
         lv_label_set_text(deg_labels[i], db);
         lv_obj_set_style_text_color(deg_labels[i], D, 0);
-        lv_obj_set_style_text_font(deg_labels[i], &lv_font_montserrat_10, 0);
+        lv_obj_set_style_text_font(deg_labels[i], &lv_font_montserrat_14, 0);
         lv_obj_set_pos(deg_labels[i], compass_cx, compass_cy);
     }
 
@@ -252,14 +252,14 @@ void sensor_app_create(lv_obj_t *parent) {
         dir_labels[i] = lv_label_create(scr);
         lv_label_set_text(dir_labels[i], dir_texts[i]);
         lv_obj_set_style_text_color(dir_labels[i], dir_colors[i], 0);
-        lv_obj_set_style_text_font(dir_labels[i], &lv_font_montserrat_18, 0);
+        lv_obj_set_style_text_font(dir_labels[i], &lv_font_montserrat_22, 0);
         lv_obj_set_pos(dir_labels[i], compass_cx, compass_cy);
     }
 
     top_marker = lv_label_create(scr);
     lv_label_set_text(top_marker, LV_SYMBOL_DOWN);
     lv_obj_set_style_text_color(top_marker, lv_color_hex(0xFF3333), 0);
-    lv_obj_set_style_text_font(top_marker, &lv_font_montserrat_14, 0);
+    lv_obj_set_style_text_font(top_marker, &lv_font_montserrat_18, 0);
     lv_obj_set_pos(top_marker, compass_cx - 7, compass_cy - COMPASS_R - 22);
 
     static lv_point_precise_t ch_pts[2], cv_pts[2];
@@ -289,7 +289,7 @@ void sensor_app_create(lv_obj_t *parent) {
     lv_obj_t *cl = lv_label_create(cal_btn);
     lv_label_set_text(cl, "POINT N + CALIBRATE");
     lv_obj_set_style_text_color(cl, D, 0);
-    lv_obj_set_style_text_font(cl, &lv_font_montserrat_10, 0);
+    lv_obj_set_style_text_font(cl, &lv_font_montserrat_14, 0);
     lv_obj_center(cl);
 
     load_calibration();

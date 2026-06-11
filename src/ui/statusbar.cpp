@@ -23,27 +23,27 @@ void statusbar_create(lv_obj_t *parent) {
     lbl_lora = lv_label_create(bar_container);
     lv_label_set_text(lbl_lora, "LR");
     lv_obj_set_style_text_color(lbl_lora, PIPBOY_GREEN_DIM_16, 0);
-    lv_obj_set_style_text_font(lbl_lora, &lv_font_montserrat_10, 0);
+    lv_obj_set_style_text_font(lbl_lora, &lv_font_montserrat_14, 0);
 
     lbl_gps = lv_label_create(bar_container);
     lv_label_set_text(lbl_gps, LV_SYMBOL_GPS);
     lv_obj_set_style_text_color(lbl_gps, PIPBOY_GREEN_DIM_16, 0);
-    lv_obj_set_style_text_font(lbl_gps, &lv_font_montserrat_10, 0);
+    lv_obj_set_style_text_font(lbl_gps, &lv_font_montserrat_14, 0);
 
     lbl_wifi = lv_label_create(bar_container);
     lv_label_set_text(lbl_wifi, LV_SYMBOL_WIFI);
     lv_obj_set_style_text_color(lbl_wifi, PIPBOY_GREEN_DIM_16, 0);
-    lv_obj_set_style_text_font(lbl_wifi, &lv_font_montserrat_10, 0);
+    lv_obj_set_style_text_font(lbl_wifi, &lv_font_montserrat_14, 0);
 
     lbl_ble = lv_label_create(bar_container);
     lv_label_set_text(lbl_ble, LV_SYMBOL_BLUETOOTH);
     lv_obj_set_style_text_color(lbl_ble, PIPBOY_GREEN_DIM_16, 0);
-    lv_obj_set_style_text_font(lbl_ble, &lv_font_montserrat_10, 0);
+    lv_obj_set_style_text_font(lbl_ble, &lv_font_montserrat_14, 0);
 
     lbl_bat = lv_label_create(bar_container);
     lv_label_set_text(lbl_bat, LV_SYMBOL_BATTERY_FULL " 100%");
     lv_obj_set_style_text_color(lbl_bat, PIPBOY_GREEN_16, 0);
-    lv_obj_set_style_text_font(lbl_bat, &lv_font_montserrat_10, 0);
+    lv_obj_set_style_text_font(lbl_bat, &lv_font_montserrat_14, 0);
 }
 
 void statusbar_update_battery(uint8_t percent, bool charging) {

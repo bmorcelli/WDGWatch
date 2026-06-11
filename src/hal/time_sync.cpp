@@ -56,11 +56,29 @@ static void try_next_network(void) {
     wifi_start_time = millis();
 }
 
+
+void time_sync_set_timezone(const char *tz) {
+    Preferences prefs;
+    prefs.begin("timesync", false);
+    prefs.putString("tz", tz);
+    prefs.end();
+    configTzTime(tz, "pool.ntp.org", "time.nist.gov", "time.google.com");
+    Serial.printf("[TIME] Timezone updated to: %s\n", tz);
+}
+
+String time_sync_get_timezone(void) {
+    Preferences prefs;
+    prefs.begin("timesync", true);
+    String tz = prefs.getString("tz", "GST-4");
+    prefs.end();
+    return tz;
+}
+
 void time_sync_init(const WiFiNetwork *nets, int count) {
     networks = nets;
     network_count = count;
     current_network = 0;
-    synced = false;
+    synced = true;
     wifi_connected = false;
     wifi_enabled = false;
     ntp_configured = false;
@@ -68,29 +86,12 @@ void time_sync_init(const WiFiNetwork *nets, int count) {
 
     sntp_set_time_sync_notification_cb(ntp_time_sync_cb);
 
-    Preferences prefs;
-    prefs.begin("timesync", true);
-    bool previously_synced = prefs.getBool("synced", false);
-    prefs.end();
-
-    if (previously_synced) {
-
-        synced = true;
-        Serial.println("[TIME] RTC valid from NVS — skipping WiFi, no IMU conflict.");
-        return;
-    }
-
-    wifi_start_time = millis() + 3000;
-    if (count > 0) {
-
-        delay(500);
-        try_next_network();
-    }
+    String tz = time_sync_get_timezone();
+    configTzTime(tz.c_str(), "pool.ntp.org", "time.nist.gov", "time.google.com");
 }
 
 void time_sync_loop(void) {
     if (synced) return;
-
     if (ntp_got_time) {
         ntp_got_time = false;
         instance.rtc.hwClockWrite();
@@ -124,7 +125,8 @@ void time_sync_loop(void) {
         Serial.printf("[TIME] WiFi connected: %s (IP: %s)\n",
             networks[current_network].ssid, WiFi.localIP().toString().c_str());
 
-        configTzTime("GST-4",
+        String tz = time_sync_get_timezone();
+        configTzTime(tz.c_str(),
                      "pool.ntp.org", "time.nist.gov", "time.google.com");
         ntp_configured = true;
         Serial.println("[TIME] NTP request sent...");

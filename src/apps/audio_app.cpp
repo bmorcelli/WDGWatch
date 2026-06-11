@@ -118,28 +118,28 @@ void audio_app_create(lv_obj_t *parent) {
     lv_obj_t *title = lv_label_create(scr);
     lv_label_set_text(title, "[ AUDIO RECORDER ]");
     lv_obj_set_style_text_color(title, G, 0);
-    lv_obj_set_style_text_font(title, &lv_font_montserrat_16, 0);
+    lv_obj_set_style_text_font(title, &lv_font_montserrat_20, 0);
     lv_obj_align(title, LV_ALIGN_TOP_MID, 0, y);
 
     y += 30;
     lbl_status = lv_label_create(scr);
     lv_label_set_text(lbl_status, "READY");
     lv_obj_set_style_text_color(lbl_status, G, 0);
-    lv_obj_set_style_text_font(lbl_status, &lv_font_montserrat_18, 0);
+    lv_obj_set_style_text_font(lbl_status, &lv_font_montserrat_22, 0);
     lv_obj_align(lbl_status, LV_ALIGN_TOP_MID, 0, y);
 
     y += 30;
     lbl_time = lv_label_create(scr);
     lv_label_set_text(lbl_time, "0.0s");
     lv_obj_set_style_text_color(lbl_time, D, 0);
-    lv_obj_set_style_text_font(lbl_time, &lv_font_montserrat_14, 0);
+    lv_obj_set_style_text_font(lbl_time, &lv_font_montserrat_18, 0);
     lv_obj_align(lbl_time, LV_ALIGN_TOP_MID, 0, y);
 
     y += 25;
     lv_obj_t *ll = lv_label_create(scr);
     lv_label_set_text(ll, "LEVEL");
     lv_obj_set_style_text_color(ll, D, 0);
-    lv_obj_set_style_text_font(ll, &lv_font_montserrat_12, 0);
+    lv_obj_set_style_text_font(ll, &lv_font_montserrat_16, 0);
     lv_obj_set_pos(ll, x, y);
 
     bar_level = lv_bar_create(scr);
@@ -168,7 +168,7 @@ void audio_app_create(lv_obj_t *parent) {
         MAX_REC_SECONDS, AUDIO_BUF_SIZE / 1024);
     lv_label_set_text(info, ib);
     lv_obj_set_style_text_color(info, D, 0);
-    lv_obj_set_style_text_font(info, &lv_font_montserrat_12, 0);
+    lv_obj_set_style_text_font(info, &lv_font_montserrat_16, 0);
     lv_obj_set_pos(info, x, y);
 }
 

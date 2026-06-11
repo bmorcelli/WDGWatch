@@ -229,7 +229,7 @@ static lv_obj_t* make_btn(lv_obj_t *par, int x, int y, int w, int h,
     lv_obj_t *l = lv_label_create(btn);
     lv_label_set_text(l, txt);
     lv_obj_set_style_text_color(l, G, 0);
-    lv_obj_set_style_text_font(l, &lv_font_montserrat_12, 0);
+    lv_obj_set_style_text_font(l, &lv_font_montserrat_16, 0);
     lv_obj_center(l);
     return btn;
 }
@@ -307,7 +307,7 @@ static void update_pet_visuals(void) {
         poop_objs[i] = lv_label_create(pet_viewport);
         lv_label_set_text(poop_objs[i], "~=");
         lv_obj_set_style_text_color(poop_objs[i], D, 0);
-        lv_obj_set_style_text_font(poop_objs[i], &lv_font_montserrat_12, 0);
+        lv_obj_set_style_text_font(poop_objs[i], &lv_font_montserrat_16, 0);
         lv_obj_set_pos(poop_objs[i], 25 + (i * 35), 145);
     }
 }
@@ -324,7 +324,7 @@ void pet_app_create(lv_obj_t *parent) {
     lv_obj_t *title = lv_label_create(scr);
     lv_label_set_text(title, "[ SCR-PET ]");
     lv_obj_set_style_text_color(title, G, 0);
-    lv_obj_set_style_text_font(title, &lv_font_montserrat_16, 0);
+    lv_obj_set_style_text_font(title, &lv_font_montserrat_20, 0);
     lv_obj_align(title, LV_ALIGN_TOP_MID, 0, SAFE_TOP);
 
     load_pet_state();
@@ -392,7 +392,7 @@ void pet_app_create(lv_obj_t *parent) {
     pet_expression = lv_label_create(pet_face);
     lv_label_set_text(pet_expression, "o_o");
     lv_obj_set_style_text_color(pet_expression, G, 0);
-    lv_obj_set_style_text_font(pet_expression, &lv_font_montserrat_16, 0);
+    lv_obj_set_style_text_font(pet_expression, &lv_font_montserrat_20, 0);
     lv_obj_center(pet_expression);
 
     int pin_y_offsets[] = {25, 45, 65};
@@ -422,7 +422,7 @@ void pet_app_create(lv_obj_t *parent) {
     lv_obj_t *lbl_hp = lv_label_create(scr);
     lv_label_set_text(lbl_hp, "HP:");
     lv_obj_set_style_text_color(lbl_hp, D, 0);
-    lv_obj_set_style_text_font(lbl_hp, &lv_font_montserrat_12, 0);
+    lv_obj_set_style_text_font(lbl_hp, &lv_font_montserrat_16, 0);
     lv_obj_set_pos(lbl_hp, 25, 275);
 
     bar_health = lv_bar_create(scr);
@@ -432,13 +432,13 @@ void pet_app_create(lv_obj_t *parent) {
 
     lbl_health_val = lv_label_create(scr);
     lv_obj_set_style_text_color(lbl_health_val, G, 0);
-    lv_obj_set_style_text_font(lbl_health_val, &lv_font_montserrat_10, 0);
+    lv_obj_set_style_text_font(lbl_health_val, &lv_font_montserrat_14, 0);
     lv_obj_set_pos(lbl_health_val, 55 + BAR_W + 5, 276);
 
     lv_obj_t *lbl_eng = lv_label_create(scr);
     lv_label_set_text(lbl_eng, "ENG:");
     lv_obj_set_style_text_color(lbl_eng, D, 0);
-    lv_obj_set_style_text_font(lbl_eng, &lv_font_montserrat_12, 0);
+    lv_obj_set_style_text_font(lbl_eng, &lv_font_montserrat_16, 0);
     lv_obj_set_pos(lbl_eng, 25, 305);
 
     bar_energy = lv_bar_create(scr);
@@ -448,13 +448,13 @@ void pet_app_create(lv_obj_t *parent) {
 
     lbl_energy_val = lv_label_create(scr);
     lv_obj_set_style_text_color(lbl_energy_val, G, 0);
-    lv_obj_set_style_text_font(lbl_energy_val, &lv_font_montserrat_10, 0);
+    lv_obj_set_style_text_font(lbl_energy_val, &lv_font_montserrat_14, 0);
     lv_obj_set_pos(lbl_energy_val, 55 + BAR_W + 5, 306);
 
     lv_obj_t *lbl_cln = lv_label_create(scr);
     lv_label_set_text(lbl_cln, "CLN:");
     lv_obj_set_style_text_color(lbl_cln, D, 0);
-    lv_obj_set_style_text_font(lbl_cln, &lv_font_montserrat_12, 0);
+    lv_obj_set_style_text_font(lbl_cln, &lv_font_montserrat_16, 0);
     lv_obj_set_pos(lbl_cln, 215, 275);
 
     bar_clean = lv_bar_create(scr);
@@ -464,13 +464,13 @@ void pet_app_create(lv_obj_t *parent) {
 
     lbl_clean_val = lv_label_create(scr);
     lv_obj_set_style_text_color(lbl_clean_val, G, 0);
-    lv_obj_set_style_text_font(lbl_clean_val, &lv_font_montserrat_10, 0);
+    lv_obj_set_style_text_font(lbl_clean_val, &lv_font_montserrat_14, 0);
     lv_obj_set_pos(lbl_clean_val, 245 + BAR_W + 5, 276);
 
     lv_obj_t *lbl_xp = lv_label_create(scr);
     lv_label_set_text(lbl_xp, "XP:");
     lv_obj_set_style_text_color(lbl_xp, D, 0);
-    lv_obj_set_style_text_font(lbl_xp, &lv_font_montserrat_12, 0);
+    lv_obj_set_style_text_font(lbl_xp, &lv_font_montserrat_16, 0);
     lv_obj_set_pos(lbl_xp, 215, 305);
 
     bar_xp = lv_bar_create(scr);
@@ -480,7 +480,7 @@ void pet_app_create(lv_obj_t *parent) {
 
     lbl_xp_val = lv_label_create(scr);
     lv_obj_set_style_text_color(lbl_xp_val, G, 0);
-    lv_obj_set_style_text_font(lbl_xp_val, &lv_font_montserrat_10, 0);
+    lv_obj_set_style_text_font(lbl_xp_val, &lv_font_montserrat_14, 0);
     lv_obj_set_pos(lbl_xp_val, 245 + BAR_W + 5, 306);
 
     lv_obj_t *console_box = lv_obj_create(scr);
@@ -494,7 +494,7 @@ void pet_app_create(lv_obj_t *parent) {
 
     lbl_console = lv_label_create(console_box);
     lv_obj_set_style_text_color(lbl_console, G, 0);
-    lv_obj_set_style_text_font(lbl_console, &lv_font_montserrat_12, 0);
+    lv_obj_set_style_text_font(lbl_console, &lv_font_montserrat_16, 0);
     lv_obj_align(lbl_console, LV_ALIGN_LEFT_MID, 10, 0);
 
     update_bars();

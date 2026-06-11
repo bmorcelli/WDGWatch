@@ -16,6 +16,9 @@
 #include <USBHIDConsumerControl.h>
 #include "tusb.h"
 #include <hal/usb_serial_jtag_ll.h>
+#include <soc/rtc_cntl_reg.h>
+#include <soc/usb_serial_jtag_reg.h>
+#include <driver/periph_ctrl.h>
 
 #include "keys.h"
 #include "KeyboardLayout.h"
@@ -62,7 +65,29 @@ static void stop_usb_hid(void) {
         usb_media.end();
         usb_started = false;
 
-        usb_serial_jtag_ll_enable_pad(true);
+
+        periph_module_reset(PERIPH_USB_MODULE);
+        periph_module_disable(PERIPH_USB_MODULE);
+
+
+        CLEAR_PERI_REG_MASK(RTC_CNTL_USB_CONF_REG, (RTC_CNTL_SW_HW_USB_PHY_SEL | RTC_CNTL_SW_USB_PHY_SEL | RTC_CNTL_USB_PAD_ENABLE));
+
+
+        CLEAR_PERI_REG_MASK(USB_SERIAL_JTAG_CONF0_REG, USB_SERIAL_JTAG_PHY_SEL);
+
+
+        CLEAR_PERI_REG_MASK(USB_SERIAL_JTAG_CONF0_REG, USB_SERIAL_JTAG_USB_PAD_ENABLE);
+
+
+        pinMode(19, OUTPUT_OPEN_DRAIN);
+        pinMode(20, OUTPUT_OPEN_DRAIN);
+        digitalWrite(19, LOW);
+        digitalWrite(20, LOW);
+        vTaskDelay(pdMS_TO_TICKS(50));
+
+
+        SET_PERI_REG_MASK(USB_SERIAL_JTAG_CONF0_REG, USB_SERIAL_JTAG_USB_PAD_ENABLE);
+
         vTaskDelay(pdMS_TO_TICKS(200));
         Serial.println(TAG " USB Serial/JTAG restored");
     }
@@ -91,9 +116,11 @@ static const char* LAYOUT_NAMES[KB_LAYOUT_COUNT] = {
 };
 
 static float imu_pitch = 0.0f, imu_roll = 0.0f;
-static const float SENSITIVITY = 0.87f;
-static const float DEADZONE    = 2.0f;
-static const float FILTER_K    = 0.3f;
+static float roll_center = 0.0f;
+static float pitch_center = 0.0f;
+static const float SENSITIVITY = 0.22f;
+static const float DEADZONE    = 3.0f;
+static const float FILTER_K    = 0.2f;
 static float last_x = 0.0f, last_y = 0.0f;
 static bool imu_running = false;
 
@@ -163,10 +190,11 @@ static const uint8_t HID_DESC[] = {
     0x05, 0x01,
     0x09, 0x30,
     0x09, 0x31,
+    0x09, 0x38,
     0x15, 0x81,
     0x25, 0x7F,
     0x75, 0x08,
-    0x95, 0x02,
+    0x95, 0x03,
     0x81, 0x06,
     0xC0, 0xC0
 };
@@ -260,17 +288,33 @@ static void airmouse_task(void *arg) {
 
     Serial.println(TAG " Air Mouse task started");
 
+    int timeout = 50;
+    while (timeout > 0 && imu_roll == 0.0f && imu_pitch == 0.0f) {
+        vTaskDelay(pdMS_TO_TICKS(10));
+        timeout--;
+    }
+    roll_center = imu_roll;
+    pitch_center = imu_pitch;
+
     while (airmouse_active) {
-        last_x = last_x + FILTER_K * (imu_roll  - last_x);
-        last_y = last_y + FILTER_K * (imu_pitch - last_y);
+        float dev_x = imu_roll - roll_center;
+        if (dev_x > 180.0f) dev_x -= 360.0f;
+        else if (dev_x < -180.0f) dev_x += 360.0f;
+
+        float dev_y = imu_pitch - pitch_center;
+        if (dev_y > 180.0f) dev_y -= 360.0f;
+        else if (dev_y < -180.0f) dev_y += 360.0f;
+
+        last_x = last_x + FILTER_K * (dev_x  - last_x);
+        last_y = last_y + FILTER_K * (dev_y - last_y);
 
         int8_t moveX = 0, moveY = 0;
-        if (fabsf(last_x) > DEADZONE) {
-            float v = last_x > 0 ? last_x - DEADZONE : last_x + DEADZONE;
-            moveX = (int8_t)constrain((int)(v * SENSITIVITY), -20, 20);
-        }
         if (fabsf(last_y) > DEADZONE) {
             float v = last_y > 0 ? last_y - DEADZONE : last_y + DEADZONE;
+            moveX = (int8_t)constrain((int)(-v * SENSITIVITY), -20, 20);
+        }
+        if (fabsf(last_x) > DEADZONE) {
+            float v = last_x > 0 ? last_x - DEADZONE : last_x + DEADZONE;
             moveY = (int8_t)constrain((int)(v * SENSITIVITY), -20, 20);
         }
 
@@ -286,11 +330,73 @@ static void airmouse_task(void *arg) {
     vTaskDelete(nullptr);
 }
 
+void hid_airmouse_calibrate(void) {
+    roll_center = imu_roll;
+    pitch_center = imu_pitch;
+}
+
+void hid_mouse_click(uint8_t buttons) {
+    if (hid_svc_is_usb_connected()) {
+        if (buttons & 0x01) {
+            usb_mouse.press(MOUSE_LEFT);
+            delay(10);
+            usb_mouse.release(MOUSE_LEFT);
+        }
+        if (buttons & 0x02) {
+            usb_mouse.press(MOUSE_RIGHT);
+            delay(10);
+            usb_mouse.release(MOUSE_RIGHT);
+        }
+    } else if (hid_connected && mouse_input) {
+        uint8_t report_press[4] = { buttons, 0, 0, 0 };
+        mouse_input->notify(report_press, sizeof(report_press));
+        delay(10);
+        uint8_t report_release[4] = { 0, 0, 0, 0 };
+        mouse_input->notify(report_release, sizeof(report_release));
+    }
+}
+
+void hid_mouse_scroll(int8_t wheel) {
+    if (hid_svc_is_usb_connected()) {
+        usb_mouse.move(0, 0, wheel);
+    } else if (hid_connected && mouse_input) {
+        uint8_t report[4] = { 0, 0, 0, (uint8_t)wheel };
+        mouse_input->notify(report, sizeof(report));
+    }
+}
+
 struct ScriptTaskArgs {
     char path[128];
     bool is_ble;
 };
 static ScriptTaskArgs script_args;
+
+static uint8_t get_keycode_from_string(String key) {
+    key.trim();
+    key.toUpperCase();
+    if (key.length() == 1) {
+        char k = key.charAt(0);
+        if (k >= 'A' && k <= 'Z') return 4 + (k - 'A');
+        if (k >= '1' && k <= '9') return 30 + (k - '1');
+        if (k == '0') return 39;
+    }
+    if (key == "ENTER") return 0x28;
+    if (key == "ESCAPE" || key == "ESC") return 0x29;
+    if (key == "BACKSPACE") return 0x2A;
+    if (key == "TAB") return 0x2B;
+    if (key == "SPACE") return 0x2C;
+    if (key == "UP" || key == "UPARROW") return 0x52;
+    if (key == "DOWN" || key == "DOWNARROW") return 0x51;
+    if (key == "LEFT" || key == "LEFTARROW") return 0x50;
+    if (key == "RIGHT" || key == "RIGHTARROW") return 0x4F;
+    if (key == "PRINTSCREEN") return 0x46;
+    if (key == "DELETE") return 0x4C;
+    if (key.startsWith("F")) {
+        int num = key.substring(1).toInt();
+        if (num >= 1 && num <= 12) return 0x3A + (num - 1);
+    }
+    return 0;
+}
 
 static void script_task(void *arg) {
     ScriptTaskArgs *args = (ScriptTaskArgs *)arg;
@@ -332,14 +438,25 @@ static void script_task(void *arg) {
 
     vTaskDelay(pdMS_TO_TICKS(500));
 
-    while (f.available() && !script_abort) {
-        String line = f.readStringUntil('\n');
+    uint32_t default_delay_ms = 0;
+
+    auto execute_script_line = [&](String line) {
         line.trim();
-        if (line.length() == 0 || line.startsWith("REM") || line.startsWith("//")) continue;
+        if (line.length() == 0 || line.startsWith("REM") || line.startsWith("//")) return;
+
+        if (line.startsWith("DEFAULTDELAY ") || line.startsWith("DEFAULT_DELAY ")) {
+            int sp = line.indexOf(' ');
+            default_delay_ms = line.substring(sp + 1).toInt();
+            return;
+        }
 
         if (line.startsWith("DELAY ")) {
-            delay(line.substring(6).toInt());
-        } else if (line.startsWith("STRING ")) {
+            int sp = line.indexOf(' ');
+            vTaskDelay(pdMS_TO_TICKS(line.substring(sp + 1).toInt()));
+            return;
+        }
+
+        if (line.startsWith("STRING ")) {
             String txt = line.substring(7);
             for (int i = 0; i < (int)txt.length(); i++) {
                 char c = txt[i];
@@ -353,7 +470,7 @@ static void script_task(void *arg) {
                         send_keyboard(mod, keycode);
                     }
                 }
-                vTaskDelay(pdMS_TO_TICKS(50));
+                vTaskDelay(pdMS_TO_TICKS(30));
             }
         } else if (line == "ENTER") {
             send_keyboard(0, 0x28);
@@ -363,21 +480,86 @@ static void script_task(void *arg) {
             send_keyboard(0, 0x29);
         } else if (line == "BACKSPACE") {
             send_keyboard(0, 0x2A);
-        } else if (line.startsWith("GUI ") || line.startsWith("WINDOWS ")) {
-            int sp = line.indexOf(' ');
-            char k = line.charAt(sp + 1);
-            uint8_t kc = 0;
-            if (k >= 'a' && k <= 'z') kc = 4 + (k - 'a');
-            else if (k >= 'A' && k <= 'Z') kc = 4 + (k - 'A');
-            send_keyboard(0x08, kc);
-        } else if (line.startsWith("CTRL-ALT ") || line.startsWith("CTRL-SHIFT ")) {
-            bool isAlt = line.startsWith("CTRL-ALT ");
-            int sp = line.lastIndexOf(' ');
-            char k = line.charAt(sp + 1);
-            uint8_t kc = 0;
-            if (k >= 'a' && k <= 'z') kc = 4 + (k - 'a');
-            else if (k >= 'A' && k <= 'Z') kc = 4 + (k - 'A');
-            send_keyboard(isAlt ? 0x05 : 0x03, kc);
+        } else if (line == "SPACE") {
+            send_keyboard(0, 0x2C);
+        } else if (line == "UP" || line == "UPARROW") {
+            send_keyboard(0, 0x52);
+        } else if (line == "DOWN" || line == "DOWNARROW") {
+            send_keyboard(0, 0x51);
+        } else if (line == "LEFT" || line == "LEFTARROW") {
+            send_keyboard(0, 0x50);
+        } else if (line == "RIGHT" || line == "RIGHTARROW") {
+            send_keyboard(0, 0x4F);
+        } else {
+            uint8_t mod = 0;
+            String key_part = "";
+            bool is_mod = false;
+
+            if (line.startsWith("CTRL-ALT ") || line.startsWith("CONTROL-ALT ")) {
+                mod = 0x01 | 0x04;
+                key_part = line.substring(line.indexOf(' ') + 1);
+                is_mod = true;
+            } else if (line.startsWith("CTRL-SHIFT ") || line.startsWith("CONTROL-SHIFT ")) {
+                mod = 0x01 | 0x02;
+                key_part = line.substring(line.indexOf(' ') + 1);
+                is_mod = true;
+            } else if (line.startsWith("ALT-SHIFT ")) {
+                mod = 0x04 | 0x02;
+                key_part = line.substring(line.indexOf(' ') + 1);
+                is_mod = true;
+            } else if (line.startsWith("CTRL ") || line.startsWith("CONTROL ")) {
+                mod = 0x01;
+                key_part = line.substring(line.indexOf(' ') + 1);
+                is_mod = true;
+            } else if (line.startsWith("ALT ")) {
+                mod = 0x04;
+                key_part = line.substring(line.indexOf(' ') + 1);
+                is_mod = true;
+            } else if (line.startsWith("SHIFT ")) {
+                mod = 0x02;
+                key_part = line.substring(line.indexOf(' ') + 1);
+                is_mod = true;
+            } else if (line.startsWith("GUI ") || line.startsWith("WINDOWS ")) {
+                mod = 0x08;
+                key_part = line.substring(line.indexOf(' ') + 1);
+                is_mod = true;
+            } else if (line == "CTRL" || line == "CONTROL") {
+                mod = 0x01;
+                is_mod = true;
+            } else if (line == "ALT") {
+                mod = 0x04;
+                is_mod = true;
+            } else if (line == "SHIFT") {
+                mod = 0x02;
+                is_mod = true;
+            } else if (line == "GUI" || line == "WINDOWS") {
+                mod = 0x08;
+                is_mod = true;
+            } else if (line == "CTRL-ALT-DEL" || line == "CONTROL-ALT-DEL" || line == "CTRL-ALT-DELETE" || line == "CONTROL-ALT-DELETE") {
+                send_keyboard(0x01 | 0x04, 0x4C);
+            }
+
+            if (is_mod) {
+                uint8_t kc = 0;
+                if (key_part.length() > 0) {
+                    kc = get_keycode_from_string(key_part);
+                }
+                send_keyboard(mod, kc);
+            }
+        }
+
+        if (default_delay_ms > 0) {
+            vTaskDelay(pdMS_TO_TICKS(default_delay_ms));
+        } else {
+            vTaskDelay(pdMS_TO_TICKS(20));
+        }
+    };
+
+    while (f.available() && !script_abort) {
+        String line = f.readStringUntil('\n');
+        line.trim();
+        if (line.length() > 0) {
+            execute_script_line(line);
         }
         vTaskDelay(pdMS_TO_TICKS(10));
     }

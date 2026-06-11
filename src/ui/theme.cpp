@@ -18,7 +18,7 @@ void pipboy_theme_init(void) {
 
     lv_style_init(&style_title);
     lv_style_set_text_color(&style_title, PIPBOY_GREEN_16);
-    lv_style_set_text_font(&style_title, &lv_font_montserrat_20);
+    lv_style_set_text_font(&style_title, &lv_font_montserrat_24);
 
     lv_style_init(&style_panel);
     lv_style_set_bg_color(&style_panel, PIPBOY_BG_16);

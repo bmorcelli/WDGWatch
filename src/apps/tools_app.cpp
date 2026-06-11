@@ -49,7 +49,7 @@ static lv_obj_t* make_btn(lv_obj_t *par, int w, int h,
     lv_obj_t *l = lv_label_create(btn);
     lv_label_set_text(l, txt);
     lv_obj_set_style_text_color(l, G, 0);
-    lv_obj_set_style_text_font(l, &lv_font_montserrat_14, 0);
+    lv_obj_set_style_text_font(l, &lv_font_montserrat_18, 0);
     lv_obj_center(l);
     return btn;
 }
@@ -58,7 +58,7 @@ static lv_obj_t* make_section_label(lv_obj_t *par, const char *txt) {
     lv_obj_t *l = lv_label_create(par);
     lv_label_set_text(l, txt);
     lv_obj_set_style_text_color(l, D, 0);
-    lv_obj_set_style_text_font(l, &lv_font_montserrat_14, 0);
+    lv_obj_set_style_text_font(l, &lv_font_montserrat_18, 0);
     return l;
 }
 
@@ -206,7 +206,7 @@ void tools_app_create(lv_obj_t *parent) {
     lv_obj_t *title = lv_label_create(scr);
     lv_label_set_text(title, "[ TOOLS ]");
     lv_obj_set_style_text_color(title, G, 0);
-    lv_obj_set_style_text_font(title, &lv_font_montserrat_18, 0);
+    lv_obj_set_style_text_font(title, &lv_font_montserrat_22, 0);
     lv_obj_set_pos(title, CW / 2 - 50, y);
     y += 30;
 
@@ -254,7 +254,7 @@ void tools_app_create(lv_obj_t *parent) {
     lbl_timer_status = lv_label_create(scr);
     lv_label_set_text(lbl_timer_status, "");
     lv_obj_set_style_text_color(lbl_timer_status, D, 0);
-    lv_obj_set_style_text_font(lbl_timer_status, &lv_font_montserrat_14, 0);
+    lv_obj_set_style_text_font(lbl_timer_status, &lv_font_montserrat_18, 0);
     lv_obj_set_pos(lbl_timer_status, 0, y);
     y += 22;
 

@@ -1,4 +1,5 @@
 #include <LilyGoLib.h>
+#include <WiFi.h>
 #include <LV_Helper.h>
 #include "config.h"
 #include "app_manager.h"
@@ -15,6 +16,8 @@
 #include "hal/rf_service.h"
 #include "hal/hid_service.h"
 
+#include <bosch/BoschSensorDataHelper.hpp>
+
 #if __has_include("wifi_config.h")
 #include "wifi_config.h"
 #else
@@ -29,6 +32,7 @@ static const uint32_t UPDATE_INTERVAL = 500;
 
 #define BOOT_BUTTON_PIN 0
 static bool boot_btn_last = true;
+static SensorStepCounter *step_counter = nullptr;
 
 static void update_watchface_data(void);
 
@@ -40,6 +44,16 @@ void setup() {
     Serial.println("=================================\n");
 
     instance.begin();
+
+    instance.powerControl(POWER_GPS, false);
+    instance.powerControl(POWER_RADIO, false);
+    instance.powerControl(POWER_NFC, false);
+    WiFi.mode(WIFI_OFF);
+
+
+    step_counter = new SensorStepCounter(instance.sensor);
+    step_counter->enable(1.0f, 0);
+
     Serial.println("[INIT] Hardware OK");
 
     beginLvglHelper(instance);
@@ -59,6 +73,9 @@ void setup() {
         if (event == POWER_EVENT) {
             PMUEventType_t pmu = instance.getPMUEventType(params);
             if (pmu == PMU_EVENT_KEY_CLICKED) {
+                if (millis() - power_hal_last_wakeup_time() < 500) {
+                    return;
+                }
                 power_hal_screen_toggle();
             }
         }
@@ -171,6 +188,10 @@ static void update_watchface_data(void) {
         );
     }
 
-    watchface_set_steps(0, 5000);
-    watchface_set_distance(0.0f);
+    uint32_t steps = 0;
+    if (step_counter) {
+        steps = step_counter->getStepCount();
+    }
+    watchface_set_steps(steps, 5000);
+    watchface_set_distance((steps * 0.7f) / 1000.0f);
 }

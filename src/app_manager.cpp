@@ -126,7 +126,7 @@ static void create_menu_screen(void) {
     lv_obj_t *title = lv_label_create(scr_menu);
     lv_label_set_text(title, "[ SCR TERMINAL ]");
     lv_obj_set_style_text_color(title, PIPBOY_GREEN_16, 0);
-    lv_obj_set_style_text_font(title, &lv_font_montserrat_16, 0);
+    lv_obj_set_style_text_font(title, &lv_font_montserrat_20, 0);
     lv_obj_align(title, LV_ALIGN_TOP_MID, 0, SAFE_TOP);
 
     const int BTN_W = 110;
@@ -162,7 +162,7 @@ static void create_menu_screen(void) {
         lv_obj_t *lbl = lv_label_create(btn);
         lv_label_set_text(lbl, menu_items[i]);
         lv_obj_set_style_text_color(lbl, PIPBOY_GREEN_16, 0);
-        lv_obj_set_style_text_font(lbl, &lv_font_montserrat_16, 0);
+        lv_obj_set_style_text_font(lbl, &lv_font_montserrat_20, 0);
         lv_obj_center(lbl);
 
         lv_obj_add_event_cb(btn, menu_btn_cb, LV_EVENT_CLICKED, &btn_ids[i]);
@@ -250,7 +250,7 @@ void app_manager_init(void) {
         lv_obj_set_width(boot_term_label, SCREEN_WIDTH - SAFE_LEFT - SAFE_RIGHT);
         lv_obj_align(boot_term_label, LV_ALIGN_TOP_LEFT, SAFE_LEFT, SAFE_TOP + 10);
         lv_obj_set_style_text_color(boot_term_label, PIPBOY_GREEN_16, 0);
-        lv_obj_set_style_text_font(boot_term_label, &lv_font_montserrat_14, 0);
+        lv_obj_set_style_text_font(boot_term_label, &lv_font_montserrat_18, 0);
         lv_label_set_text(boot_term_label, boot_messages[0]);
 
         boot_progress_bar = lv_bar_create(scr_boot);
@@ -268,7 +268,7 @@ void app_manager_init(void) {
         boot_progress_label = lv_label_create(scr_boot);
         lv_obj_align_to(boot_progress_label, boot_progress_bar, LV_ALIGN_OUT_TOP_MID, 0, -5);
         lv_obj_set_style_text_color(boot_progress_label, PIPBOY_GREEN_16, 0);
-        lv_obj_set_style_text_font(boot_progress_label, &lv_font_montserrat_14, 0);
+        lv_obj_set_style_text_font(boot_progress_label, &lv_font_montserrat_18, 0);
         lv_label_set_text(boot_progress_label, "0%");
 
         lv_screen_load(scr_boot);

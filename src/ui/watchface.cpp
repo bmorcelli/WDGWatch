@@ -58,13 +58,13 @@ static void create_pipboy(void) {
     lbl_month = lv_label_create(scr);
     lv_label_set_text(lbl_month, "MARCH");
     lv_obj_set_style_text_color(lbl_month, D, 0);
-    lv_obj_set_style_text_font(lbl_month, &lv_font_montserrat_14, 0);
+    lv_obj_set_style_text_font(lbl_month, &lv_font_montserrat_18, 0);
     lv_obj_set_pos(lbl_month, X0 + 50, Y0);
 
     lbl_date = lv_label_create(scr);
     lv_label_set_text(lbl_date, "03-26");
     lv_obj_set_style_text_color(lbl_date, D, 0);
-    lv_obj_set_style_text_font(lbl_date, &lv_font_montserrat_14, 0);
+    lv_obj_set_style_text_font(lbl_date, &lv_font_montserrat_18, 0);
     lv_obj_set_pos(lbl_date, XM - 65, Y0);
 
     int dw = 42, dh = 18, dg = 4;
@@ -80,7 +80,7 @@ static void create_pipboy(void) {
         lv_obj_t *lb = lv_label_create(b);
         lv_label_set_text(lb, day_names[i]);
         lv_obj_set_style_text_color(lb, D, 0);
-        lv_obj_set_style_text_font(lb, &lv_font_montserrat_10, 0);
+        lv_obj_set_style_text_font(lb, &lv_font_montserrat_14, 0);
         lv_obj_center(lb); day_labels[i] = lb;
     }
 
@@ -96,7 +96,7 @@ static void create_pipboy(void) {
     lbl_battery = lv_label_create(scr);
     lv_label_set_text(lbl_battery, "80%");
     lv_obj_set_style_text_color(lbl_battery, D, 0);
-    lv_obj_set_style_text_font(lbl_battery, &lv_font_montserrat_10, 0);
+    lv_obj_set_style_text_font(lbl_battery, &lv_font_montserrat_14, 0);
     lv_obj_set_pos(lbl_battery, X0 + 155, Y0+44);
 
     lv_obj_t *tc = lv_obj_create(scr); lv_obj_remove_style_all(tc);
@@ -117,25 +117,25 @@ static void create_pipboy(void) {
     lbl_seconds = lv_label_create(scr);
     lv_label_set_text(lbl_seconds, ":00");
     lv_obj_set_style_text_color(lbl_seconds, D, 0);
-    lv_obj_set_style_text_font(lbl_seconds, &lv_font_montserrat_18, 0);
+    lv_obj_set_style_text_font(lbl_seconds, &lv_font_montserrat_22, 0);
     lv_obj_align(lbl_seconds, LV_ALIGN_CENTER, 0, 55);
 
     lbl_steps_v = lv_label_create(scr);
     lv_label_set_text(lbl_steps_v, "STEPS: 0");
     lv_obj_set_style_text_color(lbl_steps_v, D, 0);
-    lv_obj_set_style_text_font(lbl_steps_v, &lv_font_montserrat_12, 0);
+    lv_obj_set_style_text_font(lbl_steps_v, &lv_font_montserrat_16, 0);
     lv_obj_set_pos(lbl_steps_v, X0+30, YM-80);
 
     lbl_gps = lv_label_create(scr);
     lv_label_set_text(lbl_gps, LV_SYMBOL_GPS " NO FIX");
     lv_obj_set_style_text_color(lbl_gps, D, 0);
-    lv_obj_set_style_text_font(lbl_gps, &lv_font_montserrat_12, 0);
+    lv_obj_set_style_text_font(lbl_gps, &lv_font_montserrat_16, 0);
     lv_obj_set_pos(lbl_gps, XM-120, YM-80);
 
     lbl_sync = lv_label_create(scr);
     lv_label_set_text(lbl_sync, LV_SYMBOL_WIFI " --");
     lv_obj_set_style_text_color(lbl_sync, D, 0);
-    lv_obj_set_style_text_font(lbl_sync, &lv_font_montserrat_12, 0);
+    lv_obj_set_style_text_font(lbl_sync, &lv_font_montserrat_16, 0);
     lv_obj_align(lbl_sync, LV_ALIGN_BOTTOM_MID, 0, -(SAFE_BOTTOM+5));
 }
 
@@ -154,19 +154,19 @@ static void create_minimal(void) {
     m_date = lv_label_create(scr);
     lv_label_set_text(m_date, "THURSDAY, MARCH 26");
     lv_obj_set_style_text_color(m_date, D, 0);
-    lv_obj_set_style_text_font(m_date, &lv_font_montserrat_16, 0);
+    lv_obj_set_style_text_font(m_date, &lv_font_montserrat_20, 0);
     lv_obj_align(m_date, LV_ALIGN_CENTER, 0, 40);
 
     m_bat = lv_label_create(scr);
     lv_label_set_text(m_bat, "80%");
     lv_obj_set_style_text_color(m_bat, D, 0);
-    lv_obj_set_style_text_font(m_bat, &lv_font_montserrat_14, 0);
+    lv_obj_set_style_text_font(m_bat, &lv_font_montserrat_18, 0);
     lv_obj_align(m_bat, LV_ALIGN_TOP_RIGHT, -SAFE_RIGHT-5, Y0);
 
     m_sync = lv_label_create(scr);
     lv_label_set_text(m_sync, "");
     lv_obj_set_style_text_color(m_sync, D, 0);
-    lv_obj_set_style_text_font(m_sync, &lv_font_montserrat_12, 0);
+    lv_obj_set_style_text_font(m_sync, &lv_font_montserrat_16, 0);
     lv_obj_align(m_sync, LV_ALIGN_BOTTOM_MID, 0, -(SAFE_BOTTOM+5));
 }
 
@@ -214,13 +214,13 @@ static void create_analog(void) {
     a_time_lbl = lv_label_create(scr);
     lv_label_set_text(a_time_lbl, "00:00:00");
     lv_obj_set_style_text_color(a_time_lbl, D, 0);
-    lv_obj_set_style_text_font(a_time_lbl, &lv_font_montserrat_16, 0);
+    lv_obj_set_style_text_font(a_time_lbl, &lv_font_montserrat_20, 0);
     lv_obj_align(a_time_lbl, LV_ALIGN_CENTER, 0, 100);
 
     a_date_lbl = lv_label_create(scr);
     lv_label_set_text(a_date_lbl, "MAR 26");
     lv_obj_set_style_text_color(a_date_lbl, D, 0);
-    lv_obj_set_style_text_font(a_date_lbl, &lv_font_montserrat_14, 0);
+    lv_obj_set_style_text_font(a_date_lbl, &lv_font_montserrat_18, 0);
     lv_obj_align(a_date_lbl, LV_ALIGN_CENTER, 0, 125);
 
     draw_hand(&line_hour, hour_pts, 0, 100, 5, G);

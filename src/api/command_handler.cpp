@@ -219,6 +219,39 @@ static char* cmd_sensor_data(void) {
     return buf;
 }
 
+static char* cmd_hid_list_scripts(void) {
+    JsonDocument doc;
+    doc["type"] = "hid_scripts";
+    JsonArray arr = doc["scripts"].to<JsonArray>();
+
+    if (SD.exists("/badusb")) {
+        File dir = SD.open("/badusb");
+        if (dir && dir.isDirectory()) {
+            File f = dir.openNextFile();
+            int count = 0;
+            while (f && count < 32) {
+                if (!f.isDirectory()) {
+                    const char *fname = f.name();
+                    const char *slash = strrchr(fname, '/');
+                    if (slash) fname = slash + 1;
+
+                    String name = fname;
+                    if (name.endsWith(".txt") || name.endsWith(".ducky") || name.endsWith(".duck")) {
+                        arr.add(name);
+                        count++;
+                    }
+                }
+                f = dir.openNextFile();
+            }
+            dir.close();
+        }
+    }
+
+    char *buf = (char*)malloc(1024);
+    serializeJson(doc, buf, 1024);
+    return buf;
+}
+
 char* api_handle_command(const char *json_cmd) {
     JsonDocument doc;
     DeserializationError err = deserializeJson(doc, json_cmd);
@@ -295,16 +328,107 @@ char* api_handle_command(const char *json_cmd) {
         hid_svc_stop();
         return strdup("{\"ok\":true,\"msg\":\"hid stopped\"}");
     }
+    if (strcmp(cmd, "hid_set_layout") == 0) {
+        const char *layout_str = doc["params"]["layout"] | "US";
+        KeyboardLayoutId layout = KB_LAYOUT_US;
+        if (strcmp(layout_str, "US") == 0) layout = KB_LAYOUT_US;
+        else if (strcmp(layout_str, "DK") == 0) layout = KB_LAYOUT_DK;
+        else if (strcmp(layout_str, "UK") == 0) layout = KB_LAYOUT_UK;
+        else if (strcmp(layout_str, "FR") == 0) layout = KB_LAYOUT_FR;
+        else if (strcmp(layout_str, "DE") == 0) layout = KB_LAYOUT_DE;
+        else if (strcmp(layout_str, "HU") == 0) layout = KB_LAYOUT_HU;
+        else if (strcmp(layout_str, "IT") == 0) layout = KB_LAYOUT_IT;
+        else if (strcmp(layout_str, "BR") == 0) layout = KB_LAYOUT_BR;
+        else if (strcmp(layout_str, "PT") == 0) layout = KB_LAYOUT_PT;
+        else if (strcmp(layout_str, "SI") == 0) layout = KB_LAYOUT_SI;
+        else if (strcmp(layout_str, "ES") == 0) layout = KB_LAYOUT_ES;
+        else if (strcmp(layout_str, "SV") == 0) layout = KB_LAYOUT_SV;
+        else if (strcmp(layout_str, "TR") == 0) layout = KB_LAYOUT_TR;
+        hid_svc_set_layout(layout);
+        return strdup("{\"ok\":true,\"msg\":\"layout updated\"}");
+    }
+    if (strcmp(cmd, "hid_list_scripts") == 0) {
+        return cmd_hid_list_scripts();
+    }
     if (strcmp(cmd, "hid_run_script") == 0) {
         const char *path = doc["params"]["path"] | "";
         bool ble = doc["params"]["ble"] | false;
-        hid_svc_run_script(path, ble);
+
+        char full_path[128];
+        if (path[0] == '/') {
+            strncpy(full_path, path, sizeof(full_path) - 1);
+        } else {
+            snprintf(full_path, sizeof(full_path), "/badusb/%s", path);
+        }
+        full_path[sizeof(full_path) - 1] = 0;
+
+        if (!SD.exists(full_path)) {
+            return strdup("{\"error\":\"script file not found on SD\"}");
+        }
+
+        if (doc["params"].containsKey("layout")) {
+            const char *layout_str = doc["params"]["layout"] | "US";
+            KeyboardLayoutId layout = KB_LAYOUT_US;
+            if (strcmp(layout_str, "US") == 0) layout = KB_LAYOUT_US;
+            else if (strcmp(layout_str, "DK") == 0) layout = KB_LAYOUT_DK;
+            else if (strcmp(layout_str, "UK") == 0) layout = KB_LAYOUT_UK;
+            else if (strcmp(layout_str, "FR") == 0) layout = KB_LAYOUT_FR;
+            else if (strcmp(layout_str, "DE") == 0) layout = KB_LAYOUT_DE;
+            else if (strcmp(layout_str, "HU") == 0) layout = KB_LAYOUT_HU;
+            else if (strcmp(layout_str, "IT") == 0) layout = KB_LAYOUT_IT;
+            else if (strcmp(layout_str, "BR") == 0) layout = KB_LAYOUT_BR;
+            else if (strcmp(layout_str, "PT") == 0) layout = KB_LAYOUT_PT;
+            else if (strcmp(layout_str, "SI") == 0) layout = KB_LAYOUT_SI;
+            else if (strcmp(layout_str, "ES") == 0) layout = KB_LAYOUT_ES;
+            else if (strcmp(layout_str, "SV") == 0) layout = KB_LAYOUT_SV;
+            else if (strcmp(layout_str, "TR") == 0) layout = KB_LAYOUT_TR;
+            hid_svc_set_layout(layout);
+        }
+
+        hid_svc_run_script(full_path, ble);
         return strdup("{\"ok\":true,\"msg\":\"script started\"}");
+    }
+    if (strcmp(cmd, "hid_run_instant") == 0) {
+        const char *script_content = doc["params"]["script"] | "";
+        bool ble = doc["params"]["ble"] | false;
+        if (!SD.exists("/badusb")) {
+            SD.mkdir("/badusb");
+        }
+
+        File f = SD.open("/badusb/temp_api.txt", FILE_WRITE);
+        if (!f) {
+            return strdup("{\"error\":\"failed to write temp script to SD\"}");
+        }
+        f.print(script_content);
+        f.close();
+
+        if (doc["params"].containsKey("layout")) {
+            const char *layout_str = doc["params"]["layout"] | "US";
+            KeyboardLayoutId layout = KB_LAYOUT_US;
+            if (strcmp(layout_str, "US") == 0) layout = KB_LAYOUT_US;
+            else if (strcmp(layout_str, "DK") == 0) layout = KB_LAYOUT_DK;
+            else if (strcmp(layout_str, "UK") == 0) layout = KB_LAYOUT_UK;
+            else if (strcmp(layout_str, "FR") == 0) layout = KB_LAYOUT_FR;
+            else if (strcmp(layout_str, "DE") == 0) layout = KB_LAYOUT_DE;
+            else if (strcmp(layout_str, "HU") == 0) layout = KB_LAYOUT_HU;
+            else if (strcmp(layout_str, "IT") == 0) layout = KB_LAYOUT_IT;
+            else if (strcmp(layout_str, "BR") == 0) layout = KB_LAYOUT_BR;
+            else if (strcmp(layout_str, "PT") == 0) layout = KB_LAYOUT_PT;
+            else if (strcmp(layout_str, "SI") == 0) layout = KB_LAYOUT_SI;
+            else if (strcmp(layout_str, "ES") == 0) layout = KB_LAYOUT_ES;
+            else if (strcmp(layout_str, "SV") == 0) layout = KB_LAYOUT_SV;
+            else if (strcmp(layout_str, "TR") == 0) layout = KB_LAYOUT_TR;
+            hid_svc_set_layout(layout);
+        }
+
+        hid_svc_run_script("/badusb/temp_api.txt", ble);
+        return strdup("{\"ok\":true,\"msg\":\"instant script started\"}");
     }
     if (strcmp(cmd, "hid_abort_script") == 0) {
         hid_svc_abort_script();
         return strdup("{\"ok\":true,\"msg\":\"script aborted\"}");
     }
+
     if (strcmp(cmd, "hid_status") == 0) {
         JsonDocument hdoc;
         hdoc["type"] = "hid_status";
@@ -313,8 +437,9 @@ char* api_handle_command(const char *json_cmd) {
         hdoc["usb_connected"] = hid_svc_is_usb_connected();
         hdoc["running_script"] = hid_svc_is_running_script();
         hdoc["name"] = hid_svc_get_name();
-        char *buf = (char*)malloc(192);
-        serializeJson(hdoc, buf, 192);
+        hdoc["layout"] = hid_svc_get_layout_name(hid_svc_get_layout());
+        char *buf = (char*)malloc(256);
+        serializeJson(hdoc, buf, 256);
         return buf;
     }
 

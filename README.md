@@ -43,9 +43,11 @@ Leverages the onboard SX1262 transceiver to provide RF security research tools:
 *   **Dynamic Countdown:** When active, the screen locks onto a glowing red warning status displaying a real-time countdown timer.
 *   **Tesla Port:** Sends a single-pass RF burst signal mapped to common automotive diagnostic frequencies for authorized testing.
 
-### 4. 🛜 WiFi Recon & BLE AirTag Hunting
+
+### 4. 🛜 WiFi Recon, BLE Hunting & Timezone Management
 *   **WiFi Sniffing & Deauth:** Scans 2.4GHz channels, lists active BSSIDs, displays RSSI, and allows targeting individual APs for authorized deauthentication or broad blackout tests.
 *   **BLE Tracker:** Searches for nearby Bluetooth Low Energy devices and actively checks manufacturer data payloads to flag Apple AirTags or other trackers.
+*   **Dynamic Timezone Configuration:** Redesigned the WiFi menu into a split-layout to accommodate a new **CLOCK** button. When connected to a WiFi network, users can open a touch-navigable, scrollable list of 38 global cities to configure the system timezone. This timezone is persisted in NVS (`timesync` namespace) and automatically triggers an NTP re-sync to apply local time offset and DST rules.
 
 ### 5. 🌌 LoRa MeshCore Node ("SCRW")
 *   Tunes to `869.618 MHz` (SF8 / BW62.5 / CR5) to act as a wearable node.
@@ -77,6 +79,7 @@ Leverages the onboard SX1262 transceiver to provide RF security research tools:
 | ⚡ **Tesla Port RF Signal** | 🟢 Yes | 🟢 Yes | `rf_tesla_send` | 1-Pass Burst |
 | ⌨️ **BadUSB/BadBLE Keyboard** | 🟢 Yes | 🟢 Yes | `hid_status` | SCR-Keyboard |
 | 🔒 **Retro Boot Sequence** | 🟢 Yes | 🔴 No | — | Gesture Locked |
+| 🕰️ **Dynamic Timezone & NTP Sync** | 🟢 Yes | 🔴 No | — | Stable |
 
 ---
 
@@ -98,7 +101,7 @@ Ensure you have **PlatformIO** installed (VSCode extension or CLI).
 
 ```bash
 # Clone the repository
-git clone https://github.com/LOCOSP/WDGWatch.git
+git clone https://github.com/sacriphanius/WDGWatch.git
 cd WDGWatch
 
 # Setup WiFi Credentials (Optional)
@@ -193,9 +196,12 @@ SX1262 alıcı-vericisini kullanarak güvenlik araştırması araçları sunar:
 *   **Geri Sayım Ekranı:** Jammer aktifleştiğinde ekran kırmızı renkli uyarı moduna geçer ve canlı bir geri sayım sayacı gösterir. Süre bitince otomatik olarak durur.
 *   **Tesla Port:** Yetkili araç testleri için yaygın otomotiv teşhis frekanslarında tek geçişli bir RF sinyal patlaması gönderir.
 
-### 4. 🛜 WiFi Recon & BLE AirTag Algılama
+
+
+### 4. 🛜 WiFi Keşif, BLE Algılama ve Zaman Dilimi Yönetimi
 *   **WiFi Tarama & Deauth:** 2.4GHz kanallarını tarar, BSSID ve RSSI değerlerini listeler. Yetkili deauth veya genel sinyal karartma (blackout) testleri için hedef seçimini sağlar.
 *   **BLE Tracker:** Çevredeki Bluetooth Low Energy cihazlarını tarar ve Apple AirTag gibi takip cihazlarını tespit etmek için üretici veri paketlerini analiz eder.
+*   **Dinamik Zaman Dilimi Ayarı (Saat Dilimi):** WiFi menüsünde yapılan arayüz güncellemesiyle **CLOCK** butonu eklenmiştir. Cihaz WiFi ağına bağlandığında aktifleşen bu buton, 38 farklı dünya şehrini içeren dokunmatik ve kaydırılabilir bir liste sunar. Seçilen zaman dilimi kalıcı olarak NVS hafızasına (`timesync` isim uzayı altında) kaydedilir ve anında yerel saat dilimi ile yaz/kış saati (DST) kurallarına göre NTP senkronizasyonunu tetikler.
 
 ### 5. 🌌 LoRa MeshCore Düğümü ("SCRW")
 *   `869.618 MHz` (SF8 / BW62.5 / CR5) frekansında çalışarak mesh ağına bağlanır.
@@ -227,6 +233,7 @@ SX1262 alıcı-vericisini kullanarak güvenlik araştırması araçları sunar:
 | ⚡ **Tesla Port RF Sinyali** | 🟢 Evet | 🟢 Evet | `rf_tesla_send` | Tek Geçişli Sinyal |
 | ⌨️ **BadUSB/BadBLE Klavye (HID)** | 🟢 Evet | 🟢 Evet | `hid_status` | SCR-Keyboard |
 | 🔒 **Retro Boot Ekranı** | 🟢 Evet | 🔴 Hayır | — | El Hareketi Kilitli |
+| 🕰️ **Dinamik Saat Dilimi ve NTP** | 🟢 Evet | 🔴 Hayır | — | Kararlı |
 
 ---
 
@@ -248,7 +255,7 @@ Sisteminizde **PlatformIO**'nun (VSCode eklentisi veya CLI) yüklü olduğundan 
 
 ```bash
 # Depoyu klonlayın
-git clone https://github.com/LOCOSP/WDGWatch.git
+git clone https://github.com/sacriphanius/WDGWatch.git
 cd WDGWatch
 
 # Wi-Fi Ağ Ayarları (İsteğe Bağlı)
@@ -342,14 +349,23 @@ Hem **BLE Nordic UART** hem de HTTP `POST /api/cmd` istekleri tek satırlık, `\
     *   *Usage / Kullanım:* `{"cmd":"hid_stop"}`
     *   *Description / Açıklama:* Stops BLE advertising and disconnects the keyboard link. / BLE yayınını durdurur ve mevcut HID bağlantılarını sonlandırır.
 *   **Run DuckyScript / Script Çalıştır (`hid_run_script`):**
-    *   *Usage / Kullanım:* `{"cmd":"hid_run_script", "params":{"path":"/scripts/pay.txt","ble":true}}`
-    *   *Params / Parametre:* `path` (String: SD card absolute file path), `ble` (Boolean: `true` for BLE, `false` for USB). / SD karttaki script dosyasının tam konumu ve BLE/USB seçimi.
+    *   *Usage / Kullanım:* `{"cmd":"hid_run_script", "params":{"path":"pay.txt","ble":true,"layout":"US"}}`
+    *   *Params / Parametre:* `path` (String: Absolute or relative SD card file path. If relative, prefix `/badusb/` is applied), `ble` (Boolean: `true` for BLE, `false` for USB), `layout` (Optional String: keyboard layout, e.g. `"US"`, `"TR"`). / SD karttaki script dosyasının tam veya göreceli konumu (göreceli ise `/badusb/` öneki uygulanır), BLE/USB seçimi ve isteğe bağlı klavye düzeni (`layout`).
+*   **Run Instant DuckyScript / Anlık Script Çalıştır (`hid_run_instant`):**
+    *   *Usage / Kullanım:* `{"cmd":"hid_run_instant", "params":{"script":"DELAY 500\nSTRING Hello","ble":true,"layout":"TR"}}`
+    *   *Params / Parametre:* `script` (String: raw Ducky Script content), `ble` (Boolean: `true` for BLE, `false` for USB), `layout` (Optional String: keyboard layout, e.g. `"US"`, `"TR"`). / Doğrudan çalıştırılacak ham Ducky Script kodu, BLE/USB seçimi ve isteğe bağlı klavye düzeni (`layout`).
+*   **Set Keyboard Layout / Klavye Düzenini Ayarla (`hid_set_layout`):**
+    *   *Usage / Kullanım:* `{"cmd":"hid_set_layout", "params":{"layout":"TR"}}`
+    *   *Params / Parametre:* `layout` (String: Target layout code, supported: `US`, `DK`, `UK`, `FR`, `DE`, `HU`, `IT`, `BR`, `PT`, `SI`, `ES`, `SV`, `TR`). / Hedef klavye dil düzeni kodu.
+*   **List Script Files / Script Dosyalarını Listele (`hid_list_scripts`):**
+    *   *Usage / Kullanım:* `{"cmd":"hid_list_scripts"}`
+    *   *Description / Açıklama:* Returns a list of all `.txt`, `.duck`, and `.ducky` files stored in `/badusb` directory of the SD card. / SD karttaki `/badusb` klasöründe bulunan tüm `.txt`, `.duck` ve `.ducky` uzantılı script dosyalarının listesini döner.
 *   **Abort Script / Script İptali (`hid_abort_script`):**
     *   *Usage / Kullanım:* `{"cmd":"hid_abort_script"}`
     *   *Description / Açıklama:* Immediately stops any running DuckyScript execution. / Çalışmakta olan DuckyScript (BadUSB/BadBLE) payload'ını anında durdurur.
 *   **Get HID Status / HID Durumu (`hid_status`):**
     *   *Usage / Kullanım:* `{"cmd":"hid_status"}`
-    *   *Description / Açıklama:* Returns active state, BLE link connection status, USB link connection status, name, and if a payload is currently executing. / HID modülünün aktifliğini, BLE ve USB bağlantı durumlarını, yayın adını ve çalışan script durumunu döner.
+    *   *Description / Açıklama:* Returns active state, BLE link connection status, USB link connection status, name, layout, and if a payload is currently executing. / HID modülünün aktifliğini, BLE ve USB bağlantı durumlarını, yayın adını, klavye dil düzenini ve çalışan script durumunu döner.
 
 ---
 

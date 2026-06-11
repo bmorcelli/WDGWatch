@@ -61,7 +61,7 @@ static lv_obj_t* make_btn(lv_obj_t *par, int x, int y, int w, int h,
     lv_obj_t *l = lv_label_create(btn);
     lv_label_set_text(l, txt);
     lv_obj_set_style_text_color(l, G, 0);
-    lv_obj_set_style_text_font(l, &lv_font_montserrat_14, 0);
+    lv_obj_set_style_text_font(l, &lv_font_montserrat_18, 0);
     lv_obj_center(l);
     return btn;
 }
@@ -139,14 +139,14 @@ void rf_app_create(lv_obj_t *parent) {
     lv_obj_t *title = lv_label_create(scr);
     lv_label_set_text(title, "[ RF TOOLS ]");
     lv_obj_set_style_text_color(title, G, 0);
-    lv_obj_set_style_text_font(title, &lv_font_montserrat_16, 0);
+    lv_obj_set_style_text_font(title, &lv_font_montserrat_20, 0);
     lv_obj_align(title, LV_ALIGN_TOP_MID, 0, y);
     y += 30;
 
     lv_obj_t *sec1 = lv_label_create(scr);
     lv_label_set_text(sec1, LV_SYMBOL_VOLUME_MAX "  RF JAMMER");
     lv_obj_set_style_text_color(sec1, D, 0);
-    lv_obj_set_style_text_font(sec1, &lv_font_montserrat_14, 0);
+    lv_obj_set_style_text_font(sec1, &lv_font_montserrat_18, 0);
     lv_obj_set_pos(sec1, x, y);
     y += 22;
 
@@ -173,7 +173,7 @@ void rf_app_create(lv_obj_t *parent) {
     lv_obj_t *lbl_dur_title = lv_label_create(scr);
     lv_label_set_text(lbl_dur_title, "CHOOSE DURATION:");
     lv_obj_set_style_text_color(lbl_dur_title, D, 0);
-    lv_obj_set_style_text_font(lbl_dur_title, &lv_font_montserrat_12, 0);
+    lv_obj_set_style_text_font(lbl_dur_title, &lv_font_montserrat_16, 0);
     lv_obj_set_pos(lbl_dur_title, x, y);
     y += 18;
 
@@ -194,7 +194,7 @@ void rf_app_create(lv_obj_t *parent) {
     lbl_jammer = lv_label_create(scr);
     lv_label_set_text(lbl_jammer, "JAMMER: OFF");
     lv_obj_set_style_text_color(lbl_jammer, D, 0);
-    lv_obj_set_style_text_font(lbl_jammer, &lv_font_montserrat_14, 0);
+    lv_obj_set_style_text_font(lbl_jammer, &lv_font_montserrat_18, 0);
     lv_obj_set_pos(lbl_jammer, x, y);
 
     btn_jam_stop = make_btn(scr, x + 200, y - 5, 140, 32,
@@ -212,14 +212,14 @@ void rf_app_create(lv_obj_t *parent) {
     lv_obj_t *sec2 = lv_label_create(scr);
     lv_label_set_text(sec2, LV_SYMBOL_CHARGE "  TESLA PORT");
     lv_obj_set_style_text_color(sec2, D, 0);
-    lv_obj_set_style_text_font(sec2, &lv_font_montserrat_14, 0);
+    lv_obj_set_style_text_font(sec2, &lv_font_montserrat_18, 0);
     lv_obj_set_pos(sec2, x, y);
     y += 22;
 
     lv_obj_t *tesla_info = lv_label_create(scr);
     lv_label_set_text(tesla_info, "433.92 MHz  |  OOK burst  |  1 pass");
     lv_obj_set_style_text_color(tesla_info, D, 0);
-    lv_obj_set_style_text_font(tesla_info, &lv_font_montserrat_12, 0);
+    lv_obj_set_style_text_font(tesla_info, &lv_font_montserrat_16, 0);
     lv_obj_set_pos(tesla_info, x, y);
     y += 20;
 
@@ -230,7 +230,7 @@ void rf_app_create(lv_obj_t *parent) {
     lbl_tesla = lv_label_create(scr);
     lv_label_set_text(lbl_tesla, "READY");
     lv_obj_set_style_text_color(lbl_tesla, D, 0);
-    lv_obj_set_style_text_font(lbl_tesla, &lv_font_montserrat_12, 0);
+    lv_obj_set_style_text_font(lbl_tesla, &lv_font_montserrat_16, 0);
     lv_obj_set_pos(lbl_tesla, x, y);
 }
 

@@ -41,5 +41,9 @@ void hid_media_screenshot(void);
 bool hid_airmouse_start(void);
 void hid_airmouse_stop(void);
 bool hid_airmouse_is_active(void);
+void hid_airmouse_calibrate(void);
+
+void hid_mouse_click(uint8_t buttons);
+void hid_mouse_scroll(int8_t wheel);
 
 void hid_service_loop(void);
