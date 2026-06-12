@@ -186,13 +186,9 @@ void ble_uart_loop(void) {
 
     if (ble_just_connected) {
         ble_just_connected = false;
-        action_overlay_show("WATCH_DOGS");
-        instance.setBrightness(15);
     }
     if (ble_just_disconnected) {
         ble_just_disconnected = false;
-        action_overlay_hide();
-        instance.setBrightness(PIPBOY_DEFAULT_BRIGHTNESS);
     }
 
     if (show_pin_flag) {

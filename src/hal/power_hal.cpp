@@ -54,7 +54,7 @@ uint32_t power_hal_last_wakeup_time(void) {
 }
 
 void power_hal_light_sleep(void) {
-    if (gps_app_is_enabled() || instance.pmu.isVbusIn()) {
+    if (gps_app_is_enabled() || web_server_is_active() || ble_uart_is_active() || lora_svc_is_running() || instance.pmu.isVbusIn()) {
         screen_off = true;
         instance.setBrightness(0);
         return;

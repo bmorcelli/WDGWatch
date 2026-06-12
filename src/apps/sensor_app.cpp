@@ -54,18 +54,20 @@ static void calibrate_compass(lv_event_t *e) {
     (void)e; haptic_success();
     cal_offset = -raw_yaw;
     Preferences p;
-    p.begin("compass", false);
-    p.putFloat("offset", cal_offset);
-    p.end();
+    if (p.begin("compass", false)) {
+        p.putFloat("offset", cal_offset);
+        p.end();
+    }
 
     if (cal_btn_ref) lv_obj_add_flag(cal_btn_ref, LV_OBJ_FLAG_HIDDEN);
 }
 
 static void load_calibration(void) {
     Preferences p;
-    p.begin("compass", true);
-    cal_offset = p.getFloat("offset", 0.0f);
-    p.end();
+    if (p.begin("compass", true)) {
+        cal_offset = p.getFloat("offset", 0.0f);
+        p.end();
+    }
 }
 
 static void start_imu(void) {

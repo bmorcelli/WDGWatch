@@ -168,6 +168,7 @@ static void wifi_connect_attempt(const char* ssid, const char* password) {
             snprintf(b, sizeof(b), "SSID: %s\nIP: %s", ssid, WiFi.localIP().toString().c_str());
             lv_label_set_text(lbl_ip, b);
         }
+        time_sync_save_network(ssid, password, false);
     } else {
         WiFi.disconnect(true);
         WiFi.mode(WIFI_OFF);
@@ -353,14 +354,22 @@ static void toggle_wifi_cb(lv_event_t *e) {
 
         bool found_saved = false;
         String saved_ssid, saved_password;
+        
+        time_sync_load_networks();
+        int saved_count = time_sync_get_saved_network_count();
+        
         for (int i = 0; i < n; i++) {
             String s = WiFi.SSID(i);
-            for (size_t j = 0; j < sizeof(wifi_networks)/sizeof(wifi_networks[0]); j++) {
-                if (s == wifi_networks[j].ssid && strlen(wifi_networks[j].ssid) > 0) {
-                    found_saved = true;
-                    saved_ssid = wifi_networks[j].ssid;
-                    saved_password = wifi_networks[j].password;
-                    break;
+            for (int j = 0; j < saved_count; j++) {
+                String s_ssid, s_pwd;
+                bool s_hidden;
+                if (time_sync_get_saved_network(j, s_ssid, s_pwd, s_hidden)) {
+                    if (s == s_ssid && s_ssid.length() > 0) {
+                        found_saved = true;
+                        saved_ssid = s_ssid;
+                        saved_password = s_pwd;
+                        break;
+                    }
                 }
             }
             if (found_saved) break;

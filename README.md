@@ -352,7 +352,7 @@ Hem **BLE Nordic UART** hem de HTTP `POST /api/cmd` istekleri tek satırlık, `\
     *   *Usage / Kullanım:* `{"cmd":"hid_run_script", "params":{"path":"pay.txt","ble":true,"layout":"US"}}`
     *   *Params / Parametre:* `path` (String: Absolute or relative SD card file path. If relative, prefix `/badusb/` is applied), `ble` (Boolean: `true` for BLE, `false` for USB), `layout` (Optional String: keyboard layout, e.g. `"US"`, `"TR"`). / SD karttaki script dosyasının tam veya göreceli konumu (göreceli ise `/badusb/` öneki uygulanır), BLE/USB seçimi ve isteğe bağlı klavye düzeni (`layout`).
 *   **Run Instant DuckyScript / Anlık Script Çalıştır (`hid_run_instant`):**
-    *   *Usage / Kullanım:* `{"cmd":"hid_run_instant", "params":{"script":"DELAY 500\nSTRING Hello","ble":true,"layout":"TR"}}`
+    *   *Usage / Kullanım:* `{"cmd":"hid_run_instant", "params":{"script":"GUI r\nDELAY 500\nSTRING notepad.exe\nENTER\nDELAY 1000\nSTRING Hello World!\nENTER","ble":true,"layout":"TR"}}` (Opens notepad and types "Hello World!" / Windows çalıştır menüsünü açar, notepad başlatır ve "Hello World!" yazar).
     *   *Params / Parametre:* `script` (String: raw Ducky Script content), `ble` (Boolean: `true` for BLE, `false` for USB), `layout` (Optional String: keyboard layout, e.g. `"US"`, `"TR"`). / Doğrudan çalıştırılacak ham Ducky Script kodu, BLE/USB seçimi ve isteğe bağlı klavye düzeni (`layout`).
 *   **Set Keyboard Layout / Klavye Düzenini Ayarla (`hid_set_layout`):**
     *   *Usage / Kullanım:* `{"cmd":"hid_set_layout", "params":{"layout":"TR"}}`

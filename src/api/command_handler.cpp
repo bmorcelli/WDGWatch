@@ -252,6 +252,43 @@ static char* cmd_hid_list_scripts(void) {
     return buf;
 }
 
+static char* cmd_help(void) {
+    JsonDocument doc;
+    doc["type"] = "help";
+    JsonObject cats = doc["categories"].to<JsonObject>();
+
+    JsonArray sys = cats["system"].to<JsonArray>();
+    sys.add("status"); sys.add("version"); sys.add("brightness"); sys.add("haptic");
+    sys.add("watchface"); sys.add("reboot"); sys.add("compass"); sys.add("sensor_data");
+
+    JsonArray nfc = cats["nfc"].to<JsonArray>();
+    nfc.add("nfc_scan"); nfc.add("nfc_stop"); nfc.add("nfc_save"); nfc.add("nfc_list");
+    nfc.add("nfc_export"); nfc.add("nfc_delete"); nfc.add("nfc_download");
+
+    JsonArray lora = cats["lora"].to<JsonArray>();
+    lora.add("lora_start"); lora.add("lora_stop"); lora.add("lora_send"); lora.add("lora_advert");
+    lora.add("lora_history");
+
+    JsonArray recon = cats["recon"].to<JsonArray>();
+    recon.add("recon_wifi"); recon.add("recon_ble"); recon.add("recon_stop"); recon.add("recon_deauth");
+    recon.add("recon_results"); recon.add("deauth_all"); recon.add("sniffer_start"); recon.add("sniffer_stop");
+    recon.add("deauth_detect"); recon.add("evil_twin"); recon.add("evil_twin_stop");
+
+    JsonArray rf = cats["rf"].to<JsonArray>();
+    rf.add("rf_jammer_start"); rf.add("rf_jammer_stop"); rf.add("rf_tesla_send"); rf.add("rf_status");
+
+    JsonArray hid = cats["hid"].to<JsonArray>();
+    hid.add("hid_start"); hid.add("hid_stop"); hid.add("hid_set_layout"); hid.add("hid_list_scripts");
+    hid.add("hid_run_script"); hid.add("hid_run_instant"); hid.add("hid_abort_script"); hid.add("hid_status");
+
+    JsonArray pet = cats["pet"].to<JsonArray>();
+    pet.add("pet_feed"); pet.add("pet_heal"); pet.add("pet_clean"); pet.add("pet_status");
+
+    char *buf = (char*)malloc(1536);
+    serializeJson(doc, buf, 1536);
+    return buf;
+}
+
 char* api_handle_command(const char *json_cmd) {
     JsonDocument doc;
     DeserializationError err = deserializeJson(doc, json_cmd);
@@ -259,6 +296,7 @@ char* api_handle_command(const char *json_cmd) {
 
     const char *cmd = doc["cmd"] | "";
 
+    if (strcmp(cmd, "help") == 0)       return cmd_help();
     if (strcmp(cmd, "status") == 0)     return cmd_status();
     if (strcmp(cmd, "version") == 0)    return cmd_version();
     if (strcmp(cmd, "brightness") == 0) return cmd_brightness(doc["params"]["v"] | 128);

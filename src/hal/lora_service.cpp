@@ -73,26 +73,33 @@ static bool keypair_loaded = false;
 static void load_or_create_keypair(void) {
     if (keypair_loaded) return;
     Preferences prefs;
-    prefs.begin("meshcore", true);
-
-    if (prefs.getBytesLength("sk") == 64 && prefs.getUChar("kv", 0) == 2) {
-        prefs.getBytes("sk", ed25519_sk, 64);
-        prefs.getBytes("pk", ed25519_pk, 32);
-        Serial.println("[MC] Keypair loaded from NVS");
-    } else {
+    bool loaded = false;
+    
+    if (prefs.begin("meshcore", true)) {
+        if (prefs.getBytesLength("sk") == 64 && prefs.getUChar("kv", 0) == 2) {
+            prefs.getBytes("sk", ed25519_sk, 64);
+            prefs.getBytes("pk", ed25519_pk, 32);
+            Serial.println("[MC] Keypair loaded from NVS");
+            loaded = true;
+        }
         prefs.end();
+    }
 
+    if (!loaded) {
         uint8_t seed[32];
         esp_fill_random(seed, 32);
-
         ed25519_create_keypair(ed25519_pk, ed25519_sk, seed);
-        prefs.begin("meshcore", false);
-        prefs.putBytes("sk", ed25519_sk, 64);
-        prefs.putBytes("pk", ed25519_pk, 32);
-        prefs.putUChar("kv", 2);
-        Serial.println("[MC] New keypair generated (Orlp ed25519)");
+
+        if (prefs.begin("meshcore", false)) {
+            prefs.putBytes("sk", ed25519_sk, 64);
+            prefs.putBytes("pk", ed25519_pk, 32);
+            prefs.putUChar("kv", 2);
+            prefs.end();
+            Serial.println("[MC] New keypair generated (Orlp ed25519) and saved to NVS");
+        } else {
+            Serial.println("[MC] Warning: Failed to save generated keypair to NVS");
+        }
     }
-    prefs.end();
     keypair_loaded = true;
     Serial.printf("[MC] PubKey: %02X%02X%02X%02X...\n",
         ed25519_pk[0], ed25519_pk[1], ed25519_pk[2], ed25519_pk[3]);

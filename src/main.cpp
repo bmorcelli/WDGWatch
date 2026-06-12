@@ -15,6 +15,7 @@
 #include "api/command_handler.h"
 #include "hal/rf_service.h"
 #include "hal/hid_service.h"
+#include "apps/gps_app.h"
 
 #include <bosch/BoschSensorDataHelper.hpp>
 
@@ -186,6 +187,8 @@ static void update_watchface_data(void) {
             instance.gps.location.lng(),
             instance.gps.altitude.meters()
         );
+    } else {
+        watchface_set_gps(NAN, NAN, 0.0f);
     }
 
     uint32_t steps = 0;

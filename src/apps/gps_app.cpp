@@ -271,3 +271,7 @@ void gps_app_destroy(void) {
 bool gps_app_is_enabled(void) {
     return gps_enabled;
 }
+
+bool gps_app_is_wardriving_active(void) {
+    return wardriving_active;
+}

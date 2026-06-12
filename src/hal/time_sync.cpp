@@ -3,11 +3,13 @@
 #include <esp_sntp.h>
 #include <time.h>
 #include <Preferences.h>
+#include <SD.h>
+#include <ArduinoJson.h>
+#include <vector>
 #include "../config.h"
 #include "../web/web_server.h"
 
 static void wifi_shutdown_safe(void) {
-
     if (web_server_is_active()) {
         WiFi.disconnect(false);
     } else {
@@ -28,49 +30,214 @@ static int current_network = 0;
 static uint32_t wifi_start_time = 0;
 static const uint32_t WIFI_TIMEOUT_PER_NET = 15000;
 
+struct DynamicWiFiNetwork {
+    String ssid;
+    String password;
+    bool hidden;
+};
+
+static std::vector<DynamicWiFiNetwork> dynamic_networks;
+
 static void ntp_time_sync_cb(struct timeval *tv) {
     Serial.println("[TIME] NTP callback fired!");
     ntp_got_time = true;
 }
 
+void time_sync_load_networks(void) {
+    dynamic_networks.clear();
+
+    // 1. Try to load from SD card if present and file exists
+    bool loaded_from_sd = false;
+    if (SD.exists("/wifi_config.json")) {
+        File f = SD.open("/wifi_config.json", FILE_READ);
+        if (f) {
+            JsonDocument doc;
+            DeserializationError err = deserializeJson(doc, f);
+            f.close();
+            if (!err) {
+                JsonArray arr = doc["networks"].as<JsonArray>();
+                for (JsonObject obj : arr) {
+                    DynamicWiFiNetwork net;
+                    net.ssid = obj["ssid"] | "";
+                    net.password = obj["password"] | "";
+                    net.hidden = obj["hidden"] | false;
+                    if (net.ssid.length() > 0) {
+                        dynamic_networks.push_back(net);
+                    }
+                }
+                Serial.printf("[TIME] Loaded %d networks from SD card /wifi_config.json\n", (int)dynamic_networks.size());
+                loaded_from_sd = true;
+            } else {
+                Serial.printf("[TIME] Failed to parse /wifi_config.json: %s\n", err.c_str());
+            }
+        }
+    }
+
+    // 2. If SD loading failed or empty, fallback to NVS Preferences
+    if (!loaded_from_sd || dynamic_networks.empty()) {
+        Preferences prefs;
+        if (prefs.begin("wificreds", true)) {
+            String jsonStr = prefs.getString("networks_json", "");
+            prefs.end();
+            if (jsonStr.length() > 0) {
+                JsonDocument doc;
+                DeserializationError err = deserializeJson(doc, jsonStr);
+                if (!err) {
+                    JsonArray arr = doc["networks"].as<JsonArray>();
+                    for (JsonObject obj : arr) {
+                        DynamicWiFiNetwork net;
+                        net.ssid = obj["ssid"] | "";
+                        net.password = obj["password"] | "";
+                        net.hidden = obj["hidden"] | false;
+                        if (net.ssid.length() > 0) {
+                            dynamic_networks.push_back(net);
+                        }
+                    }
+                    Serial.printf("[TIME] Loaded %d networks from NVS preferences\n", (int)dynamic_networks.size());
+                }
+            }
+        }
+    }
+
+    // 3. Fallback to compile-time networks passed to time_sync_init or wifi_config.h if still empty
+    if (dynamic_networks.empty()) {
+        if (networks != nullptr && network_count > 0) {
+            for (int i = 0; i < network_count; i++) {
+                if (strlen(networks[i].ssid) > 0) {
+                    DynamicWiFiNetwork net;
+                    net.ssid = networks[i].ssid;
+                    net.password = networks[i].password;
+                    net.hidden = networks[i].hidden;
+                    dynamic_networks.push_back(net);
+                }
+            }
+            Serial.printf("[TIME] Loaded %d networks from compile-time settings\n", (int)dynamic_networks.size());
+        }
+    }
+}
+
+void time_sync_save_network(const char *ssid, const char *password, bool hidden) {
+    if (!ssid || strlen(ssid) == 0) return;
+
+    // Reload first to get the latest networks
+    time_sync_load_networks();
+
+    // Update or insert
+    bool found = false;
+    for (auto &net : dynamic_networks) {
+        if (net.ssid == ssid) {
+            net.password = password;
+            net.hidden = hidden;
+            found = true;
+            break;
+        }
+    }
+    if (!found) {
+        DynamicWiFiNetwork net;
+        net.ssid = ssid;
+        net.password = password;
+        net.hidden = hidden;
+        dynamic_networks.push_back(net);
+    }
+
+    // Prepare JSON document
+    JsonDocument doc;
+    JsonArray arr = doc["networks"].to<JsonArray>();
+    for (const auto &net : dynamic_networks) {
+        JsonObject obj = arr.add<JsonObject>();
+        obj["ssid"] = net.ssid;
+        obj["password"] = net.password;
+        obj["hidden"] = net.hidden;
+    }
+
+    // 1. Save to SD card
+    File f = SD.open("/wifi_config.json", FILE_WRITE);
+    if (f) {
+        if (serializeJson(doc, f) == 0) {
+            Serial.println("[TIME] Failed to serialize JSON to SD card");
+        } else {
+            Serial.println("[TIME] Saved wifi_config.json to SD card");
+        }
+        f.close();
+    } else {
+        Serial.println("[TIME] SD card not available or failed to write /wifi_config.json");
+    }
+
+    // 2. Save to NVS Preferences as backup
+    String jsonStr;
+    serializeJson(doc, jsonStr);
+    Preferences prefs;
+    if (prefs.begin("wificreds", false)) {
+        prefs.putString("networks_json", jsonStr);
+        prefs.end();
+        Serial.println("[TIME] Saved wifi config to NVS preferences");
+    } else {
+        Serial.println("[TIME] Failed to open NVS wificreds for writing");
+    }
+}
+
+int time_sync_get_saved_network_count(void) {
+    return (int)dynamic_networks.size();
+}
+
+bool time_sync_get_saved_network(int index, String &ssid, String &password, bool &hidden) {
+    if (index < 0 || index >= (int)dynamic_networks.size()) {
+        return false;
+    }
+    ssid = dynamic_networks[index].ssid;
+    password = dynamic_networks[index].password;
+    hidden = dynamic_networks[index].hidden;
+    return true;
+}
+
 static void try_next_network(void) {
     WiFi.disconnect(true);
 
-    if (current_network >= network_count) {
+    time_sync_load_networks();
 
+    if (dynamic_networks.empty()) {
+        Serial.println("[TIME] No Wi-Fi networks configured.");
+        wifi_enabled = false;
+        return;
+    }
+
+    if (current_network >= (int)dynamic_networks.size()) {
         current_network = 0;
     }
 
-    const WiFiNetwork &net = networks[current_network];
+    const DynamicWiFiNetwork &net = dynamic_networks[current_network];
     Serial.printf("[TIME] Trying WiFi #%d: %s%s\n",
-        current_network, net.ssid, net.hidden ? " (hidden)" : "");
+        current_network, net.ssid.c_str(), net.hidden ? " (hidden)" : "");
 
     WiFi.mode(WIFI_STA);
     if (net.hidden) {
-
-        WiFi.begin(net.ssid, net.password, 0, nullptr, true);
+        WiFi.begin(net.ssid.c_str(), net.password.c_str(), 0, nullptr, true);
     } else {
-        WiFi.begin(net.ssid, net.password);
+        WiFi.begin(net.ssid.c_str(), net.password.c_str());
     }
     wifi_enabled = true;
     wifi_start_time = millis();
 }
 
-
 void time_sync_set_timezone(const char *tz) {
     Preferences prefs;
-    prefs.begin("timesync", false);
-    prefs.putString("tz", tz);
-    prefs.end();
+    if (prefs.begin("timesync", false)) {
+        prefs.putString("tz", tz);
+        prefs.end();
+    } else {
+        Serial.println("[TIME] Warning: Failed to open NVS timesync for writing");
+    }
     configTzTime(tz, "pool.ntp.org", "time.nist.gov", "time.google.com");
     Serial.printf("[TIME] Timezone updated to: %s\n", tz);
 }
 
 String time_sync_get_timezone(void) {
     Preferences prefs;
-    prefs.begin("timesync", true);
-    String tz = prefs.getString("tz", "GST-4");
-    prefs.end();
+    String tz = "GST-4";
+    if (prefs.begin("timesync", true)) {
+        tz = prefs.getString("tz", "GST-4");
+        prefs.end();
+    }
     return tz;
 }
 
@@ -78,16 +245,29 @@ void time_sync_init(const WiFiNetwork *nets, int count) {
     networks = nets;
     network_count = count;
     current_network = 0;
-    synced = true;
+    
+    sntp_set_time_sync_notification_cb(ntp_time_sync_cb);
+
+    // Initialize dynamic networks list
+    time_sync_load_networks();
+
+    Preferences prefs;
+    bool already_synced = true;
+    if (prefs.begin("timesync", true)) {
+        already_synced = prefs.getBool("synced", false); // Default to false to trigger auto-sync on first boot
+        prefs.end();
+    }
+    synced = already_synced;
+    
     wifi_connected = false;
     wifi_enabled = false;
     ntp_configured = false;
     ntp_got_time = false;
 
-    sntp_set_time_sync_notification_cb(ntp_time_sync_cb);
-
     String tz = time_sync_get_timezone();
     configTzTime(tz.c_str(), "pool.ntp.org", "time.nist.gov", "time.google.com");
+
+    instance.rtc.hwClockRead();
 }
 
 void time_sync_loop(void) {
@@ -104,9 +284,13 @@ void time_sync_loop(void) {
         }
 
         Preferences prefs;
-        prefs.begin("timesync", false);
-        prefs.putBool("synced", true);
-        prefs.end();
+        if (prefs.begin("timesync", false)) {
+            prefs.putBool("synced", true);
+            prefs.end();
+            Serial.println("[TIME] Synced status saved to NVS.");
+        } else {
+            Serial.println("[TIME] Warning: Failed to save synced status to NVS.");
+        }
 
         synced = true;
         wifi_shutdown_safe();
@@ -122,8 +306,16 @@ void time_sync_loop(void) {
 
     if (st == WL_CONNECTED && !wifi_connected) {
         wifi_connected = true;
+        
+        String connected_ssid = "";
+        if (current_network >= 0 && current_network < (int)dynamic_networks.size()) {
+            connected_ssid = dynamic_networks[current_network].ssid;
+        } else {
+            connected_ssid = WiFi.SSID();
+        }
+
         Serial.printf("[TIME] WiFi connected: %s (IP: %s)\n",
-            networks[current_network].ssid, WiFi.localIP().toString().c_str());
+            connected_ssid.c_str(), WiFi.localIP().toString().c_str());
 
         String tz = time_sync_get_timezone();
         configTzTime(tz.c_str(),
@@ -135,10 +327,10 @@ void time_sync_loop(void) {
     if (!wifi_connected && (millis() - wifi_start_time > WIFI_TIMEOUT_PER_NET)) {
         Serial.printf("[TIME] WiFi #%d timeout (status=%d)\n", current_network, st);
         current_network++;
-        if (current_network < network_count) {
+        time_sync_load_networks();
+        if (!dynamic_networks.empty() && current_network < (int)dynamic_networks.size()) {
             try_next_network();
         } else {
-
             Serial.println("[TIME] All networks failed, retrying in 10s...");
             wifi_shutdown_safe();
             wifi_enabled = false;
@@ -153,11 +345,13 @@ void time_sync_loop(void) {
         wifi_enabled = false;
         wifi_connected = false;
         ntp_configured = false;
-
     }
 
     if (!wifi_enabled && !synced && (millis() - wifi_start_time > 10000)) {
-        try_next_network();
+        time_sync_load_networks();
+        if (!dynamic_networks.empty()) {
+            try_next_network();
+        }
     }
 }
 
@@ -174,9 +368,14 @@ void time_sync_force_retry(void) {
     current_network = 0;
 
     Preferences prefs;
-    prefs.begin("timesync", false);
-    prefs.putBool("synced", false);
-    prefs.end();
-    Serial.println("[TIME] Force retry — NVS flag cleared.");
-    if (network_count > 0) try_next_network();
+    if (prefs.begin("timesync", false)) {
+        prefs.putBool("synced", false);
+        prefs.end();
+        Serial.println("[TIME] Force retry — NVS flag cleared.");
+    } else {
+        Serial.println("[TIME] Warning: Failed to clear synced status in NVS.");
+    }
+    
+    time_sync_load_networks();
+    if (!dynamic_networks.empty()) try_next_network();
 }

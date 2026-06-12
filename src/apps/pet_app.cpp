@@ -50,18 +50,22 @@ static void update_pet_visuals(void);
 static void log_message(const char* msg);
 
 static void load_pet_state(void) {
-    prefs.begin("scr_pet", false);
-    pet_level = prefs.getUInt("level", 1);
-    pet_xp = prefs.getUInt("xp", 0);
-    pet_energy = prefs.getUInt("energy", 80);
-    pet_health = prefs.getUInt("health", 80);
-    pet_clean = prefs.getUInt("clean", 80);
-    pet_poops = prefs.getUInt("poops", 0);
-    uint32_t last_time = prefs.getUInt("last_time", 0);
-    prefs.end();
+    bool loaded = false;
+    uint32_t last_time = 0;
+    if (prefs.begin("scr_pet", true)) { // Read-only is safer for load
+        pet_level = prefs.getUInt("level", 1);
+        pet_xp = prefs.getUInt("xp", 0);
+        pet_energy = prefs.getUInt("energy", 80);
+        pet_health = prefs.getUInt("health", 80);
+        pet_clean = prefs.getUInt("clean", 80);
+        pet_poops = prefs.getUInt("poops", 0);
+        last_time = prefs.getUInt("last_time", 0);
+        prefs.end();
+        loaded = true;
+    }
 
     uint32_t now = time(nullptr);
-    if (last_time > 0 && now > last_time) {
+    if (loaded && last_time > 0 && now > last_time) {
         uint32_t diff_sec = now - last_time;
         uint32_t energy_decay = (diff_sec * 4) / 3600;
         uint32_t clean_decay = (diff_sec * 3) / 3600;
@@ -87,15 +91,16 @@ static void load_pet_state(void) {
 }
 
 static void save_pet_state(void) {
-    prefs.begin("scr_pet", false);
-    prefs.putUInt("level", pet_level);
-    prefs.putUInt("xp", pet_xp);
-    prefs.putUInt("energy", pet_energy);
-    prefs.putUInt("health", pet_health);
-    prefs.putUInt("clean", pet_clean);
-    prefs.putUInt("poops", pet_poops);
-    prefs.putUInt("last_time", time(nullptr));
-    prefs.end();
+    if (prefs.begin("scr_pet", false)) {
+        prefs.putUInt("level", pet_level);
+        prefs.putUInt("xp", pet_xp);
+        prefs.putUInt("energy", pet_energy);
+        prefs.putUInt("health", pet_health);
+        prefs.putUInt("clean", pet_clean);
+        prefs.putUInt("poops", pet_poops);
+        prefs.putUInt("last_time", time(nullptr));
+        prefs.end();
+    }
 }
 
 static void log_message(const char* msg) {

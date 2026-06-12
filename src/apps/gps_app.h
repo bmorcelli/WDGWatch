@@ -5,3 +5,4 @@ void gps_app_create(lv_obj_t *parent);
 void gps_app_update(void);
 void gps_app_destroy(void);
 bool gps_app_is_enabled(void);
+bool gps_app_is_wardriving_active(void);

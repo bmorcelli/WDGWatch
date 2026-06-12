@@ -2,6 +2,10 @@
 #include "theme.h"
 #include <cstdio>
 #include <math.h>
+#include "../apps/gps_app.h"
+#include "../web/web_server.h"
+#include "../hal/ble_uart_service.h"
+#include "../hal/lora_service.h"
 
 #define G  PIPBOY_GREEN_16
 #define D  PIPBOY_GREEN_DIM_16
@@ -130,11 +134,11 @@ static void create_pipboy(void) {
     lv_label_set_text(lbl_gps, LV_SYMBOL_GPS " NO FIX");
     lv_obj_set_style_text_color(lbl_gps, D, 0);
     lv_obj_set_style_text_font(lbl_gps, &lv_font_montserrat_16, 0);
-    lv_obj_set_pos(lbl_gps, XM-120, YM-80);
+    lv_obj_align(lbl_gps, LV_ALIGN_BOTTOM_RIGHT, -SAFE_RIGHT, -80);
 
     lbl_sync = lv_label_create(scr);
-    lv_label_set_text(lbl_sync, LV_SYMBOL_WIFI " --");
-    lv_obj_set_style_text_color(lbl_sync, D, 0);
+    lv_label_set_recolor(lbl_sync, true);
+    lv_label_set_text(lbl_sync, "");
     lv_obj_set_style_text_font(lbl_sync, &lv_font_montserrat_16, 0);
     lv_obj_align(lbl_sync, LV_ALIGN_BOTTOM_MID, 0, -(SAFE_BOTTOM+5));
 }
@@ -367,9 +371,34 @@ void watchface_set_distance(float km) { (void)km; }
 
 void watchface_set_gps(float lat, float lon, float alt) {
     if (lbl_gps) {
-        char b[32]; snprintf(b, sizeof(b), LV_SYMBOL_GPS " %.4f,%.4f", lat, lon);
+        bool wd = gps_app_is_wardriving_active();
+        bool gps_on = gps_app_is_enabled();
+
+        if (!gps_on) {
+            lv_label_set_text(lbl_gps, LV_SYMBOL_GPS " OFF");
+            lv_obj_set_style_text_color(lbl_gps, D, 0);
+            return;
+        }
+
+        if (wd) {
+            lv_label_set_text(lbl_gps, "wardriving");
+            if (isnan(lat) || isnan(lon)) {
+                lv_obj_set_style_text_color(lbl_gps, D, 0);
+            } else {
+                lv_obj_set_style_text_color(lbl_gps, G, 0);
+            }
+            return;
+        }
+
+        char b[64];
+        if (isnan(lat) || isnan(lon)) {
+            snprintf(b, sizeof(b), LV_SYMBOL_GPS " NO FIX");
+            lv_obj_set_style_text_color(lbl_gps, D, 0);
+        } else {
+            snprintf(b, sizeof(b), LV_SYMBOL_GPS " %.4f,%.4f", lat, lon);
+            lv_obj_set_style_text_color(lbl_gps, G, 0);
+        }
         lv_label_set_text(lbl_gps, b);
-        lv_obj_set_style_text_color(lbl_gps, G, 0);
     }
 }
 
@@ -377,17 +406,24 @@ void watchface_set_temperature(int16_t temp_c) { (void)temp_c; }
 
 void watchface_set_sync_status(bool wifi, bool ntp_ok, bool gps_fix) {
     c_ntp = ntp_ok; c_wifi = wifi; c_gps = gps_fix;
-    char b[48];
-    snprintf(b, sizeof(b), LV_SYMBOL_WIFI " %s  " LV_SYMBOL_GPS " %s  %s",
-        wifi?"ON":"--", gps_fix?"FIX":"--", ntp_ok?"[NTP OK]":"");
+    char b[128];
+    bool ws = web_server_is_active();
+    bool wdg = ble_uart_is_active();
+    bool mc = lora_svc_is_running();
+
+    snprintf(b, sizeof(b), "%s " LV_SYMBOL_WIFI " %s#  %s " LV_SYMBOL_GPS " %s#  %s " LV_SYMBOL_KEYBOARD " %s#  %s " LV_SYMBOL_BLUETOOTH " %s#  %s " LV_SYMBOL_BULLET " %s#",
+        wifi ? "#00e5ff" : "#007280", wifi ? "ON" : "--",
+        gps_fix ? "#00e5ff" : "#007280", gps_fix ? "FIX" : "--",
+        ws ? "#00e5ff" : "#007280", ws ? "ON" : "--",
+        wdg ? "#00e5ff" : "#007280", wdg ? "ON" : "--",
+        mc ? "#00e5ff" : "#007280", mc ? "ON" : "--");
 
     if (lbl_sync) {
         lv_label_set_text(lbl_sync, b);
-        lv_obj_set_style_text_color(lbl_sync, ntp_ok?G:D, 0);
     }
     if (m_sync) {
-        lv_label_set_text(m_sync, ntp_ok?"NTP OK":"");
-        lv_obj_set_style_text_color(m_sync, ntp_ok?G:D, 0);
+        lv_label_set_text(m_sync, ntp_ok ? "NTP OK" : "");
+        lv_obj_set_style_text_color(m_sync, ntp_ok ? G : D, 0);
     }
 }
 

@@ -46,25 +46,27 @@ static int selected_tag = -1;
 static Preferences nfc_prefs;
 
 static void load_tags(void) {
-    nfc_prefs.begin("nfc_tags", true);
-    saved_count = nfc_prefs.getInt("count", 0);
-    if (saved_count > MAX_SAVED_TAGS) saved_count = MAX_SAVED_TAGS;
-    for (int i = 0; i < saved_count; i++) {
-        char key[16]; snprintf(key, sizeof(key), "tag%d", i);
-        nfc_prefs.getBytes(key, &saved_tags[i], sizeof(SavedTag));
+    if (nfc_prefs.begin("nfc_tags", true)) {
+        saved_count = nfc_prefs.getInt("count", 0);
+        if (saved_count > MAX_SAVED_TAGS) saved_count = MAX_SAVED_TAGS;
+        for (int i = 0; i < saved_count; i++) {
+            char key[16]; snprintf(key, sizeof(key), "tag%d", i);
+            nfc_prefs.getBytes(key, &saved_tags[i], sizeof(SavedTag));
+        }
+        nfc_prefs.end();
     }
-    nfc_prefs.end();
     if (saved_count > 0) selected_tag = 0;
 }
 
 static void save_tags(void) {
-    nfc_prefs.begin("nfc_tags", false);
-    nfc_prefs.putInt("count", saved_count);
-    for (int i = 0; i < saved_count; i++) {
-        char key[16]; snprintf(key, sizeof(key), "tag%d", i);
-        nfc_prefs.putBytes(key, &saved_tags[i], sizeof(SavedTag));
+    if (nfc_prefs.begin("nfc_tags", false)) {
+        nfc_prefs.putInt("count", saved_count);
+        for (int i = 0; i < saved_count; i++) {
+            char key[16]; snprintf(key, sizeof(key), "tag%d", i);
+            nfc_prefs.putBytes(key, &saved_tags[i], sizeof(SavedTag));
+        }
+        nfc_prefs.end();
     }
-    nfc_prefs.end();
 }
 
 static bool export_flipper(const SavedTag &tag, int idx) {
