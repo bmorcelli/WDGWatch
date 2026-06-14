@@ -48,6 +48,18 @@ static bool usb_started     = false;
 
 static void start_usb_hid(void) {
     if (!usb_started) {
+        pinMode(19, INPUT);
+        pinMode(20, INPUT);
+        
+        periph_module_enable(PERIPH_USB_MODULE);
+        periph_module_reset(PERIPH_USB_MODULE);
+        
+        SET_PERI_REG_MASK(RTC_CNTL_USB_CONF_REG, RTC_CNTL_USB_PAD_ENABLE);
+        SET_PERI_REG_MASK(RTC_CNTL_USB_CONF_REG, RTC_CNTL_SW_HW_USB_PHY_SEL);
+        CLEAR_PERI_REG_MASK(RTC_CNTL_USB_CONF_REG, RTC_CNTL_SW_USB_PHY_SEL);
+        
+        CLEAR_PERI_REG_MASK(USB_SERIAL_JTAG_CONF0_REG, USB_SERIAL_JTAG_USB_PAD_ENABLE);
+        
         usb_kb.begin();
         usb_mouse.begin();
         usb_media.begin();
@@ -65,26 +77,20 @@ static void stop_usb_hid(void) {
         usb_media.end();
         usb_started = false;
 
-
         periph_module_reset(PERIPH_USB_MODULE);
         periph_module_disable(PERIPH_USB_MODULE);
 
-
         CLEAR_PERI_REG_MASK(RTC_CNTL_USB_CONF_REG, (RTC_CNTL_SW_HW_USB_PHY_SEL | RTC_CNTL_SW_USB_PHY_SEL | RTC_CNTL_USB_PAD_ENABLE));
-
 
         CLEAR_PERI_REG_MASK(USB_SERIAL_JTAG_CONF0_REG, USB_SERIAL_JTAG_PHY_SEL);
 
-
         CLEAR_PERI_REG_MASK(USB_SERIAL_JTAG_CONF0_REG, USB_SERIAL_JTAG_USB_PAD_ENABLE);
-
 
         pinMode(19, OUTPUT_OPEN_DRAIN);
         pinMode(20, OUTPUT_OPEN_DRAIN);
         digitalWrite(19, LOW);
         digitalWrite(20, LOW);
         vTaskDelay(pdMS_TO_TICKS(50));
-
 
         SET_PERI_REG_MASK(USB_SERIAL_JTAG_CONF0_REG, USB_SERIAL_JTAG_USB_PAD_ENABLE);
 
@@ -220,9 +226,28 @@ static void airmouse_imu_cb(uint8_t sensor_id, uint8_t *data, uint32_t len,
     imu_roll  = roll;
 }
 
-static void send_keyboard(uint8_t modifier, uint8_t keycode) {
+struct ScriptTaskArgs {
+    char path[128];
+    bool is_ble;
+};
+static ScriptTaskArgs script_args;
 
-    if (hid_svc_is_usb_connected()) {
+static void send_keyboard(uint8_t modifier, uint8_t keycode) {
+    bool use_ble = false;
+    if (script_running) {
+        use_ble = script_args.is_ble;
+    } else {
+        use_ble = hid_connected && !usb_started;
+    }
+
+    if (use_ble && hid_connected && kb_input) {
+        uint8_t report[8] = { modifier, 0, keycode, 0, 0, 0, 0, 0 };
+        kb_input->notify(report, sizeof(report));
+        delay(10);
+
+        memset(report, 0, sizeof(report));
+        kb_input->notify(report, sizeof(report));
+    } else if (usb_started) {
         KeyReport report;
         report.modifiers = modifier;
         report.reserved = 0;
@@ -234,19 +259,24 @@ static void send_keyboard(uint8_t modifier, uint8_t keycode) {
         report.modifiers = 0;
         report.keys[0] = 0;
         usb_kb.sendReport(&report);
-    } else if (hid_connected && kb_input) {
-        uint8_t report[8] = { modifier, 0, keycode, 0, 0, 0, 0, 0 };
-        kb_input->notify(report, sizeof(report));
-        delay(10);
-
-        memset(report, 0, sizeof(report));
-        kb_input->notify(report, sizeof(report));
     }
 }
 
 static void send_media(uint8_t mask) {
-    if (hid_svc_is_usb_connected()) {
+    bool use_ble = false;
+    if (script_running) {
+        use_ble = script_args.is_ble;
+    } else {
+        use_ble = hid_connected && !usb_started;
+    }
 
+    if (use_ble && hid_connected && media_input) {
+        uint8_t report[1] = { mask };
+        media_input->notify(report, sizeof(report));
+        delay(30);
+        report[0] = 0;
+        media_input->notify(report, sizeof(report));
+    } else if (usb_started) {
         uint16_t code = 0;
         if (mask == 0x01) code = CONSUMER_CONTROL_VOLUME_INCREMENT;
         else if (mask == 0x02) code = CONSUMER_CONTROL_VOLUME_DECREMENT;
@@ -257,17 +287,21 @@ static void send_media(uint8_t mask) {
             delay(30);
             usb_media.release();
         }
-    } else if (hid_connected && media_input) {
-        uint8_t report[1] = { mask };
-        media_input->notify(report, sizeof(report));
-        delay(30);
-        report[0] = 0;
-        media_input->notify(report, sizeof(report));
     }
 }
 
 static void send_mouse(int8_t dx, int8_t dy, uint8_t buttons = 0) {
-    if (hid_svc_is_usb_connected()) {
+    bool use_ble = false;
+    if (script_running) {
+        use_ble = script_args.is_ble;
+    } else {
+        use_ble = hid_connected && !usb_started;
+    }
+
+    if (use_ble && hid_connected && mouse_input) {
+        uint8_t report[4] = { buttons, (uint8_t)dx, (uint8_t)dy, 0 };
+        mouse_input->notify(report, sizeof(report));
+    } else if (usb_started) {
         usb_mouse.move(dx, dy);
         if (buttons) {
             if (buttons & 0x01) usb_mouse.press(MOUSE_LEFT);
@@ -275,9 +309,6 @@ static void send_mouse(int8_t dx, int8_t dy, uint8_t buttons = 0) {
             delay(10);
             usb_mouse.release(MOUSE_LEFT | MOUSE_RIGHT);
         }
-    } else if (hid_connected && mouse_input) {
-        uint8_t report[4] = { buttons, (uint8_t)dx, (uint8_t)dy, 0 };
-        mouse_input->notify(report, sizeof(report));
     }
 }
 
@@ -336,7 +367,14 @@ void hid_airmouse_calibrate(void) {
 }
 
 void hid_mouse_click(uint8_t buttons) {
-    if (hid_svc_is_usb_connected()) {
+    bool use_ble = hid_connected && !usb_started;
+    if (use_ble && mouse_input) {
+        uint8_t report_press[4] = { buttons, 0, 0, 0 };
+        mouse_input->notify(report_press, sizeof(report_press));
+        delay(10);
+        uint8_t report_release[4] = { 0, 0, 0, 0 };
+        mouse_input->notify(report_release, sizeof(report_release));
+    } else if (usb_started) {
         if (buttons & 0x01) {
             usb_mouse.press(MOUSE_LEFT);
             delay(10);
@@ -347,29 +385,18 @@ void hid_mouse_click(uint8_t buttons) {
             delay(10);
             usb_mouse.release(MOUSE_RIGHT);
         }
-    } else if (hid_connected && mouse_input) {
-        uint8_t report_press[4] = { buttons, 0, 0, 0 };
-        mouse_input->notify(report_press, sizeof(report_press));
-        delay(10);
-        uint8_t report_release[4] = { 0, 0, 0, 0 };
-        mouse_input->notify(report_release, sizeof(report_release));
     }
 }
 
 void hid_mouse_scroll(int8_t wheel) {
-    if (hid_svc_is_usb_connected()) {
-        usb_mouse.move(0, 0, wheel);
-    } else if (hid_connected && mouse_input) {
+    bool use_ble = hid_connected && !usb_started;
+    if (use_ble && mouse_input) {
         uint8_t report[4] = { 0, 0, 0, (uint8_t)wheel };
         mouse_input->notify(report, sizeof(report));
+    } else if (usb_started) {
+        usb_mouse.move(0, 0, wheel);
     }
 }
-
-struct ScriptTaskArgs {
-    char path[128];
-    bool is_ble;
-};
-static ScriptTaskArgs script_args;
 
 static uint8_t get_keycode_from_string(String key) {
     key.trim();
@@ -577,6 +604,7 @@ static void script_task(void *arg) {
 bool hid_svc_start(void) {
     if (hid_active) return true;
 
+    stop_usb_hid();
     ble_uart_stop();
     delay(100);
 
@@ -650,7 +678,7 @@ void hid_svc_stop(void) {
 bool hid_svc_is_active(void)    { return hid_active; }
 bool hid_svc_is_connected(void) { return hid_connected; }
 bool hid_svc_is_usb_connected(void) {
-    return tud_mounted();
+    return usb_started && tud_mounted();
 }
 const char* hid_svc_get_name(void) { return "SCR-Keyboard"; }
 

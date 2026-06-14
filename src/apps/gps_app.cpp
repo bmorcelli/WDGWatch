@@ -98,7 +98,6 @@ static void toggle_gps_cb(lv_event_t *e) {
 
     update_btn_style(btn_gps_toggle, gps_enabled);
 
-
     if (!gps_enabled && wardriving_active) {
         wardriving_active = false;
         lv_obj_t *w_lbl = lv_obj_get_child(btn_wardriving, 0);
@@ -111,7 +110,6 @@ static void toggle_gps_cb(lv_event_t *e) {
 
 static void toggle_wardriving_cb(lv_event_t *e) {
     (void)e; haptic_click();
-
 
     if (!wardriving_active && !gps_enabled) {
         gps_enabled = true;

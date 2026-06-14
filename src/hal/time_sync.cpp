@@ -46,7 +46,7 @@ static void ntp_time_sync_cb(struct timeval *tv) {
 void time_sync_load_networks(void) {
     dynamic_networks.clear();
 
-    // 1. Try to load from SD card if present and file exists
+    
     bool loaded_from_sd = false;
     if (SD.exists("/wifi_config.json")) {
         File f = SD.open("/wifi_config.json", FILE_READ);
@@ -73,7 +73,7 @@ void time_sync_load_networks(void) {
         }
     }
 
-    // 2. If SD loading failed or empty, fallback to NVS Preferences
+    
     if (!loaded_from_sd || dynamic_networks.empty()) {
         Preferences prefs;
         if (prefs.begin("wificreds", true)) {
@@ -99,7 +99,7 @@ void time_sync_load_networks(void) {
         }
     }
 
-    // 3. Fallback to compile-time networks passed to time_sync_init or wifi_config.h if still empty
+    
     if (dynamic_networks.empty()) {
         if (networks != nullptr && network_count > 0) {
             for (int i = 0; i < network_count; i++) {
@@ -119,10 +119,10 @@ void time_sync_load_networks(void) {
 void time_sync_save_network(const char *ssid, const char *password, bool hidden) {
     if (!ssid || strlen(ssid) == 0) return;
 
-    // Reload first to get the latest networks
+    
     time_sync_load_networks();
 
-    // Update or insert
+    
     bool found = false;
     for (auto &net : dynamic_networks) {
         if (net.ssid == ssid) {
@@ -140,7 +140,7 @@ void time_sync_save_network(const char *ssid, const char *password, bool hidden)
         dynamic_networks.push_back(net);
     }
 
-    // Prepare JSON document
+    
     JsonDocument doc;
     JsonArray arr = doc["networks"].to<JsonArray>();
     for (const auto &net : dynamic_networks) {
@@ -150,7 +150,7 @@ void time_sync_save_network(const char *ssid, const char *password, bool hidden)
         obj["hidden"] = net.hidden;
     }
 
-    // 1. Save to SD card
+    
     File f = SD.open("/wifi_config.json", FILE_WRITE);
     if (f) {
         if (serializeJson(doc, f) == 0) {
@@ -163,7 +163,7 @@ void time_sync_save_network(const char *ssid, const char *password, bool hidden)
         Serial.println("[TIME] SD card not available or failed to write /wifi_config.json");
     }
 
-    // 2. Save to NVS Preferences as backup
+    
     String jsonStr;
     serializeJson(doc, jsonStr);
     Preferences prefs;
@@ -248,13 +248,13 @@ void time_sync_init(const WiFiNetwork *nets, int count) {
     
     sntp_set_time_sync_notification_cb(ntp_time_sync_cb);
 
-    // Initialize dynamic networks list
+    
     time_sync_load_networks();
 
     Preferences prefs;
     bool already_synced = true;
     if (prefs.begin("timesync", true)) {
-        already_synced = prefs.getBool("synced", false); // Default to false to trigger auto-sync on first boot
+        already_synced = prefs.getBool("synced", false); 
         prefs.end();
     }
     synced = already_synced;

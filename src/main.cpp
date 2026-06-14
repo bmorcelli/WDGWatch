@@ -4,6 +4,7 @@
 #include "config.h"
 #include "app_manager.h"
 #include "ui/watchface.h"
+#include "ui/boot_screen.h"
 #include "hal/power_hal.h"
 #include "hal/time_sync.h"
 #include "hal/haptic.h"
@@ -51,7 +52,6 @@ void setup() {
     instance.powerControl(POWER_NFC, false);
     WiFi.mode(WIFI_OFF);
 
-
     step_counter = new SensorStepCounter(instance.sensor);
     step_counter->enable(1.0f, 0);
 
@@ -60,11 +60,19 @@ void setup() {
     beginLvglHelper(instance);
     Serial.println("[INIT] LVGL OK");
 
+    
+    lv_obj_t *root_scr = lv_scr_act();
+    boot_screen_show(root_scr);
+    boot_screen_update_progress("Hardware OK", 5);
+
     app_manager_init();
+    boot_screen_update_progress("App manager OK", 15);
 
     power_hal_init();
+    boot_screen_update_progress("Power HAL OK", 25);
 
     time_sync_init(wifi_networks, sizeof(wifi_networks) / sizeof(wifi_networks[0]));
+    boot_screen_update_progress("Time sync OK", 35);
 
     instance.setBrightness(PIPBOY_DEFAULT_BRIGHTNESS);
 
@@ -83,11 +91,19 @@ void setup() {
     });
 
     nfc_service_init();
+    boot_screen_update_progress("NFC OK", 50);
+
     lora_service_init();
+    boot_screen_update_progress("LoRa OK", 62);
+
     recon_service_init();
+    boot_screen_update_progress("Recon OK", 72);
+
     rf_service_init();
+    boot_screen_update_progress("RF OK", 82);
 
     api_init();
+    boot_screen_update_progress("API OK", 90);
 
     api_set_event_callback([](const char *json) {
         ble_uart_send(json);
@@ -95,8 +111,12 @@ void setup() {
     });
 
     haptic_init();
-    haptic_success();
+    boot_screen_update_progress("System ready", 100);
+    delay(600);
 
+    boot_screen_hide();
+
+    haptic_success();
     Serial.println("[INIT] Ready!\n");
 }
 

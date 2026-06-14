@@ -52,7 +52,7 @@ static void log_message(const char* msg);
 static void load_pet_state(void) {
     bool loaded = false;
     uint32_t last_time = 0;
-    if (prefs.begin("scr_pet", true)) { // Read-only is safer for load
+    if (prefs.begin("scr_pet", true)) { 
         pet_level = prefs.getUInt("level", 1);
         pet_xp = prefs.getUInt("xp", 0);
         pet_energy = prefs.getUInt("energy", 80);

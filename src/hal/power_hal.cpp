@@ -31,7 +31,6 @@ void power_hal_init(void) {
 void power_hal_check_sleep(void) {
     if (screen_off) return;
 
-
     if (app_manager_current() == APP_HID) {
         if (hid_svc_is_active() || hid_airmouse_is_active() || hid_svc_is_running_script()) {
             power_hal_reset_activity();
@@ -63,7 +62,6 @@ void power_hal_light_sleep(void) {
     screen_off = true;
     instance.setBrightness(0);
 
-
     if (rf_jammer_is_active()) {
         rf_jammer_stop();
     }
@@ -71,7 +69,6 @@ void power_hal_light_sleep(void) {
     if (nfc_svc_is_scanning() || nfc_svc_is_emulating()) {
         nfc_svc_request_stop();
     }
-
 
     bool was_hid_active = hid_svc_is_active();
     if (was_hid_active) {
@@ -82,22 +79,17 @@ void power_hal_light_sleep(void) {
         ble_uart_stop();
     }
 
-
     instance.powerControl(POWER_GPS, false);
     instance.powerControl(POWER_NFC, false);
     instance.powerControl(POWER_RADIO, false);
     instance.powerControl(POWER_SPEAK, false);
 
-
     WiFi.mode(WIFI_OFF);
-
 
     instance.lightSleep((WakeupSource_t)(WAKEUP_SRC_POWER_KEY | WAKEUP_SRC_TOUCH_PANEL | WAKEUP_SRC_BOOT_BUTTON));
 
-
     last_wakeup_ms = millis();
     screen_off = false;
-
 
     if (gps_app_is_enabled()) {
         instance.powerControl(POWER_GPS, true);
@@ -110,7 +102,6 @@ void power_hal_light_sleep(void) {
     if (current == APP_RF || current == APP_LORA || lora_svc_is_running()) {
         instance.powerControl(POWER_RADIO, true);
     }
-
 
     if (was_hid_active) {
         hid_svc_start();

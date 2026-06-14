@@ -47,6 +47,8 @@ button:active,.btn:active{background:#007280}
 .on{background:#00e5ff}
 .off{background:#333}
 #wifi-results{max-height:200px;overflow-y:auto}
+.modal{display:none;position:fixed;z-index:100;left:0;top:0;width:100%;height:100%;background-color:rgba(0,0,0,0.85);overflow:auto}
+.modal-content{background:#000;margin:15% auto;padding:15px;border:1px solid #00e5ff;width:85%;max-width:380px}
 </style>
 </head>
 <body>
@@ -58,6 +60,7 @@ button:active,.btn:active{background:#007280}
 <button class="tab" onclick="showTab('lora')">LORA</button>
 <button class="tab" onclick="showTab('wifi')">WiFi</button>
 <button class="tab" onclick="showTab('recon')">RECON</button>
+<button class="tab" onclick="showTab('hid')">HID</button>
 <button class="tab" onclick="showTab('settings')">SET</button>
 </div>
 
@@ -140,6 +143,39 @@ button:active,.btn:active{background:#007280}
 <button onclick="startDeauth()" class="btn-danger">SEND DEAUTH</button>
 </div>
 
+<!-- HID -->
+<div id="hid" class="panel">
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+<h3 style="color:#007280;margin:0">HID CONTROLLER</h3>
+<div style="display:flex;gap:6px">
+<button onclick="showSDModal()" style="width:auto;padding:4px 8px;font-size:12px;margin:0">📁 LOAD FROM SD</button>
+<button id="btn-hid-kb" onclick="showLayoutModal()" style="width:auto;padding:4px 8px;font-size:12px;margin:0">⌨️ KB: US</button>
+</div>
+</div>
+<div class="row"><span class="lbl">STATUS</span><span class="val" id="hid-status">DISCONNECTED</span></div>
+<div class="row"><span class="lbl">SCRIPT</span><span class="val" id="hid-script-status">IDLE</span></div>
+<div class="grid2" style="margin-top:6px;margin-bottom:8px">
+<button onclick="api('/api/cmd','POST',{cmd:JSON.stringify({cmd:'hid_start'})})">START BLE HID</button>
+<button onclick="api('/api/cmd','POST',{cmd:JSON.stringify({cmd:'hid_stop'})})" class="btn-warn">STOP BLE HID</button>
+</div>
+<div style="position:relative;margin-top:8px">
+<textarea id="hid-script-box" rows="10" placeholder="Type DuckyScript here..." style="font-family:monospace;white-space:pre;overflow:auto;resize:both;height:180px"></textarea>
+<div style="display:flex;gap:6px;margin-top:4px">
+<button onclick="saveScriptToSD()" class="btn-warn" style="flex:1;margin:0">SAVE TO SD</button>
+<button onclick="runInstantScript(false)" style="flex:1;margin:0">SEND USB</button>
+<button onclick="runInstantScript(true)" style="flex:1;margin:0">SEND BLE</button>
+</div>
+</div>
+<div style="margin-top:8px">
+<div style="color:#007280;font-size:12px;margin-bottom:2px;display:flex;justify-content:space-between">
+<span>TERMINAL COMMAND LINE</span>
+<span>Press Enter to add</span>
+</div>
+<input id="hid-term-input" placeholder="e.g. STRING hello world..." onkeydown="handleTermEnter(event)">
+</div>
+<button onclick="api('/api/cmd','POST',{cmd:JSON.stringify({cmd:'hid_abort_script'})})" class="btn-danger" style="margin-top:10px">ABORT RUNNING SCRIPT</button>
+</div>
+
 <!-- SETTINGS -->
 <div id="settings" class="panel">
 <div class="switch-row"><span>WiFi AP</span><span class="val" style="color:#00e5ff">ON (connected)</span></div>
@@ -157,6 +193,37 @@ button:active,.btn:active{background:#007280}
 </div>
 
 <div id="log"></div>
+
+<!-- Modals -->
+<div id="layout-modal" class="modal">
+<div class="modal-content">
+<h3 style="color:#00e5ff;margin-bottom:10px;border-bottom:1px solid #007280;padding-bottom:4px">SELECT KEYBOARD LAYOUT</h3>
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;max-height:200px;overflow-y:auto">
+<button class="btn" style="padding:6px;margin:0" onclick="selectLayout('US')">US</button>
+<button class="btn" style="padding:6px;margin:0" onclick="selectLayout('TR')">TR</button>
+<button class="btn" style="padding:6px;margin:0" onclick="selectLayout('DE')">DE</button>
+<button class="btn" style="padding:6px;margin:0" onclick="selectLayout('FR')">FR</button>
+<button class="btn" style="padding:6px;margin:0" onclick="selectLayout('DK')">DK</button>
+<button class="btn" style="padding:6px;margin:0" onclick="selectLayout('UK')">UK</button>
+<button class="btn" style="padding:6px;margin:0" onclick="selectLayout('HU')">HU</button>
+<button class="btn" style="padding:6px;margin:0" onclick="selectLayout('IT')">IT</button>
+<button class="btn" style="padding:6px;margin:0" onclick="selectLayout('BR')">BR</button>
+<button class="btn" style="padding:6px;margin:0" onclick="selectLayout('PT')">PT</button>
+<button class="btn" style="padding:6px;margin:0" onclick="selectLayout('SI')">SI</button>
+<button class="btn" style="padding:6px;margin:0" onclick="selectLayout('ES')">ES</button>
+<button class="btn" style="padding:6px;margin:0" onclick="selectLayout('SV')">SV</button>
+</div>
+<button onclick="closeLayoutModal()" class="btn-warn" style="margin-top:10px;padding:6px">CANCEL</button>
+</div>
+</div>
+
+<div id="sd-modal" class="modal">
+<div class="modal-content">
+<h3 style="color:#00e5ff;margin-bottom:10px;border-bottom:1px solid #007280;padding-bottom:4px">LOAD FROM SD</h3>
+<div id="sd-modal-list" style="display:flex;flex-direction:column;gap:4px;max-height:220px;overflow-y:auto"></div>
+<button onclick="closeSDModal()" class="btn-warn" style="margin-top:10px;padding:6px">CANCEL</button>
+</div>
+</div>
 
 <script>
 let ws;
@@ -179,6 +246,16 @@ function handleWS(d){
   if(d.lora!==undefined) el('lora-status',d.lora?'ON':'OFF');
   if(d.gps!==undefined){let g=document.getElementById('sw-gps');if(g)g.checked=(d.gps!=='OFF')}
   if(d.nfc!==undefined){let n=document.getElementById('sw-nfc');if(n)n.checked=d.nfc}
+  if(d.hid_active!==undefined){
+   let status='DISCONNECTED';
+   if(d.hid_usb)status='USB CONNECTED';
+   else if(d.hid_conn)status='BLE CONNECTED';
+   else if(d.hid_active)status='BLE ADVERTISING';
+   el('hid-status',status);
+   el('hid-script-status',d.hid_running?'RUNNING':'IDLE');
+   let k=document.getElementById('btn-hid-kb');
+   if(k&&d.hid_layout)k.textContent='⌨️ KB: '+d.hid_layout;
+  }
  }
  if(d.type==='nfc_tag'){
   el('nfc-uid',d.uid||'--');el('nfc-ndef',d.ndef||'--');
@@ -303,6 +380,74 @@ function renderWifi(nets){
  });
 }
 function toggleSvc(svc,on){api('/api/service','POST',{service:svc,enable:on})}
+function showLayoutModal(){document.getElementById('layout-modal').style.display='block'}
+function closeLayoutModal(){document.getElementById('layout-modal').style.display='none'}
+function selectLayout(l){
+ api('/api/cmd','POST',{cmd:JSON.stringify({cmd:'hid_set_layout',params:{layout:l}})});
+ closeLayoutModal();
+}
+function closeSDModal(){document.getElementById('sd-modal').style.display='none'}
+async function showSDModal(){
+ let r=await api('/api/cmd','POST',{cmd:JSON.stringify({cmd:'hid_list_scripts'})});
+ let list=document.getElementById('sd-modal-list');
+ list.innerHTML='';
+ if(r&&r.scripts&&r.scripts.length>0){
+  r.scripts.forEach(s=>{
+   list.innerHTML+='<div class="tag" style="margin:2px 0;"><span style="color:#00e5ff;font-size:13px;cursor:pointer;" onclick="loadScriptContent(\''+s+'\')">'+s+'</span></div>';
+  });
+ }else{
+  list.innerHTML='<div style="color:#007280;padding:10px;text-align:center;">No scripts found in /badusb</div>';
+ }
+ document.getElementById('sd-modal').style.display='block';
+}
+async function loadScriptContent(name){
+ let r=await api('/api/cmd','POST',{cmd:JSON.stringify({cmd:'hid_read_script',params:{name:name}})});
+ if(r&&r.ok){
+  document.getElementById('hid-script-box').value=r.content;
+  log('Loaded script: '+name);
+ }else{
+  log('Error loading script: '+(r.error||'unknown'));
+ }
+ closeSDModal();
+}
+async function saveScriptToSD(){
+ let name=prompt("Enter script filename (e.g. exploit.txt):");
+ if(!name)return;
+ name=name.trim();
+ if(name==='')return;
+ let content=document.getElementById('hid-script-box').value;
+ let r=await api('/api/cmd','POST',{cmd:JSON.stringify({cmd:'hid_save_script',params:{name:name,content:content}})});
+ if(r&&r.ok){
+  log('Script saved to SD as: '+name);
+ }else{
+  log('Error saving script: '+(r.error||'unknown'));
+ }
+}
+async function runInstantScript(ble){
+ let content=document.getElementById('hid-script-box').value;
+ let layout=document.getElementById('btn-hid-kb').textContent.replace('⌨️ KB: ','');
+ let r=await api('/api/cmd','POST',{cmd:JSON.stringify({cmd:'hid_run_instant',params:{script:content,ble:ble,layout:layout}})});
+ if(r&&r.ok){
+  log('Instant script sent ('+(ble?'BLE':'USB')+')');
+ }else{
+  log('Error running script: '+(r.error||'unknown'));
+ }
+}
+function handleTermEnter(e){
+ if(e.key==='Enter'){
+  e.preventDefault();
+  let inp=document.getElementById('hid-term-input');
+  let box=document.getElementById('hid-script-box');
+  if(inp&&box){
+   let val=inp.value.trim();
+   if(val){
+    box.value+=(box.value?"\n":"")+val;
+    inp.value='';
+    box.scrollTop=box.scrollHeight;
+   }
+  }
+ }
+}
 wsConnect();
 setInterval(()=>{if(ws&&ws.readyState===1)ws.send('ping')},5000);
 </script>

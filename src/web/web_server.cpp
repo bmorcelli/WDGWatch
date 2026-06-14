@@ -14,6 +14,7 @@
 #include "../api/command_handler.h"
 #include "../ui/watchface.h"
 #include "../ui/action_overlay.h"
+#include "../hal/hid_service.h"
 
 static AsyncWebServer server(80);
 static AsyncWebSocket ws("/ws");
@@ -87,6 +88,11 @@ static void push_status(void) {
     doc["heap"] = ESP.getFreeHeap() / 1024;
     doc["lora"] = lora_svc_is_running();
     doc["nfc"] = nfc_svc_is_scanning();
+    doc["hid_active"] = hid_svc_is_active();
+    doc["hid_conn"] = hid_svc_is_connected();
+    doc["hid_usb"] = hid_svc_is_usb_connected();
+    doc["hid_running"] = hid_svc_is_running_script();
+    doc["hid_layout"] = hid_svc_get_layout_name(hid_svc_get_layout());
 
     if (instance.gps.location.isValid()) {
         char g[32]; snprintf(g, sizeof(g), "%.4f,%.4f", instance.gps.location.lat(), instance.gps.location.lng());
@@ -101,7 +107,7 @@ static void push_status(void) {
     char up[16]; snprintf(up, sizeof(up), "%dh%02dm", s/3600, (s%3600)/60);
     doc["uptime"] = up;
 
-    char buf[256];
+    char buf[512];
     serializeJson(doc, buf, sizeof(buf));
     ws_broadcast(buf);
 }

@@ -481,6 +481,68 @@ char* api_handle_command(const char *json_cmd) {
         return buf;
     }
 
+    if (strcmp(cmd, "hid_save_script") == 0) {
+        const char *name = doc["params"]["name"] | "";
+        const char *content = doc["params"]["content"] | "";
+        if (strlen(name) == 0) return strdup("{\"error\":\"empty name\"}");
+        
+        char full_path[128];
+        if (name[0] == '/') {
+            strncpy(full_path, name, sizeof(full_path) - 1);
+        } else {
+            snprintf(full_path, sizeof(full_path), "/badusb/%s", name);
+        }
+        full_path[sizeof(full_path) - 1] = 0;
+        
+        if (!SD.exists("/badusb")) {
+            SD.mkdir("/badusb");
+        }
+        
+        File f = SD.open(full_path, FILE_WRITE);
+        if (!f) return strdup("{\"error\":\"failed to write to SD\"}");
+        f.print(content);
+        f.close();
+        return strdup("{\"ok\":true,\"msg\":\"saved to SD\"}");
+    }
+
+    if (strcmp(cmd, "hid_read_script") == 0) {
+        const char *name = doc["params"]["name"] | "";
+        if (strlen(name) == 0) return strdup("{\"error\":\"empty name\"}");
+        
+        char full_path[128];
+        if (name[0] == '/') {
+            strncpy(full_path, name, sizeof(full_path) - 1);
+        } else {
+            snprintf(full_path, sizeof(full_path), "/badusb/%s", name);
+        }
+        full_path[sizeof(full_path) - 1] = 0;
+        
+        if (!SD.exists(full_path)) return strdup("{\"error\":\"file not found\"}");
+        
+        File f = SD.open(full_path, FILE_READ);
+        if (!f) return strdup("{\"error\":\"failed to read file\"}");
+        
+        size_t fsize = f.size();
+        if (fsize > 8192) {
+            f.close();
+            return strdup("{\"error\":\"file too large\"}");
+        }
+        
+        char *content = (char*)malloc(fsize + 1);
+        f.readBytes(content, fsize);
+        content[fsize] = 0;
+        f.close();
+        
+        JsonDocument rdoc;
+        rdoc["ok"] = true;
+        rdoc["content"] = content;
+        free(content);
+        
+        char *buf = (char*)malloc(fsize + 128);
+        serializeJson(rdoc, buf, fsize + 128);
+        return buf;
+    }
+
     if (strcmp(cmd, "pet_feed") == 0) {
         pet_feed_action();
         return strdup("{\"ok\":true,\"msg\":\"pet fed\"}");
