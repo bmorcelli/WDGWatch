@@ -57,7 +57,67 @@ static lv_obj_t* make_btn(lv_obj_t *par, int x, int y, int w, int h, const char 
 
 static void wifi_scan_cb(lv_event_t *e) { (void)e; haptic_click(); recon_request_wifi_scan(); }
 static void ble_scan_cb(lv_event_t *e)  { (void)e; haptic_click(); recon_request_ble_scan(10); }
-static void stop_cb(lv_event_t *e)      { (void)e; haptic_click(); recon_request_stop(); }
+static bool arp_scan_was_running = false;
+static void stop_cb(lv_event_t *e) {
+    (void)e; haptic_click();
+    arp_scan_was_running = false;
+    recon_request_stop();
+}
+
+static void ip_select_cb(lv_event_t *e) {
+    haptic_click();
+    const char* ip = (const char*)lv_event_get_user_data(e);
+    recon_request_ip_sniff(ip);
+    lv_obj_t* item = (lv_obj_t*)lv_event_get_target(e);
+    lv_obj_t* modal = lv_obj_get_parent(lv_obj_get_parent(item));
+    lv_obj_delete(modal);
+}
+
+static void close_modal_cb(lv_event_t *e) {
+    haptic_click();
+    lv_obj_t* btn = (lv_obj_t*)lv_event_get_target(e);
+    lv_obj_t* modal = lv_obj_get_parent(lv_obj_get_parent(btn));
+    lv_obj_delete(modal);
+}
+
+static void arp_btn_cb(lv_event_t *e) {
+    if (e) haptic_click();
+    if (recon_is_arp_scanning()) {
+        if (lbl_status) lv_label_set_text(lbl_status, "ARP SCAN IN PROGRESS");
+        lv_obj_set_style_text_color(lbl_status, G, 0);
+        return;
+    }
+    int ac = recon_arp_count();
+    if (ac == 0) {
+        if (lbl_status) lv_label_set_text(lbl_status, "ARP SCANNING...");
+        lv_obj_set_style_text_color(lbl_status, G, 0);
+        recon_request_arp_scan();
+        return;
+    }
+    lv_obj_t* modal = create_modal("NETWORK HOSTS");
+    lv_obj_t* list = lv_list_create(modal);
+    lv_obj_set_size(list, 350, 350);
+    lv_obj_align(list, LV_ALIGN_BOTTOM_MID, 0, 0);
+    lv_obj_set_style_bg_color(list, BG, 0);
+    lv_obj_set_style_border_width(list, 0, 0);
+
+    // Add close button at the top
+    lv_obj_t* close_btn = lv_list_add_button(list, nullptr, "[ BACK / CLOSE ]");
+    lv_obj_set_style_bg_color(close_btn, BG, 0);
+    lv_obj_set_style_text_color(lv_obj_get_child(close_btn, 0), lv_color_hex(0xFF3300), 0);
+    lv_obj_add_event_cb(close_btn, close_modal_cb, LV_EVENT_CLICKED, nullptr);
+
+    for (int i = 0; i < ac; i++) {
+        const ArpDevice* d = recon_get_arp_device(i);
+        if (!d) continue;
+        char buf[64];
+        snprintf(buf, sizeof(buf), "%s [%s]", d->ip, d->vendor);
+        lv_obj_t* btn = lv_list_add_button(list, nullptr, buf);
+        lv_obj_set_style_bg_color(btn, BG, 0);
+        lv_obj_set_style_text_color(lv_obj_get_child(btn, 0), G, 0);
+        lv_obj_add_event_cb(btn, ip_select_cb, LV_EVENT_CLICKED, (void*)d->ip);
+    }
+}
 
 static void deauth_target_selected_cb(lv_event_t *e) {
     haptic_click();
@@ -404,6 +464,9 @@ void recon_app_create(lv_obj_t *parent) {
     make_btn(scr, x+bw+7, y, bw, bh, "BEACON", beacon_btn_cb);
     make_btn(scr, x+2*(bw+7), y, bw, bh, "EVIL T", evil_twin_btn_cb);
 
+    y += bh + 7;
+    make_btn(scr, x, y, bw*2+7, bh, "ARP", arp_btn_cb);
+
     y += bh + 15;
     lbl_results = lv_label_create(scr);
     lv_label_set_recolor(lbl_results, true);
@@ -418,8 +481,10 @@ void recon_app_create(lv_obj_t *parent) {
 void recon_app_update(void) {
     if (!scr || !lbl_status || !lbl_results) return;
 
-    if (recon_is_scanning()) {
-        lv_label_set_text(lbl_status, "SCANNING...");
+    if (recon_is_scanning() || recon_is_arp_scanning()) {
+        const char* arp_msg = recon_is_arp_waiting_wifi() ? "ARP: Connecting..." : "ARP SCANNING...";
+        lv_label_set_text(lbl_status, recon_is_arp_scanning() ? arp_msg : "SCANNING...");
+        lv_obj_set_style_text_color(lbl_status, G, 0);
     } else if (recon_is_deauthing()) {
         lv_label_set_text(lbl_status, "DEAUTH ACTIVE");
         lv_obj_set_style_text_color(lbl_status, lv_color_hex(0xFF3300), 0);
@@ -427,6 +492,11 @@ void recon_app_update(void) {
     } else if (recon_is_beacon_spamming()) {
         char b[48];
         snprintf(b, sizeof(b), "BEACON SPAMMING: %d SSIDs", recon_beacon_active_count());
+        lv_label_set_text(lbl_status, b);
+        lv_obj_set_style_text_color(lbl_status, lv_color_hex(0xFF9900), 0);
+    } else if (recon_is_ip_sniffing()) {
+        char b[48];
+        snprintf(b, sizeof(b), "SNIFFING: %s", recon_sniff_target_ip());
         lv_label_set_text(lbl_status, b);
         lv_obj_set_style_text_color(lbl_status, lv_color_hex(0xFF9900), 0);
     } else if (recon_is_evil_twin()) {
@@ -448,7 +518,39 @@ void recon_app_update(void) {
     int wc = recon_wifi_count();
     int bc = recon_ble_count();
 
-    if (recon_is_evil_twin()) {
+    if (recon_is_arp_scanning()) {
+        arp_scan_was_running = true;
+    } else if (arp_scan_was_running) {
+        arp_scan_was_running = false;
+        int ac = recon_arp_count();
+        if (ac > 0) {
+            arp_btn_cb(nullptr);
+        } else {
+            if (lbl_status) lv_label_set_text(lbl_status, "ARP: NO HOSTS FOUND");
+            lv_obj_set_style_text_color(lbl_status, lv_color_hex(0xFF9900), 0);
+        }
+    }
+
+    if (recon_is_ip_sniffing()) {
+        int uc = recon_sniff_unique_ip_count();
+        pos += snprintf(buf+pos, sizeof(buf)-pos, "[ SNIFF: %s ]\n", recon_sniff_target_ip());
+        pos += snprintf(buf+pos, sizeof(buf)-pos, "PCAP -> SD:/traffic/\n\n");
+        if (uc == 0) {
+            pos += snprintf(buf+pos, sizeof(buf)-pos, "Waiting for packets...\n");
+        } else {
+            pos += snprintf(buf+pos, sizeof(buf)-pos, "Remote IPs (%d):\n", uc);
+            for (int i = 0; i < uc && pos < 900; i++) {
+                pos += snprintf(buf+pos, sizeof(buf)-pos, "  %s\n", recon_sniff_get_ip(i));
+            }
+        }
+    } else if (recon_is_arp_scanning()) {
+        pos += snprintf(buf+pos, sizeof(buf)-pos, "[ ARP SCAN ]\n");
+        if (recon_is_arp_waiting_wifi()) {
+            pos += snprintf(buf+pos, sizeof(buf)-pos, "Connecting to WiFi...\n");
+        } else {
+            pos += snprintf(buf+pos, sizeof(buf)-pos, "Sending ARP requests...\n%d/254\nHosts found: %d\n", recon_arp_scan_progress(), recon_arp_count());
+        }
+    } else if (recon_is_evil_twin()) {
         pos += snprintf(buf+pos, sizeof(buf)-pos, "[ EVIL TWIN LOG ]\n");
         if (recon_et_has_new_cred()) {
             pos += snprintf(buf+pos, sizeof(buf)-pos, "#00E5FF Captured: %s#\n", recon_et_last_cred());
@@ -467,8 +569,16 @@ void recon_app_update(void) {
             pos += snprintf(buf+pos, sizeof(buf)-pos, "WiFi: %d networks\n", wc);
             for (int i = 0; i < wc && i < 10 && pos < 900; i++) {
                 const ReconWiFi *n = recon_get_wifi(i);
-                if (n) pos += snprintf(buf+pos, sizeof(buf)-pos, " %d. %s [%d] CH%d\n",
-                    i+1, n->ssid, n->rssi, n->channel);
+                if (!n) continue;
+                if (n->is_camera) {
+                    pos += snprintf(buf+pos, sizeof(buf)-pos,
+                        "#FF9900 %d. %s [%d] CH%d (CAM!)#\n",
+                        i+1, n->ssid, n->rssi, n->channel);
+                } else {
+                    pos += snprintf(buf+pos, sizeof(buf)-pos,
+                        " %d. %s [%d] CH%d\n",
+                        i+1, n->ssid, n->rssi, n->channel);
+                }
             }
             if (wc > 10) pos += snprintf(buf+pos, sizeof(buf)-pos, " ...+%d more\n", wc-10);
         }
@@ -495,6 +605,7 @@ void recon_app_update(void) {
 }
 
 void recon_app_destroy(void) {
+    recon_request_stop();
     if (kbd_container) {
         lv_obj_delete(kbd_container);
         kbd_container = nullptr;

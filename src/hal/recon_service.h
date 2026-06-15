@@ -3,6 +3,8 @@
 
 #define BEACON_SSID_COUNT 15
 #define BEACON_SSID_LEN   33
+#define MAX_ARP_RESULTS   32
+#define MAX_SNIFF_IPS     32
 
 struct ReconWiFi {
     char ssid[33];
@@ -10,6 +12,13 @@ struct ReconWiFi {
     int  rssi;
     int  channel;
     char auth[16];
+    bool is_camera;
+};
+
+struct ArpDevice {
+    char ip[16];
+    char mac[18];
+    char vendor[32];
 };
 
 struct BleDevice {
@@ -54,9 +63,22 @@ bool        recon_et_has_new_cred(void);
 
 int recon_wifi_count(void);
 int recon_ble_count(void);
+int recon_arp_count(void);
 
 const ReconWiFi* recon_get_wifi(int idx);
 const BleDevice* recon_get_ble(int idx);
+const ArpDevice* recon_get_arp_device(int idx);
+
+void recon_request_arp_scan(void);
+bool recon_is_arp_scanning(void);
+bool recon_is_arp_waiting_wifi(void);
+int  recon_arp_scan_progress(void);
+
+void recon_request_ip_sniff(const char* target_ip);
+bool recon_is_ip_sniffing(void);
+const char* recon_sniff_target_ip(void);
+int  recon_sniff_unique_ip_count(void);
+const char* recon_sniff_get_ip(int idx);
 
 void recon_request_bitgotchi(bool active);
 bool recon_is_bitgotchi_active(void);
