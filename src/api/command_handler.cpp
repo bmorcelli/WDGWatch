@@ -16,6 +16,7 @@
 #include "../hal/rf_service.h"
 #include "../hal/hid_service.h"
 #include "../apps/pet_app.h"
+#include "../apps/gps_app.h"
 
 static api_event_cb_t event_cb = nullptr;
 
@@ -193,8 +194,8 @@ static char* cmd_reboot(void) {
     return strdup("{\"ok\":true,\"msg\":\"rebooting\"}");
 }
 
-static char* cmd_gps_on(void)  { instance.powerControl(POWER_GPS, true); return strdup("{\"ok\":true}"); }
-static char* cmd_gps_off(void) { instance.powerControl(POWER_GPS, false); return strdup("{\"ok\":true}"); }
+static char* cmd_gps_on(void)  { gps_app_set_enabled(true); return strdup("{\"ok\":true}"); }
+static char* cmd_gps_off(void) { gps_app_set_enabled(false); return strdup("{\"ok\":true}"); }
 
 static char* cmd_compass(void) {
     char *buf = (char*)malloc(128);

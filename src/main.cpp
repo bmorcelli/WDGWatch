@@ -58,6 +58,10 @@ void setup() {
     Serial.println("[INIT] Hardware OK");
 
     beginLvglHelper(instance);
+    lv_indev_t *touch_indev = lv_get_touch_indev();
+    if (touch_indev) {
+        lv_indev_set_scroll_limit(touch_indev, 25);
+    }
     Serial.println("[INIT] LVGL OK");
 
     

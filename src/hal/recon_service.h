@@ -1,19 +1,23 @@
 #pragma once
 #include <LilyGoLib.h>
 
+#define BEACON_SSID_COUNT 15
+#define BEACON_SSID_LEN   33
+
 struct ReconWiFi {
     char ssid[33];
     char bssid[18];
-    int rssi;
-    int channel;
+    int  rssi;
+    int  channel;
     char auth[16];
 };
 
 struct BleDevice {
     char mac[18];
     char name[33];
-    int rssi;
+    int  rssi;
     bool is_airtag;
+    bool is_flipper;
 };
 
 void recon_service_init(void);
@@ -25,21 +29,38 @@ void recon_request_deauth(const char* bssid, int channel);
 void recon_request_deauth_all(void);
 void recon_request_sniffer(int channel = 0);
 void recon_request_deauth_detect(void);
-void recon_request_evil_twin(const char* ssid, int channel);
 void recon_request_stop(void);
+
+void recon_request_beacon_spam(const char ssids[][BEACON_SSID_LEN], int count);
+
+void recon_request_evil_twin(const char* ssid, int channel);
+
+void recon_request_evil_twin_full(const char* ssid, int channel,
+                                   const char* bssid,
+                                   const char* html_path);
 
 bool recon_is_scanning(void);
 bool recon_is_deauthing(void);
 bool recon_is_sniffing(void);
 bool recon_is_evil_twin(void);
+bool recon_is_beacon_spamming(void);
 
 int recon_sniffer_packet_count(void);
 int recon_deauth_detect_count(void);
+int recon_beacon_active_count(void);
 
 const char* recon_et_last_cred(void);
-bool recon_et_has_new_cred(void);
-int  recon_wifi_count(void);
-int  recon_ble_count(void);
+bool        recon_et_has_new_cred(void);
+
+int recon_wifi_count(void);
+int recon_ble_count(void);
 
 const ReconWiFi* recon_get_wifi(int idx);
-const BleDevice*   recon_get_ble(int idx);
+const BleDevice* recon_get_ble(int idx);
+
+void recon_request_bitgotchi(bool active);
+bool recon_is_bitgotchi_active(void);
+int  recon_bitgotchi_friends_count(void);
+int  recon_bitgotchi_handshakes_count(void);
+const char* recon_bitgotchi_last_event(void);
+bool recon_bitgotchi_has_new_event(void);

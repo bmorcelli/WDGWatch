@@ -270,6 +270,25 @@ bool gps_app_is_enabled(void) {
     return gps_enabled;
 }
 
+void gps_app_set_enabled(bool enabled) {
+    if (gps_enabled == enabled) return;
+    gps_enabled = enabled;
+    instance.powerControl(POWER_GPS, gps_enabled);
+    if (!gps_enabled && wardriving_active) {
+        wardriving_active = false;
+        if (btn_wardriving) {
+            lv_obj_t *w_lbl = lv_obj_get_child(btn_wardriving, 0);
+            if (w_lbl) {
+                lv_label_set_text(w_lbl, "WARDRIVING");
+            }
+            update_btn_style(btn_wardriving, false);
+        }
+    }
+    if (btn_gps_toggle) {
+        update_btn_style(btn_gps_toggle, gps_enabled);
+    }
+}
+
 bool gps_app_is_wardriving_active(void) {
     return wardriving_active;
 }

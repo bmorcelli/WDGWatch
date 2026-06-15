@@ -5,6 +5,9 @@
 void rf_service_init(void);
 void rf_service_loop(void);
 
+bool rf_radio_wake(float freq_mhz);
+void rf_radio_sleep(void);
+
 bool rf_jammer_start(uint32_t freq_hz);
 void rf_jammer_stop(void);
 bool rf_jammer_is_active(void);

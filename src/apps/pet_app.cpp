@@ -2,6 +2,7 @@
 #include "pet_app.h"
 #include "../config.h"
 #include "../hal/haptic.h"
+#include "../hal/recon_service.h"
 #include <Preferences.h>
 #include <time.h>
 
@@ -44,6 +45,7 @@ static lv_obj_t *lbl_console = nullptr;
 
 static uint32_t expression_override_until = 0;
 static const char* override_face = nullptr;
+static lv_obj_t *btn_bitgotchi = nullptr;
 
 static void update_bars(void);
 static void update_pet_visuals(void);
@@ -216,6 +218,29 @@ static void status_cb(lv_event_t *e) {
     snprintf(buf, sizeof(buf), "LVL:%d | XP:%d%% | HP:%d%% | ENG:%d%%",
              pet_level, pet_xp, pet_health, pet_energy);
     log_message(buf);
+}
+
+static void bitgotchi_toggle_cb(lv_event_t *e) {
+    (void)e;
+    haptic_click();
+    bool active = recon_is_bitgotchi_active();
+    recon_request_bitgotchi(!active);
+
+    if (active) {
+        
+        if (pet_viewport) {
+            lv_obj_set_style_bg_color(pet_viewport, BG, 0);
+            lv_obj_set_style_border_color(pet_viewport, D, 0);
+        }
+        log_message("Bit-gotchi stopped.");
+    } else {
+        
+        if (pet_viewport) {
+            lv_obj_set_style_bg_color(pet_viewport, lv_color_hex(0x001518), 0);
+            lv_obj_set_style_border_color(pet_viewport, G, 0);
+        }
+        log_message("Bit-gotchi started!");
+    }
 }
 
 static lv_obj_t* make_btn(lv_obj_t *par, int x, int y, int w, int h,
@@ -421,6 +446,24 @@ void pet_app_create(lv_obj_t *parent) {
     make_btn(scr, 240, SAFE_TOP + 100, BW, BH, "CLEAN", clean_cb);
     make_btn(scr, 314, SAFE_TOP + 100, BW, BH, "STATUS", status_cb);
 
+    
+    btn_bitgotchi = lv_button_create(scr);
+    lv_obj_set_size(btn_bitgotchi, BW * 2 + 6, 40);
+    lv_obj_set_pos(btn_bitgotchi, 240, SAFE_TOP + 185);
+    lv_obj_set_style_bg_color(btn_bitgotchi, BG, 0);
+    lv_obj_set_style_border_color(btn_bitgotchi, lv_color_hex(0xFF9900), 0);
+    lv_obj_set_style_border_width(btn_bitgotchi, 1, 0);
+    lv_obj_set_style_radius(btn_bitgotchi, 0, 0);
+    lv_obj_set_style_pad_all(btn_bitgotchi, 0, 0);
+    lv_obj_set_style_bg_color(btn_bitgotchi, lv_color_hex(0xFF9900), LV_STATE_PRESSED);
+    lv_obj_set_style_bg_opa(btn_bitgotchi, 40, LV_STATE_PRESSED);
+    lv_obj_add_event_cb(btn_bitgotchi, bitgotchi_toggle_cb, LV_EVENT_CLICKED, nullptr);
+    lv_obj_t *bg_lbl = lv_label_create(btn_bitgotchi);
+    lv_label_set_text(bg_lbl, "BIT-GOTCHI");
+    lv_obj_set_style_text_color(bg_lbl, lv_color_hex(0xFF9900), 0);
+    lv_obj_set_style_text_font(bg_lbl, &lv_font_montserrat_16, 0);
+    lv_obj_center(bg_lbl);
+
     const int BAR_W = 110;
     const int BAR_H = 10;
 
@@ -489,8 +532,8 @@ void pet_app_create(lv_obj_t *parent) {
     lv_obj_set_pos(lbl_xp_val, 245 + BAR_W + 5, 306);
 
     lv_obj_t *console_box = lv_obj_create(scr);
-    lv_obj_set_size(console_box, SCREEN_WIDTH - SAFE_LEFT - SAFE_RIGHT, 50);
-    lv_obj_set_pos(console_box, SAFE_LEFT, 345);
+    lv_obj_set_size(console_box, SCREEN_WIDTH - SAFE_LEFT - SAFE_RIGHT, 80);
+    lv_obj_set_pos(console_box, SAFE_LEFT, 335);
     lv_obj_set_style_bg_color(console_box, BG, 0);
     lv_obj_set_style_border_color(console_box, D, 0);
     lv_obj_set_style_border_width(console_box, 1, 0);
@@ -498,9 +541,12 @@ void pet_app_create(lv_obj_t *parent) {
     lv_obj_clear_flag(console_box, LV_OBJ_FLAG_SCROLLABLE);
 
     lbl_console = lv_label_create(console_box);
+    lv_label_set_recolor(lbl_console, true);
     lv_obj_set_style_text_color(lbl_console, G, 0);
-    lv_obj_set_style_text_font(lbl_console, &lv_font_montserrat_16, 0);
-    lv_obj_align(lbl_console, LV_ALIGN_LEFT_MID, 10, 0);
+    lv_obj_set_style_text_font(lbl_console, &lv_font_montserrat_14, 0);
+    lv_obj_set_width(lbl_console, SCREEN_WIDTH - SAFE_LEFT - SAFE_RIGHT - 20);
+    lv_label_set_long_mode(lbl_console, LV_LABEL_LONG_WRAP);
+    lv_obj_align(lbl_console, LV_ALIGN_TOP_LEFT, 8, 5);
 
     update_bars();
     update_pet_visuals();
@@ -532,9 +578,40 @@ void pet_app_update(void) {
         }
     }
 
+    if (btn_bitgotchi) {
+        bool active = recon_is_bitgotchi_active();
+        if (active) {
+            lv_obj_set_style_bg_color(btn_bitgotchi, lv_color_hex(0xFF9900), 0);
+            lv_obj_set_style_bg_opa(btn_bitgotchi, LV_OPA_COVER, 0);
+            lv_obj_t *lbl = lv_obj_get_child(btn_bitgotchi, 0);
+            if (lbl) lv_obj_set_style_text_color(lbl, BG, 0);
+        } else {
+            lv_obj_set_style_bg_color(btn_bitgotchi, BG, 0);
+            lv_obj_t *lbl = lv_obj_get_child(btn_bitgotchi, 0);
+            if (lbl) lv_obj_set_style_text_color(lbl, lv_color_hex(0xFF9900), 0);
+        }
+    }
+
     if (override_face && now > expression_override_until) {
         override_face = nullptr;
         update_pet_visuals();
+    }
+
+    
+    if (recon_is_bitgotchi_active()) {
+        if (pet_viewport) {
+            lv_obj_set_style_bg_color(pet_viewport, lv_color_hex(0x001518), 0);
+            lv_obj_set_style_border_color(pet_viewport, G, 0);
+        }
+        if (recon_bitgotchi_has_new_event()) {
+            char buf[160];
+            snprintf(buf, sizeof(buf),
+                "#FF9900 [BIT-GOTCHI]# %s\n#00E5FF Friends:%d  Keys:%d#",
+                recon_bitgotchi_last_event(),
+                recon_bitgotchi_friends_count(),
+                recon_bitgotchi_handshakes_count());
+            if (lbl_console) lv_label_set_text(lbl_console, buf);
+        }
     }
 }
 
@@ -566,6 +643,7 @@ void pet_app_destroy(void) {
     lbl_console = nullptr;
     override_face = nullptr;
     expression_override_until = 0;
+    btn_bitgotchi = nullptr;
 
     if (scr) { lv_obj_delete(scr); scr = nullptr; }
 }

@@ -125,6 +125,9 @@ static void tesla_cb(lv_event_t *e) {
 }
 
 void rf_app_create(lv_obj_t *parent) {
+    
+    rf_radio_wake(433.92f);
+
     scr = lv_obj_create(parent);
     lv_obj_remove_style_all(scr);
     lv_obj_set_size(scr, SCREEN_WIDTH, SCREEN_HEIGHT);
@@ -274,7 +277,8 @@ void rf_app_update(void) {
 }
 
 void rf_app_destroy(void) {
-    if (rf_jammer_is_active()) rf_jammer_stop();
+    
+    rf_radio_sleep();
 
     for (int i = 0; i < FREQ_COUNT; i++) freq_btns[i] = nullptr;
     for (int i = 0; i < DURATION_COUNT; i++) dur_btns[i] = nullptr;

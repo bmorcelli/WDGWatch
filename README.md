@@ -84,6 +84,7 @@ Leverages the onboard SX1262 transceiver to provide RF security research tools:
 | 🛜 **BLE Recon + AirTag Hunt** | 🟢 Yes | 🟢 Yes | `recon_ble` | Stable |
 | ⚡ **WiFi Deauth Targeted/Blackout** | 🟢 Yes | 🟢 Yes | `recon_deauth` | Working |
 | 🕵️ **Packet Sniffer & Detect** | 🟢 Yes | 🟢 Yes | `sniffer_start` | Passive |
+| 🛜 **SSID Beacon Spoofer** | 🟢 Yes | 🔴 No | — | Up to 15 SSIDs |
 | 😈 **Evil Twin AP Creator** | 🟢 Yes | 🟢 Yes | `evil_twin` | Basic AP |
 | 🏷️ **NFC Scan (ISO-14443A/NDEF)** | 🟢 Yes | 🟢 Yes | `nfc_scan` | Stable |
 | 💾 **NFC Save & Flipper Export** | 🟢 Yes | 🟢 Yes | `nfc_export` | Stable |
@@ -144,6 +145,8 @@ Both BLE Nordic UART and HTTP `POST /api/cmd` accept single-line, `\n` (newline 
 *   **Cycle Watchface (`watchface`):** `{"cmd":"watchface", "params":{"style":"next"}}` (style: `"next"` or `"prev"`)
 *   **Reboot Device (`reboot`):** `{"cmd":"reboot"}`
 *   **Compass Data (`compass`):** `{"cmd":"compass"}`
+*   **Enable GPS (`gps_on`):** `{"cmd":"gps_on"}`
+*   **Disable GPS (`gps_off`):** `{"cmd":"gps_off"}`
 *   **Sensor Telemetry (`sensor_data`):** `{"cmd":"sensor_data"}`
 
 ### 2. 👾 SCR-Bit Pet Commands
@@ -168,6 +171,8 @@ Both BLE Nordic UART and HTTP `POST /api/cmd` accept single-line, `\n` (newline 
 *   **Set Keyboard Layout (`hid_set_layout`):** `{"cmd":"hid_set_layout", "params":{"layout":"TR"}}`
 *   **List Script Files (`hid_list_scripts`):** `{"cmd":"hid_list_scripts"}`
 *   **Abort Script (`hid_abort_script`):** `{"cmd":"hid_abort_script"}`
+*   **Save Script (`hid_save_script`):** `{"cmd":"hid_save_script", "params":{"path":"pay.txt","content":"STRING hello"}}`
+*   **Read Script (`hid_read_script`):** `{"cmd":"hid_read_script", "params":{"path":"pay.txt"}}`
 *   **Get HID Status (`hid_status`):** `{"cmd":"hid_status"}`
 
 ### 5. 🏷️ HF NFC Transceiver Commands
@@ -304,6 +309,7 @@ SX1262 alıcı-vericisini kullanarak güvenlik araştırması araçları sunar:
 | 🛜 **BLE Tarama + AirTag Bulucu** | 🟢 Evet | 🟢 Evet | `recon_ble` | Kararlı |
 | ⚡ **Hedefli WiFi Deauth / Blackout** | 🟢 Evet | 🟢 Evet | `recon_deauth` | Çalışıyor |
 | 🕵️ **Paket Koklayıcı & Deauth Algılayıcı** | 🟢 Evet | 🟢 Evet | `sniffer_start` | Pasif |
+| 🛜 **SSID Beacon Spoofer** | 🟢 Evet | 🔴 Hayır | — | 15 SSID'ye Kadar |
 | 😈 **Evil Twin AP Oluşturucu** | 🟢 Evet | 🟢 Evet | `evil_twin` | Temel AP |
 | 🏷️ **NFC Tarama (ISO-14443A/NDEF)** | 🟢 Evet | 🟢 Evet | `nfc_scan` | Kararlı |
 | 💾 **NFC Kaydetme ve Flipper Dışa Aktarma** | 🟢 Evet | 🟢 Evet | `nfc_export` | Kararlı |
@@ -364,6 +370,8 @@ Hem BLE Nordic UART hem de HTTP `POST /api/cmd` istekleri tek satırlık, `\n` (
 *   **Kadran Değiştirme (`watchface`):** `{"cmd":"watchface", "params":{"style":"next"}}` (style: `"next"` veya `"prev"`)
 *   **Yeniden Başlatma (`reboot`):** `{"cmd":"reboot"}`
 *   **Pusula Bilgisi (`compass`):** `{"cmd":"compass"}`
+*   **GPS Aç (`gps_on`):** `{"cmd":"gps_on"}`
+*   **GPS Kapat (`gps_off`):** `{"cmd":"gps_off"}`
 *   **Sensör Telemetrisi (`sensor_data`):** `{"cmd":"sensor_data"}`
 
 ### 2. 👾 Sanal Pet Komutları
@@ -388,6 +396,8 @@ Hem BLE Nordic UART hem de HTTP `POST /api/cmd` istekleri tek satırlık, `\n` (
 *   **Klavye Düzenini Ayarla (`hid_set_layout`):** `{"cmd":"hid_set_layout", "params":{"layout":"TR"}}`
 *   **Script Dosyalarını Listele (`hid_list_scripts`):** `{"cmd":"hid_list_scripts"}`
 *   **Script İptali (`hid_abort_script`):** `{"cmd":"hid_abort_script"}`
+*   **Script Kaydet (`hid_save_script`):** `{"cmd":"hid_save_script", "params":{"path":"pay.txt","content":"STRING hello"}}`
+*   **Script Oku (`hid_read_script`):** `{"cmd":"hid_read_script", "params":{"path":"pay.txt"}}`
 *   **HID Durumu (`hid_status`):** `{"cmd":"hid_status"}`
 
 ### 5. 🏷️ NFC Komutları

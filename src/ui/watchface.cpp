@@ -6,6 +6,9 @@
 #include "../web/web_server.h"
 #include "../hal/ble_uart_service.h"
 #include "../hal/lora_service.h"
+#include "../hal/recon_service.h"
+
+#define LV_SYMBOL_SMILE "\xEF\x84\x98"
 
 #define G  PIPBOY_GREEN_16
 #define D  PIPBOY_GREEN_DIM_16
@@ -406,17 +409,20 @@ void watchface_set_temperature(int16_t temp_c) { (void)temp_c; }
 
 void watchface_set_sync_status(bool wifi, bool ntp_ok, bool gps_fix) {
     c_ntp = ntp_ok; c_wifi = wifi; c_gps = gps_fix;
-    char b[128];
+    char b[160];
     bool ws = web_server_is_active();
     bool wdg = ble_uart_is_active();
     bool mc = lora_svc_is_running();
+    bool bg = recon_is_bitgotchi_active();
 
-    snprintf(b, sizeof(b), "%s " LV_SYMBOL_WIFI " %s#  %s " LV_SYMBOL_GPS " %s#  %s " LV_SYMBOL_KEYBOARD " %s#  %s " LV_SYMBOL_BLUETOOTH " %s#  %s " LV_SYMBOL_BULLET " %s#",
+    snprintf(b, sizeof(b),
+        "%s " LV_SYMBOL_WIFI " %s#  %s " LV_SYMBOL_GPS " %s#  %s " LV_SYMBOL_KEYBOARD " %s#  %s " LV_SYMBOL_BLUETOOTH " %s#  %s " LV_SYMBOL_BULLET " %s#  %s " LV_SYMBOL_EYE_OPEN " %s#",
         wifi ? "#00e5ff" : "#007280", wifi ? "ON" : "--",
         gps_fix ? "#00e5ff" : "#007280", gps_fix ? "FIX" : "--",
         ws ? "#00e5ff" : "#007280", ws ? "ON" : "--",
         wdg ? "#00e5ff" : "#007280", wdg ? "ON" : "--",
-        mc ? "#00e5ff" : "#007280", mc ? "ON" : "--");
+        mc ? "#00e5ff" : "#007280", mc ? "ON" : "--",
+        bg ? "#00e5ff" : "#007280", bg ? "ON" : "--");
 
     if (lbl_sync) {
         lv_label_set_text(lbl_sync, b);
