@@ -13,7 +13,7 @@
     <main class="container">
         <header class="header">
             <div class="logo">SCR Terminal</div>
-            <span class="badge">V2.2 Stable</span>
+            <span class="badge" id="version-badge">Loading...</span>
         </header>
 
         <section class="card">
@@ -41,5 +41,16 @@
             <p>SCR Terminal Project &copy; 2026 | GPL-3.0 License</p>
         </footer>
     </main>
+
+    <script>
+        fetch('manifest.json')
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById('version-badge').innerText = data.version + ' Stable';
+            })
+            .catch(() => {
+                document.getElementById('version-badge').innerText = 'v2.4.1 Stable';
+            });
+    </script>
 </body>
 </html>
