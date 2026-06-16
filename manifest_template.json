@@ -1,0 +1,16 @@
+{
+  "name": "SCR Terminal (WDGWatch)",
+  "version": "VERSION_PLACEHOLDER",
+  "new_install_prompt_erase": true,
+  "builds": [
+    {
+      "chipFamily": "ESP32-S3",
+      "parts": [
+        { "path": "https://github.com/USER_PLACEHOLDER/REPO_PLACEHOLDER/releases/download/VERSION_PLACEHOLDER/bootloader.bin", "offset": 0 },
+        { "path": "https://github.com/USER_PLACEHOLDER/REPO_PLACEHOLDER/releases/download/VERSION_PLACEHOLDER/partitions.bin", "offset": 32768 },
+        { "path": "https://github.com/USER_PLACEHOLDER/REPO_PLACEHOLDER/releases/download/VERSION_PLACEHOLDER/boot_app0.bin", "offset": 57344 },
+        { "path": "https://github.com/USER_PLACEHOLDER/REPO_PLACEHOLDER/releases/download/VERSION_PLACEHOLDER/firmware.bin", "offset": 65536 }
+      ]
+    }
+  ]
+}

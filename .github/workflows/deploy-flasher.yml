@@ -1,0 +1,75 @@
+name: Deploy Web Flasher to GitHub Pages
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install PlatformIO
+        run: |
+          pip install -U platformio
+
+      - name: Build Firmware
+        run: |
+          pio run -e twatch-ultra
+
+      - name: Prepare Binaries
+        run: |
+          mkdir -p dist/firmware
+          cp .pio/build/twatch-ultra/bootloader.bin dist/firmware/
+          cp .pio/build/twatch-ultra/partitions.bin dist/firmware/
+          cp .pio/build/twatch-ultra/firmware.bin dist/firmware/
+          cp ~/.platformio/packages/framework-arduinoespressif32/tools/partitions/boot_app0.bin dist/firmware/ || echo "boot_app0 copy failed, downloading fallback..."
+
+      - name: Upload Binaries to Release Assets
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/firmware/bootloader.bin
+            dist/firmware/partitions.bin
+            dist/firmware/firmware.bin
+            dist/firmware/boot_app0.bin
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Prepare Web Directory
+        run: |
+          mkdir -p web-dist
+          cp web-flasher/index.html web-dist/
+          cp web-flasher/style.css web-dist/
+
+      - name: Generate Dynamic manifest.json
+        run: |
+          TAG_NAME=${{ github.event.release.tag_name }}
+          if [ -z "$TAG_NAME" ]; then TAG_NAME="v2.2"; fi
+          
+          REPO_NAME=${{ github.event.repository.name }}
+          OWNER_NAME=${{ github.repository_owner }}
+          
+          sed -e "s/VERSION_PLACEHOLDER/$TAG_NAME/g" \
+              -e "s/USER_PLACEHOLDER/$OWNER_NAME/g" \
+              -e "s/REPO_PLACEHOLDER/$REPO_NAME/g" \
+              manifest_template.json > web-dist/manifest.json
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./web-dist
+          publish_branch: gh-pages

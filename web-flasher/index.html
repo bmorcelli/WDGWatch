@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SCR Terminal Web Flasher</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <script type="module" src="https://unpkg.com/esp-web-tools@10/dist/web/install-button.js?module"></script>
+</head>
+<body>
+    <div class="glow-bg"></div>
+    <main class="container">
+        <header class="header">
+            <div class="logo">SCR Terminal</div>
+            <span class="badge">V2.2 Stable</span>
+        </header>
+
+        <section class="card">
+            <h1>Firmware Web Installer</h1>
+            <p class="subtitle">WDGWatch donanımınızı doğrudan tarayıcınızdan güncelleyin veya sıfırlayın.</p>
+
+            <div class="info-box">
+                <h3>⚠️ Başlamadan Önce:</h3>
+                <ul>
+                    <li>Cihazınızı USB-C kablosuyla bilgisayara bağlayın.</li>
+                    <li>Google Chrome, MS Edge veya Opera gibi <strong>Web Serial API</strong> destekleyen bir tarayıcı kullanın.</li>
+                    <li>Başka bir programın (PlatformIO, Arduino IDE veya Seri Monitör) portu meşgul etmediğinden emin olun.</li>
+                </ul>
+            </div>
+
+            <div class="button-wrapper">
+                <esp-web-install-button manifest="manifest.json">
+                    <button slot="activate" class="btn-primary">Cihaza Bağlan ve Yükle</button>
+                    <span slot="unsupported" class="unsupported-msg">Tarayıcınız Web Serial API desteklemiyor. Lütfen Chrome veya Edge kullanın.</span>
+                </esp-web-install-button>
+            </div>
+        </section>
+
+        <footer>
+            <p>SCR Terminal Project &copy; 2026 | GPL-3.0 License</p>
+        </footer>
+    </main>
+</body>
+</html>
