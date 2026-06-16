@@ -14,6 +14,15 @@
 ![Purpose](https://img.shields.io/badge/Purpose-Security%20%26%20Research-red?style=for-the-badge)
 ![Licence](https://img.shields.io/badge/Licence-GPL--3.0-green?style=for-the-badge)
 
+<div align="center">
+
+| 📟 DEDSEC // WEB FLASHER |
+| :---: |
+| **Flash or update WDGWatch firmware directly from your browser** |
+| [![CONNECT & FLASH](https://img.shields.io/badge/CONNECT%20%26%20FLASH%20NOW-00e5ff?style=for-the-badge&logo=esphome&logoColor=black&labelColor=00151c)](https://sacriphanius.github.io/WDGWatch/) |
+
+</div>
+
 An advanced, feature-rich custom firmware for the **LilyGO T-Watch S3 Ultra** (ESP32-S3, 410×502 AMOLED), rebranded as the **SCR Terminal**. It turns your wearable into a retro-cybernetic terminal device, serving as a tactical security research tool, a virtual pet keeper, and a companion for the **Watch Dogs Go** mesh ecosystem.
 
 ---
@@ -244,6 +253,15 @@ The **SCR Terminal** exposes a Bluetooth Low Energy (BLE) Serial Interface using
 ![Cihaz](https://img.shields.io/badge/Donan%C4%B1m-T--Watch%20Ultra-blue?style=for-the-badge)
 ![Amaç](https://img.shields.io/badge/Ama%C3%A7-G%C3%BCvenlik%20ve%20Ara%C5%9Ft%C4%B1rma-red?style=for-the-badge)
 ![Lisans](https://img.shields.io/badge/Lisans-GPL--3.0-green?style=for-the-badge)
+
+<div align="center">
+
+| 📟 DEDSEC // WEB FLASHER |
+| :---: |
+| **WDGWatch firmware'ini doğrudan tarayıcınızdan yükleyin veya güncelleyin** |
+| [![CONNECT & FLASH](https://img.shields.io/badge/BA%C4%9ELAN%20%26%20Y%C3%9CKLE-00e5ff?style=for-the-badge&logo=esphome&logoColor=black&labelColor=00151c)](https://sacriphanius.github.io/WDGWatch/) |
+
+</div>
 
 **LilyGO T-Watch S3 Ultra** (ESP32-S3, 410×502 AMOLED) için geliştirilmiş, **SCR Terminal** olarak yeniden markalanan gelişmiş ve zengin özellikli özel yazılımdır. Giyilebilir cihazınızı retro-siberbiyotik bir terminal arayüzüne dönüştürerek güvenlik araştırması, sanal pet yetiştiriciliği ve **Watch Dogs Go** mesh ekosistemi için bir companion sunar.
 
