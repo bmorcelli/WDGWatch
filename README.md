@@ -12,7 +12,7 @@
 ![Theme](https://img.shields.io/badge/Theme-Retro%20Cyan-00E5FF?style=for-the-badge&logoColor=black)
 ![Device](https://img.shields.io/badge/Hardware-T--Watch%20Ultra-blue?style=for-the-badge)
 ![Purpose](https://img.shields.io/badge/Purpose-Security%20%26%20Research-red?style=for-the-badge)
-![Licence](https://img.shields.io/badge/Licence-MIT-green?style=for-the-badge)
+![Licence](https://img.shields.io/badge/Licence-GPL--3.0-green?style=for-the-badge)
 
 An advanced, feature-rich custom firmware for the **LilyGO T-Watch S3 Ultra** (ESP32-S3, 410×502 AMOLED), rebranded as the **SCR Terminal**. It turns your wearable into a retro-cybernetic terminal device, serving as a tactical security research tool, a virtual pet keeper, and a companion for the **Watch Dogs Go** mesh ecosystem.
 
@@ -243,7 +243,7 @@ The **SCR Terminal** exposes a Bluetooth Low Energy (BLE) Serial Interface using
 ![Tema](https://img.shields.io/badge/Tema-Retro%20Camg%C3%B6be%C4%9Fi-00E5FF?style=for-the-badge&logoColor=black)
 ![Cihaz](https://img.shields.io/badge/Donan%C4%B1m-T--Watch%20Ultra-blue?style=for-the-badge)
 ![Amaç](https://img.shields.io/badge/Ama%C3%A7-G%C3%BCvenlik%20ve%20Ara%C5%9Ft%C4%B1rma-red?style=for-the-badge)
-![Lisans](https://img.shields.io/badge/Lisans-MIT-green?style=for-the-badge)
+![Lisans](https://img.shields.io/badge/Lisans-GPL--3.0-green?style=for-the-badge)
 
 **LilyGO T-Watch S3 Ultra** (ESP32-S3, 410×502 AMOLED) için geliştirilmiş, **SCR Terminal** olarak yeniden markalanan gelişmiş ve zengin özellikli özel yazılımdır. Giyilebilir cihazınızı retro-siberbiyotik bir terminal arayüzüne dönüştürerek güvenlik araştırması, sanal pet yetiştiriciliği ve **Watch Dogs Go** mesh ekosistemi için bir companion sunar.
 

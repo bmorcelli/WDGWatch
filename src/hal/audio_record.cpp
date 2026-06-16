@@ -32,9 +32,6 @@ void audio_rec_task(void *pvParameters) {
         audio_rec_task_handle = nullptr;
         vTaskDelete(NULL);
         return;
-    }
-
-    
     wav_header_t header;
     memcpy(header.chunk_id, "RIFF", 4);
     header.chunk_size = 36; 
@@ -81,9 +78,6 @@ void audio_rec_task(void *pvParameters) {
             Serial.printf("[REC] Recording... Bytes written so far: %u\n", audio_rec_bytes_written);
         }
         vTaskDelay(pdMS_TO_TICKS(10));
-    }
-
-    
     if (f.seek(0)) {
         header.chunk_size = audio_rec_bytes_written + 36;
         header.subchunk2_size = audio_rec_bytes_written;
@@ -101,12 +95,6 @@ void audio_rec_task(void *pvParameters) {
 bool audio_rec_start(const char* filename) {
     if (audio_rec_active) return false;
     
-    
-    i2s_driver_uninstall(I2S_NUM_0);
-    vTaskDelay(pdMS_TO_TICKS(50));
-    instance.initMicrophone();
-    
-    
     if (!SD.exists("/rec")) {
         SD.mkdir("/rec");
     }
@@ -114,7 +102,6 @@ bool audio_rec_start(const char* filename) {
     strncpy(audio_rec_filename, filename, sizeof(audio_rec_filename) - 1);
     audio_rec_active = true;
 
-    
     xTaskCreatePinnedToCore(
         audio_rec_task,
         "audio_rec_task",
@@ -134,7 +121,6 @@ void audio_rec_stop() {
     while (audio_rec_task_handle != nullptr) {
         vTaskDelay(pdMS_TO_TICKS(10));
     }
-    i2s_driver_uninstall(I2S_NUM_0);
 }
 
 bool audio_rec_is_recording() {
