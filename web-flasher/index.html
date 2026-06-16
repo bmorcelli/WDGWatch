@@ -9,10 +9,26 @@
     <script type="module" src="https://unpkg.com/esp-web-tools@10/dist/web/install-button.js?module"></script>
 </head>
 <body>
+    <!-- Intrusion Boot Sequence Overlay -->
+    <div class="intro-overlay" id="intro-overlay">
+        <div class="intro-panel">
+            <h2 class="intro-title">DEDSEC // EXPLOIT.INJECTOR</h2>
+            <p class="intro-hint">Establish secure terminal uplink to active hardware.</p>
+            <button class="btn-primary intro-btn" id="start-btn">INITIALIZE UPLINK</button>
+            <div class="intro-console" id="intro-console" style="display: none;"></div>
+        </div>
+    </div>
+
     <!-- Retro CRT Scanline overlays -->
     <div class="scanline"></div>
     <div class="scanbar"></div>
     <div class="glow-bg"></div>
+
+    <!-- HUD Telemetry Elements -->
+    <div class="hud-item hud-top-left">SYS_PORT: STANDBY</div>
+    <div class="hud-item hud-top-right">BAUD_RATE: 115200</div>
+    <div class="hud-item hud-bottom-left">TARGET: TWATCH-ULTRA</div>
+    <div class="hud-item hud-bottom-right">SEC_AUTH: VERIFIED</div>
 
     <main class="container">
         <header class="header">
@@ -30,14 +46,19 @@
  |____/ \____|_| \_\</pre>
 
             <h1>FIRMWARE WEB INSTALLER</h1>
-            <p class="subtitle">Flash or update your WDGWatch firmware directly from your web browser.</p>
+            <p class="subtitle">Flash or update WDGWatch firmware directly from your browser.</p>
+
+            <div class="status-banner">
+                <span class="status-indicator"></span>
+                <span class="status-text">SYSTEM STATUS: STANDBY / READY</span>
+            </div>
 
             <div class="info-box">
                 <h3>⚠️ BEFORE YOU BEGIN:</h3>
                 <ul>
                     <li>Connect your device using a high-quality USB-C cable.</li>
                     <li>Use a browser that supports Web Serial API (Chrome, Edge, or Opera).</li>
-                    <li>Ensure no other program (PlatformIO, Arduino IDE, or Serial Monitor) is holding the port.</li>
+                    <li>Ensure no other program (PlatformIO, Arduino IDE) is holding the port.</li>
                 </ul>
             </div>
 
@@ -68,6 +89,123 @@
     </main>
 
     <script>
+        // Web Audio API Synthesizer for beeps and keyboard typing clicks
+        const AudioSynth = {
+            ctx: null,
+            init() {
+                if (!this.ctx) {
+                    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+            },
+            beep(freq, duration, type = 'sine', volume = 0.08) {
+                this.init();
+                try {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = type;
+                    osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+                    
+                    gain.gain.setValueAtTime(volume, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.00001, this.ctx.currentTime + duration);
+                    
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + duration);
+                } catch (e) {}
+            },
+            click() {
+                this.init();
+                try {
+                    const bufferSize = this.ctx.sampleRate * 0.02; // 20ms
+                    const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+                    const data = buffer.getChannelData(0);
+                    for (let i = 0; i < bufferSize; i++) {
+                        data[i] = Math.random() * 2 - 1;
+                    }
+                    const noise = this.ctx.createBufferSource();
+                    noise.buffer = buffer;
+                    
+                    const filter = this.ctx.createBiquadFilter();
+                    filter.type = 'bandpass';
+                    filter.frequency.value = 1000;
+                    filter.Q.value = 4;
+                    
+                    const gain = this.ctx.createGain();
+                    gain.gain.setValueAtTime(0.02, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.00001, this.ctx.currentTime + 0.02);
+                    
+                    noise.connect(filter);
+                    filter.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    noise.start();
+                } catch(e) {}
+            },
+            success() {
+                this.beep(880, 0.08, 'square', 0.03);
+                setTimeout(() => this.beep(1200, 0.22, 'square', 0.03), 100);
+            },
+            error() {
+                this.beep(140, 0.35, 'sawtooth', 0.12);
+            }
+        };
+
+        // Intrusion Boot Sequence Handler
+        const startBtn = document.getElementById('start-btn');
+        const introOverlay = document.getElementById('intro-overlay');
+        const introConsole = document.getElementById('intro-console');
+        const introHint = document.querySelector('.intro-hint');
+
+        const introLines = [
+            "CONNECTING TO COMPORT...",
+            "OVERRIDING CHIP SECURITY PROTOCOLS...",
+            "INJECTING DEDSEC PAYLOAD...",
+            "ESTABLISHING SECURE INJECTOR UPLINK...",
+            "ACCESS GRANTED. SYSTEM BREACH SUCCESSFUL."
+        ];
+
+        startBtn.addEventListener('click', () => {
+            AudioSynth.init();
+            startBtn.style.display = 'none';
+            introHint.style.display = 'none';
+            introConsole.style.display = 'block';
+
+            let lineIndex = 0;
+            function printLine() {
+                if (lineIndex < introLines.length) {
+                    const text = introLines[lineIndex];
+                    const lineDiv = document.createElement('div');
+                    lineDiv.className = 'intro-line';
+                    introConsole.appendChild(lineDiv);
+                    introConsole.scrollTop = introConsole.scrollHeight;
+
+                    let charIndex = 0;
+                    function typeChar() {
+                        if (charIndex < text.length) {
+                            lineDiv.innerText += text[charIndex];
+                            AudioSynth.click();
+                            charIndex++;
+                            setTimeout(typeChar, 20 + Math.random() * 20);
+                        } else {
+                            lineIndex++;
+                            AudioSynth.beep(600, 0.05, 'sine', 0.03);
+                            setTimeout(printLine, 400 + Math.random() * 200);
+                        }
+                    }
+                    typeChar();
+                } else {
+                    AudioSynth.success();
+                    setTimeout(() => {
+                        introOverlay.classList.add('fade-out');
+                        setTimeout(() => {
+                            introOverlay.remove();
+                        }, 800);
+                    }, 600);
+                }
+            }
+            printLine();
+        });
+
         // Dynamically fetch and display the manifest version
         const versionBadge = document.getElementById('version-badge');
         fetch('manifest.json')
@@ -82,6 +220,8 @@
         // Listen to ESP Web Tools installation events and print to console log
         const button = document.querySelector('esp-web-install-button');
         const consoleLog = document.querySelector('.console-log');
+        const statusText = document.querySelector('.status-text');
+        const statusIndicator = document.querySelector('.status-indicator');
 
         function addLog(text, isError = false) {
             const line = document.createElement('div');
@@ -89,6 +229,7 @@
             line.innerText = `> ${text.toUpperCase()}`;
             consoleLog.appendChild(line);
             consoleLog.scrollTop = consoleLog.scrollHeight;
+            AudioSynth.click();
         }
 
         if (button) {
@@ -99,22 +240,39 @@
                 switch(state) {
                     case 'initializing':
                         addLog('Connecting to device bootloader...');
+                        statusText.innerText = 'SYSTEM STATUS: INITIALIZING...';
+                        statusIndicator.className = 'status-indicator warning';
+                        AudioSynth.beep(500, 0.1, 'sine', 0.05);
                         break;
                     case 'connecting':
                         addLog('Connection established. Syncing hardware...');
+                        statusText.innerText = 'SYSTEM STATUS: SYNCING...';
+                        statusIndicator.className = 'status-indicator warning';
+                        AudioSynth.beep(600, 0.1, 'sine', 0.05);
                         break;
                     case 'erasing':
                         addLog('Erasing flash sectors on ESP32-S3...');
+                        statusText.innerText = 'SYSTEM STATUS: ERASING FLASH...';
+                        statusIndicator.className = 'status-indicator warning';
+                        AudioSynth.beep(400, 0.15, 'sawtooth', 0.03);
                         break;
                     case 'writing':
                         addLog('Flashing firmware binaries... DO NOT DISCONNECT OR CLOSE THE PAGE!');
+                        statusText.innerText = 'SYSTEM STATUS: FLASHING FIRMWARE...';
+                        statusIndicator.className = 'status-indicator warning flashing';
                         break;
                     case 'finished':
                         addLog('Firmware written successfully! Rebooting watch...');
                         addLog('Device ready. Hack the planet.');
+                        statusText.innerText = 'SYSTEM STATUS: COMPLETED / READY';
+                        statusIndicator.className = 'status-indicator';
+                        AudioSynth.success();
                         break;
                     case 'error':
                         addLog('ERROR: Installation failed. Check USB connection or port usage.', true);
+                        statusText.innerText = 'SYSTEM STATUS: INJECTION ERROR';
+                        statusIndicator.className = 'status-indicator error';
+                        AudioSynth.error();
                         break;
                 }
             });

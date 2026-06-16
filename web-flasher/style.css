@@ -1,18 +1,18 @@
 :root {
     --bg-color: #000000;
     --card-bg: rgba(0, 10, 15, 0.85);
-    --primary-color: #00e5ff; /* Cyan / Neon Blue from firmware */
-    --primary-glow: rgba(0, 229, 255, 0.45);
+    --primary-color: #00e5ff; /* Cyan / Neon Blue from watch firmware */
+    --primary-glow: rgba(0, 229, 255, 0.5);
     --primary-dark: #005f6b;
     --text-color: #ffffff;
     --text-muted: #00a0b2;
     --border-color: rgba(0, 229, 255, 0.35);
     --border-glow: rgba(0, 229, 255, 0.15);
     --error-color: #ff3b30;
-    --error-glow: rgba(255, 59, 48, 0.4);
+    --error-glow: rgba(255, 59, 48, 0.5);
 }
 
-/* Background Cyber Grid */
+/* Background Grid Setup */
 body {
     margin: 0;
     padding: 0;
@@ -28,10 +28,10 @@ body {
     justify-content: center;
     align-items: center;
     min-height: 100vh;
-    overflow-x: hidden;
+    overflow: hidden;
 }
 
-/* CRT Scanlines and flicker simulation */
+/* CRT Scanlines and vertical scrolling bar */
 .scanline {
     position: fixed;
     top: 0;
@@ -40,7 +40,7 @@ body {
     height: 100%;
     background: linear-gradient(
         rgba(18, 16, 16, 0) 50%,
-        rgba(0, 0, 0, 0.18) 50%
+        rgba(0, 0, 0, 0.22) 50%
     );
     background-size: 100% 4px;
     z-index: 100;
@@ -52,12 +52,12 @@ body {
     top: 0;
     left: 0;
     width: 100%;
-    height: 3px;
-    background: rgba(0, 229, 255, 0.15);
-    box-shadow: 0 0 10px rgba(0, 229, 255, 0.4);
+    height: 4px;
+    background: rgba(0, 229, 255, 0.18);
+    box-shadow: 0 0 10px rgba(0, 229, 255, 0.5);
     z-index: 101;
     pointer-events: none;
-    animation: scan 6s linear infinite;
+    animation: scan 5s linear infinite;
 }
 
 @keyframes scan {
@@ -69,14 +69,144 @@ body {
     position: absolute;
     width: 800px;
     height: 800px;
-    background: radial-gradient(circle, rgba(0, 229, 255, 0.07) 0%, rgba(0, 0, 0, 0) 70%);
+    background: radial-gradient(circle, rgba(0, 229, 255, 0.08) 0%, rgba(0, 0, 0, 0) 70%);
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    z-index: 0;
+    z-index: 1;
     pointer-events: none;
 }
 
+/* HUD elements around the screen corners */
+.hud-item {
+    position: fixed;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.72rem;
+    color: rgba(0, 229, 255, 0.45);
+    letter-spacing: 2px;
+    pointer-events: none;
+    z-index: 5;
+    text-shadow: 0 0 6px rgba(0, 229, 255, 0.25);
+    animation: hud-glow 4s ease-in-out infinite alternate;
+}
+
+@keyframes hud-glow {
+    0% { opacity: 0.45; }
+    100% { opacity: 0.85; }
+}
+
+.hud-top-left { top: 20px; left: 20px; }
+.hud-top-right { top: 20px; right: 20px; }
+.hud-bottom-left { bottom: 20px; left: 20px; }
+.hud-bottom-right { bottom: 20px; right: 20px; }
+
+/* Fullscreen Intrusion Boot Overlay */
+.intro-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: #000000;
+    background-image: 
+        linear-gradient(rgba(0, 95, 107, 0.06) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 95, 107, 0.06) 1px, transparent 1px);
+    background-size: 25px 25px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    transition: opacity 0.8s cubic-bezier(0.19, 1, 0.22, 1), transform 0.8s cubic-bezier(0.19, 1, 0.22, 1);
+}
+
+.intro-overlay.fade-out {
+    opacity: 0;
+    transform: scale(1.05);
+    pointer-events: none;
+}
+
+.intro-panel {
+    background: rgba(0, 10, 15, 0.95);
+    border: 1px solid var(--border-color);
+    padding: 40px;
+    width: 90%;
+    max-width: 460px;
+    text-align: center;
+    position: relative;
+    box-shadow: 0 0 35px rgba(0, 229, 255, 0.2);
+}
+
+.intro-panel::before, .intro-panel::after {
+    content: '';
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    border: 2px solid var(--primary-color);
+    pointer-events: none;
+}
+.intro-panel::before { top: -1px; left: -1px; border-right: none; border-bottom: none; }
+.intro-panel::after { bottom: -1px; right: -1px; border-left: none; border-top: none; }
+
+.intro-title {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 1.55rem;
+    color: var(--primary-color);
+    margin-top: 0;
+    letter-spacing: 2px;
+    text-shadow: 0 0 10px var(--primary-glow);
+    animation: text-flicker 3s infinite;
+}
+
+@keyframes text-flicker {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.9; }
+    52% { opacity: 0.6; }
+    54% { opacity: 0.95; }
+}
+
+.intro-hint {
+    color: var(--text-muted);
+    font-size: 0.95rem;
+    margin-bottom: 25px;
+    letter-spacing: 1px;
+}
+
+.intro-console {
+    background: rgba(0, 0, 0, 0.9);
+    border: 1px solid rgba(0, 229, 255, 0.25);
+    padding: 20px;
+    height: 160px;
+    text-align: left;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.88rem;
+    color: var(--primary-color);
+    overflow-y: auto;
+    line-height: 1.6;
+    letter-spacing: 0.5px;
+}
+
+.intro-line {
+    margin-bottom: 6px;
+}
+
+.intro-btn {
+    margin-top: 10px;
+    background: transparent;
+    color: var(--primary-color);
+    border: 2px solid var(--primary-color);
+    padding: 12px 30px;
+    font-size: 1rem;
+    cursor: pointer;
+    box-shadow: 0 0 10px var(--border-glow);
+}
+
+.intro-btn:hover {
+    background: var(--primary-color);
+    color: #000000;
+    box-shadow: 0 0 18px var(--primary-glow);
+}
+
+/* App Main Container */
 .container {
     position: relative;
     z-index: 10;
@@ -85,7 +215,7 @@ body {
     padding: 20px;
 }
 
-/* Header style */
+/* Header */
 .header {
     display: flex;
     justify-content: space-between;
@@ -116,7 +246,7 @@ body {
     box-shadow: 0 0 6px var(--border-glow);
 }
 
-/* Cyber Card with corner shapes */
+/* Cyber Installer Card */
 .card {
     background: var(--card-bg);
     border: 1px solid var(--border-color);
@@ -128,7 +258,6 @@ body {
     position: relative;
 }
 
-/* Cyberpunk corners */
 .card::before, .card::after {
     content: '';
     position: absolute;
@@ -137,18 +266,8 @@ body {
     border: 2px solid var(--primary-color);
     pointer-events: none;
 }
-.card::before {
-    top: -1px;
-    left: -1px;
-    border-right: none;
-    border-bottom: none;
-}
-.card::after {
-    bottom: -1px;
-    right: -1px;
-    border-left: none;
-    border-top: none;
-}
+.card::before { top: -1px; left: -1px; border-right: none; border-bottom: none; }
+.card::after { bottom: -1px; right: -1px; border-left: none; border-top: none; }
 
 .ascii-logo {
     font-family: 'Share Tech Mono', monospace;
@@ -160,10 +279,11 @@ body {
     white-space: pre;
     display: inline-block;
     filter: drop-shadow(0 0 4px rgba(0, 95, 107, 0.3));
+    animation: text-flicker 5s infinite;
 }
 
 h1 {
-    font-size: 2.2rem;
+    font-size: 2.1rem;
     font-weight: 700;
     letter-spacing: 3px;
     margin-top: 0;
@@ -178,6 +298,52 @@ h1 {
     font-size: 1.05rem;
     letter-spacing: 1px;
     line-height: 1.4;
+}
+
+/* Status Banner */
+.status-banner {
+    display: inline-flex;
+    align-items: center;
+    background: rgba(0, 229, 255, 0.05);
+    border: 1px solid rgba(0, 229, 255, 0.15);
+    padding: 6px 14px;
+    margin-bottom: 25px;
+    border-radius: 0;
+}
+
+.status-indicator {
+    width: 8px;
+    height: 8px;
+    background-color: var(--primary-color);
+    border-radius: 50%;
+    margin-right: 10px;
+    box-shadow: 0 0 8px var(--primary-glow);
+}
+
+.status-indicator.warning {
+    background-color: #ffb300;
+    box-shadow: 0 0 8px rgba(255, 179, 0, 0.6);
+}
+
+.status-indicator.error {
+    background-color: var(--error-color);
+    box-shadow: 0 0 8px var(--error-glow);
+}
+
+.status-indicator.flashing {
+    animation: status-blink 0.5s infinite alternate;
+}
+
+@keyframes status-blink {
+    0% { opacity: 0.2; }
+    100% { opacity: 1; }
+}
+
+.status-text {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.8rem;
+    color: var(--text-color);
+    letter-spacing: 1px;
 }
 
 /* Info Box */
@@ -211,7 +377,7 @@ h1 {
     color: var(--primary-color);
 }
 
-/* Button & Installer */
+/* Connect & Flash Button wrapper */
 .button-wrapper {
     display: flex;
     justify-content: center;
@@ -228,17 +394,15 @@ h1 {
     font-weight: 700;
     letter-spacing: 2px;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.25s ease;
     box-shadow: 0 0 10px var(--border-glow);
-    position: relative;
-    overflow: hidden;
 }
 
 .btn-primary:hover {
     background: var(--primary-color);
     color: #000000;
     box-shadow: 0 0 20px var(--primary-glow);
-    transform: scale(1.03);
+    transform: scale(1.02);
 }
 
 .btn-primary:active {
@@ -253,7 +417,7 @@ h1 {
     text-shadow: 0 0 8px var(--error-glow);
 }
 
-/* Retro Terminal Console Box */
+/* Console Log Box */
 .console-box {
     margin-top: 25px;
     border: 1px solid rgba(0, 229, 255, 0.25);
@@ -313,14 +477,14 @@ h1 {
     text-shadow: 0 0 6px var(--error-glow);
 }
 
-/* Scrollbar styling for Console */
-.console-log::-webkit-scrollbar {
+/* Custom scrollbars */
+.console-log::-webkit-scrollbar, .intro-console::-webkit-scrollbar {
     width: 5px;
 }
-.console-log::-webkit-scrollbar-track {
+.console-log::-webkit-scrollbar-track, .intro-console::-webkit-scrollbar-track {
     background: rgba(0, 0, 0, 0.5);
 }
-.console-log::-webkit-scrollbar-thumb {
+.console-log::-webkit-scrollbar-thumb, .intro-console::-webkit-scrollbar-thumb {
     background: var(--primary-dark);
 }
 
@@ -331,4 +495,14 @@ footer {
     font-family: 'Share Tech Mono', monospace;
     font-size: 0.78rem;
     letter-spacing: 1px;
+}
+
+/* Hide HUD elements on mobile screens for better responsiveness */
+@media (max-width: 768px) {
+    .hud-item {
+        display: none;
+    }
+    .card {
+        padding: 20px;
+    }
 }
