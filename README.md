@@ -19,7 +19,7 @@
 | 📟 DEDSEC // WEB FLASHER |
 | :---: |
 | **Flash or update WDGWatch firmware directly from your browser** |
-| [![CONNECT & FLASH](https://img.shields.io/badge/CONNECT%20%26%20FLASH%20NOW-00e5ff?style=for-the-badge&logo=esphome&logoColor=black&labelColor=00151c)](https://sacriphanius.github.io/WDGWatch/) |
+| [![CONNECT & FLASH](https://img.shields.io/badge/CONNECT%20%26%20FLASH%20NOW-005f6b?style=for-the-badge&logo=esphome&logoColor=00e5ff&labelColor=00151c)](https://sacriphanius.github.io/WDGWatch/) |
 
 </div>
 
@@ -259,7 +259,7 @@ The **SCR Terminal** exposes a Bluetooth Low Energy (BLE) Serial Interface using
 | 📟 DEDSEC // WEB FLASHER |
 | :---: |
 | **WDGWatch firmware'ini doğrudan tarayıcınızdan yükleyin veya güncelleyin** |
-| [![CONNECT & FLASH](https://img.shields.io/badge/BA%C4%9ELAN%20%26%20Y%C3%9CKLE-00e5ff?style=for-the-badge&logo=esphome&logoColor=black&labelColor=00151c)](https://sacriphanius.github.io/WDGWatch/) |
+| [![CONNECT & FLASH](https://img.shields.io/badge/BA%C4%9ELAN%20%26%20Y%C3%9CKLE-005f6b?style=for-the-badge&logo=esphome&logoColor=00e5ff&labelColor=00151c)](https://sacriphanius.github.io/WDGWatch/) |
 
 </div>
 
