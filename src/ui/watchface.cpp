@@ -70,6 +70,11 @@ bool watchface_alarm_is_enabled(void) {
     return alarm_enabled;
 }
 
+void watchface_alarm_get_time(uint8_t *hour, uint8_t *min) {
+    if (hour) *hour = alarm_hour;
+    if (min) *min = alarm_min;
+}
+
 static void play_alarm_sound(int duration_ms, int freq_hz) {
     instance.powerControl(POWER_SPEAK, true);
     int sample_rate = 160000;
@@ -642,20 +647,23 @@ WatchfaceStyle watchface_get_style(void) { return current_style; }
 
 void watchface_set_time(uint8_t hour, uint8_t min) {
     c_hour = hour; c_min = min;
-    char b[8]; snprintf(b, sizeof(b), "%02d:%02d", hour, min);
+    
+    if (!power_hal_screen_is_off()) {
+        char b[8]; snprintf(b, sizeof(b), "%02d:%02d", hour, min);
 
-    if (lbl_time) lv_label_set_text(lbl_time, b);
-    if (m_time) lv_label_set_text(m_time, b);
+        if (lbl_time) lv_label_set_text(lbl_time, b);
+        if (m_time) lv_label_set_text(m_time, b);
 
-    if (line_hour) {
-        float h_angle = (hour % 12) * 30.0f + min * 0.5f;
-        float m_angle = min * 6.0f;
-        draw_hand(&line_hour, hour_pts, h_angle, 100, 5, G);
-        draw_hand(&line_min, min_pts, m_angle, 140, 3, G);
-    }
-    if (a_time_lbl) {
-        char tb[12]; snprintf(tb, sizeof(tb), "%02d:%02d:%02d", hour, min, c_sec);
-        lv_label_set_text(a_time_lbl, tb);
+        if (line_hour) {
+            float h_angle = (hour % 12) * 30.0f + min * 0.5f;
+            float m_angle = min * 6.0f;
+            draw_hand(&line_hour, hour_pts, h_angle, 100, 5, G);
+            draw_hand(&line_min, min_pts, m_angle, 140, 3, G);
+        }
+        if (a_time_lbl) {
+            char tb[12]; snprintf(tb, sizeof(tb), "%02d:%02d:%02d", hour, min, c_sec);
+            lv_label_set_text(a_time_lbl, tb);
+        }
     }
 
     if (alarm_enabled && hour == alarm_hour && min == alarm_min) {

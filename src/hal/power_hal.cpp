@@ -94,7 +94,20 @@ void power_hal_light_sleep(void) {
 
     while (true) {
         if (watchface_alarm_is_enabled()) {
-            esp_sleep_enable_timer_wakeup(10ULL * 1000000ULL); 
+            RTC_DateTime dt = instance.rtc.getDateTime();
+            uint8_t alarm_h = 12, alarm_m = 0;
+            watchface_alarm_get_time(&alarm_h, &alarm_m);
+
+            int32_t curr_secs = dt.getHour() * 3600 + dt.getMinute() * 60 + dt.getSecond();
+            int32_t alarm_secs = alarm_h * 3600 + alarm_m * 60;
+            int32_t diff_secs = alarm_secs - curr_secs;
+            if (diff_secs <= 0) {
+                diff_secs += 24 * 3600;
+            }
+            if (diff_secs < 2) {
+                diff_secs = 2;
+            }
+            esp_sleep_enable_timer_wakeup((uint64_t)diff_secs * 1000000ULL);
         }
 
         instance.lightSleep((WakeupSource_t)(WAKEUP_SRC_POWER_KEY | WAKEUP_SRC_TOUCH_PANEL | WAKEUP_SRC_BOOT_BUTTON));

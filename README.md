@@ -83,6 +83,26 @@ Leverages the onboard SX1262 transceiver to provide RF security research tools:
 *   **Structured SD Card Storage:** Automatically creates a `/rec` directory on the SD card if it does not exist, naming recorded files sequentially as `recrd_1.wav`, `recrd_2.wav`, `recrd_3.wav`, etc.
 *   **Hardware Integrity Protection:** Uses clean I2S lifecycle hooks (`i2s_driver_uninstall`) before and after recording to eliminate pin-sharing and hardware bus lockups with other audio features.
 
+### 9. ✈️ ADS-B Flight Radar (Live Aircraft Tracking)
+A real-time aircraft surveillance panel powered by the public [adsb.fi](https://api.adsb.fi) API:
+*   **Live Flight List:** When connected to WiFi, the Recon menu's **ADSB** button fetches all aircraft currently visible within a configurable radius (default: 150 km) of the device's GPS coordinates.
+*   **Rich Telemetry:** Displays ICAO hex code, callsign, altitude (ft), ground speed (kt), heading (°), vertical rate (fpm), and squawk code for each aircraft.
+*   **Route Lookup:** Tap any aircraft to perform an asynchronous route lookup, displaying the origin and destination airport IATA codes directly on the watch screen.
+*   **Auto-Refresh:** The panel automatically refreshes every 30 seconds while open.
+*   **Offline Graceful Degradation:** If GPS has no fix or WiFi is unavailable, the panel displays a clear error status instead of crashing.
+
+### 10. 🦋 Bit-Gotchi Recon Agent (Passive Handshake Hunter)
+The SCR-Bit virtual pet evolves into an autonomous cyber-recon agent via the **Politician** passive capture engine:
+*   **Passive EAPOL/PMKID Capture:** Activating **BIT-GOTCHI** mode enables autonomous channel hopping and WPA handshake capture without sending any deauth frames. All captured handshakes are saved as `.pcap` files inside a `/bit` directory on the SD card.
+*   **SD Log Loot Modal:** A dedicated **SD LOG LOOT** button (below the console) opens an on-device file browser listing all captured `.pcap` files with their sizes.
+*   **Butterfly Catch Animation:** When a new handshake is captured, the pet displays a butterfly net animation (`Ƹ̵̡Ӝ̵̨̄Ʒ 🕸️`) for 3 seconds, gains +15 Energy and +25 XP, triggers haptic feedback, and auto-saves state to NVS.
+*   **Detective Hat Overlay:** The pet wears a `🎩` detective hat while BIT-GOTCHI mode is active — it disappears when the mode is turned off.
+*   **Achievement Badge System (persistent via NVS):**
+    *   `🐾 First Step` — Unlocked on the first captured handshake.
+    *   `🕵️ Silent Detective` — Unlocked after 5 total captures.
+    *   `🏹 PMKID Hunter` — Unlocked when a PMKID packet is captured.
+*   **Badge Display:** Pressing the **STATUS** button prints the pet's level, XP, health, and all unlocked badges to the terminal console.
+
 ---
 
 ## 📊 Feature Matrix (English)
@@ -111,6 +131,8 @@ Leverages the onboard SX1262 transceiver to provide RF security research tools:
 | 🔒 **Retro Boot Sequence** | 🟢 Yes | 🔴 No | — | Gesture Locked |
 | 🕰️ **Dynamic Timezone & NTP Sync** | 🟢 Yes | 🔴 No | — | Stable |
 | 🎤 **Audio Recorder (Mic to SD)** | 🟢 Yes | 🔴 No | — | 16kHz 16-bit Mono |
+| ✈️ **ADS-B Flight Radar (Live)** | 🟢 Yes | 🔴 No | — | adsb.fi API / GPS |
+| 🦋 **Bit-Gotchi Recon Agent** | 🟢 Yes | 🔴 No | — | PCAP → `/bit` on SD |
 
 ---
 
@@ -323,6 +345,26 @@ SX1262 alıcı-vericisini kullanarak güvenlik araştırması araçları sunar:
 *   **Düzenli SD Klasör Yapısı:** SD kart üzerinde `/rec` klasörü yoksa otomatik olarak oluşturulur ve kaydedilen dosyalar ardışık olarak `recrd_1.wav`, `recrd_2.wav` vb. şeklinde isimlendirilir.
 *   **I2S Yaşam Döngüsü Koruması:** I2S donanım çakışmalarını ve kilitlenmelerini önlemek adına, ses kaydı başlangıcında ve bitişinde sürücüler (`i2s_driver_uninstall`) temiz bir şekilde yönetilir.
 
+### 9. ✈️ ADS-B Uçuş Radarı (Canlı Uçak Takibi)
+[adsb.fi](https://api.adsb.fi) genel API'si ile beslenen gerçek zamanlı uçak gözetleme paneli:
+*   **Canlı Uçuş Listesi:** WiFi bağlantısı varken Recon menüsündeki **ADSB** butonu, cihazın GPS koordinatlarından itibaren yapılandırılabilir bir yarıçap (varsayılan: 150 km) içindeki tüm aktif uçakları listeler.
+*   **Detaylı Telemetri:** Her uçak için ICAO hex kodu, çağrı işareti (callsign), irtifa (ft), yer hızı (kt), yön (°), dikey hız (fpm) ve squawk kodu görüntülenir.
+*   **Rota Sorgulama:** Listeden bir uçağa dokunulduğunda asenkron olarak rota sorgulanır ve kalkış/varış havalimanı IATA kodları saat ekranında gösterilir.
+*   **Otomatik Yenileme:** Panel açıkken her 30 saniyede bir veri otomatik yenilenir.
+*   **Çevrimdışı Hata Yönetimi:** GPS bağlantısı yoksa veya WiFi bağlı değilse panel çökmek yerine açık bir hata durumu gösterir.
+
+### 10. 🦋 Bit-Gotchi Recon Ajanı (Pasif El Sıkışma Avcısı)
+SCR-Bit sanal peti, **Politician** pasif yakalama motoru sayesinde otonom bir siber-keşif ajanına dönüşür:
+*   **Pasif EAPOL/PMKID Yakalama:** **BIT-GOTCHI** modu aktifleştirildiğinde, herhangi bir deauth çerçevesi göndermeden otonom kanal atlama (channel hopping) ve WPA el sıkışması yakalama devreye girer. Yakalanan tüm el sıkışmaları SD karttaki `/bit` klasörüne `.pcap` dosyası olarak kaydedilir.
+*   **SD Log Loot Modalı:** Terminelin altındaki **SD LOG LOOT** butonu, yakalanan tüm `.pcap` dosyalarını boyutlarıyla birlikte listeleyen bir dosya tarayıcı modalı açar.
+*   **Kelebek Yakalama Animasyonu:** Yeni bir el sıkışma yakalandığında, pet 3 saniye boyunca kelebek ağı animasyonu (`Ƹ̵̡Ӝ̵̨̄Ʒ 🕸️`) gösterir, +15 Enerji ve +25 XP kazanır, haptik titreşim tetiklenir ve durum NVS'e otomatik kaydedilir.
+*   **Dedektif Şapkası Görsel Katmanı:** BIT-GOTCHI modu aktifken pet, `🎩` dedektif şapkası takar; mod kapatıldığında şapka kaybolur.
+*   **Başarım Rozeti Sistemi (NVS ile kalıcı):**
+    *   `🐾 First Step` — İlk el sıkışma yakalandığında açılır.
+    *   `🕵️ Silent Detective` — Toplam 5 yakalama sonrasında açılır.
+    *   `🏹 PMKID Hunter` — Bir PMKID paketi yakalandığında açılır.
+*   **Rozet Görüntüleme:** **STATUS** butonuna basıldığında pet'in seviyesi, XP'si, canı ve kazanılan tüm rozetler terminal konsoluna yazdırılır.
+
 ---
 
 ## 📊 Özellik Tablosu (Türkçe)
@@ -351,6 +393,8 @@ SX1262 alıcı-vericisini kullanarak güvenlik araştırması araçları sunar:
 | 🔒 **Retro Boot Ekranı** | 🟢 Evet | 🔴 Hayır | — | El Hareketi Kilitli |
 | 🕰️ **Dinamik Saat Dilimi ve NTP** | 🟢 Evet | 🔴 Hayır | — | Kararlı |
 | 🎤 **Ses Kaydedici (SD Karta Kayıt)** | 🟢 Evet | 🔴 Hayır | — | 16kHz 16-bit Mono |
+| ✈️ **ADS-B Uçuş Radarı (Canlı)** | 🟢 Evet | 🔴 Hayır | — | adsb.fi API / GPS |
+| 🦋 **Bit-Gotchi Recon Ajanı** | 🟢 Evet | 🔴 Hayır | — | PCAP → SD `/bit` |
 
 ---
 

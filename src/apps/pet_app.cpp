@@ -5,6 +5,7 @@
 #include "../hal/recon_service.h"
 #include <Preferences.h>
 #include <time.h>
+#include <SD.h>
 
 #define G  lv_color_hex(0x00E5FF)
 #define D  lv_color_hex(0x007280)
@@ -19,6 +20,12 @@ static uint32_t pet_energy = 80;
 static uint32_t pet_health = 80;
 static uint32_t pet_clean = 80;
 static uint32_t pet_poops = 0;
+
+static bool badge_first_step = false;
+static bool badge_silent_detective = false;
+static bool badge_pmkid_hunter = false;
+
+static lv_obj_t *lbl_hat = nullptr;
 
 static lv_obj_t *pet_viewport = nullptr;
 static lv_obj_t *pet_container = nullptr;
@@ -61,6 +68,9 @@ static void load_pet_state(void) {
         pet_health = prefs.getUInt("health", 80);
         pet_clean = prefs.getUInt("clean", 80);
         pet_poops = prefs.getUInt("poops", 0);
+        badge_first_step = prefs.getBool("bg_step", false);
+        badge_silent_detective = prefs.getBool("bg_silent", false);
+        badge_pmkid_hunter = prefs.getBool("bg_pmkid", false);
         last_time = prefs.getUInt("last_time", 0);
         prefs.end();
         loaded = true;
@@ -100,6 +110,9 @@ static void save_pet_state(void) {
         prefs.putUInt("health", pet_health);
         prefs.putUInt("clean", pet_clean);
         prefs.putUInt("poops", pet_poops);
+        prefs.putBool("bg_step", badge_first_step);
+        prefs.putBool("bg_silent", badge_silent_detective);
+        prefs.putBool("bg_pmkid", badge_pmkid_hunter);
         prefs.putUInt("last_time", time(nullptr));
         prefs.end();
     }
@@ -214,9 +227,12 @@ static void clean_cb(lv_event_t *e) {
 static void status_cb(lv_event_t *e) {
     (void)e;
     haptic_click();
-    char buf[64];
-    snprintf(buf, sizeof(buf), "LVL:%d | XP:%d%% | HP:%d%% | ENG:%d%%",
-             pet_level, pet_xp, pet_health, pet_energy);
+    char buf[160];
+    snprintf(buf, sizeof(buf), "LVL:%d | XP:%d%% | HP:%d%%\nBadges: %s %s %s",
+             pet_level, pet_xp, pet_health,
+             badge_first_step ? "[🐾 FirstStep]" : "",
+             badge_silent_detective ? "[🕵️ SilentDet]" : "",
+             badge_pmkid_hunter ? "[🏹 PMKIDHunt]" : "");
     log_message(buf);
 }
 
@@ -314,6 +330,12 @@ static void update_pet_visuals(void) {
         }
     }
 
+    if (recon_is_bitgotchi_active()) {
+        if (lbl_hat) lv_obj_remove_flag(lbl_hat, LV_OBJ_FLAG_HIDDEN);
+    } else {
+        if (lbl_hat) lv_obj_add_flag(lbl_hat, LV_OBJ_FLAG_HIDDEN);
+    }
+
     if (!override_face) {
         if (pet_health < 30 || pet_clean < 30) {
             lv_label_set_text(pet_expression, "x_x");
@@ -339,6 +361,83 @@ static void update_pet_visuals(void) {
         lv_obj_set_style_text_color(poop_objs[i], D, 0);
         lv_obj_set_style_text_font(poop_objs[i], &lv_font_montserrat_16, 0);
         lv_obj_set_pos(poop_objs[i], 25 + (i * 35), 145);
+    }
+}
+
+static void close_loot_modal_cb(lv_event_t *e) {
+    haptic_click();
+    lv_obj_t* btn = (lv_obj_t*)lv_event_get_target(e);
+    lv_obj_t* modal = lv_obj_get_parent(lv_obj_get_parent(btn));
+    lv_obj_delete(modal);
+}
+
+static void loot_cb(lv_event_t *e) {
+    (void)e;
+    haptic_click();
+    
+    
+    lv_obj_t* modal = lv_obj_create(scr);
+    lv_obj_set_size(modal, 360, 420);
+    lv_obj_align(modal, LV_ALIGN_CENTER, 0, 0);
+    lv_obj_set_style_bg_color(modal, BG, 0);
+    lv_obj_set_style_border_color(modal, G, 0);
+    lv_obj_set_style_border_width(modal, 1, 0);
+    lv_obj_set_style_radius(modal, 0, 0);
+    
+    lv_obj_t* title = lv_label_create(modal);
+    lv_label_set_text(title, "CAPTURED PCAP LOOT");
+    lv_obj_set_style_text_color(title, G, 0);
+    lv_obj_set_style_text_font(title, &lv_font_montserrat_18, 0);
+    lv_obj_align(title, LV_ALIGN_TOP_MID, 0, 0);
+    
+    lv_obj_t* list = lv_list_create(modal);
+    lv_obj_set_size(list, 320, 320);
+    lv_obj_align(list, LV_ALIGN_BOTTOM_MID, 0, 0);
+    lv_obj_set_style_bg_color(list, BG, 0);
+    lv_obj_set_style_border_width(list, 0, 0);
+    
+    lv_obj_t* close_btn = lv_list_add_button(list, nullptr, "[ CLOSE ]");
+    lv_obj_set_style_bg_color(close_btn, BG, 0);
+    lv_obj_set_style_text_color(lv_obj_get_child(close_btn, 0), lv_color_hex(0xFF3300), 0);
+    lv_obj_add_event_cb(close_btn, close_loot_modal_cb, LV_EVENT_CLICKED, nullptr);
+    
+    if (SD.begin()) {
+        File root = SD.open("/bit");
+        if (root && root.isDirectory()) {
+            File file = root.openNextFile();
+            int file_count = 0;
+            while (file) {
+                if (!file.isDirectory() && strstr(file.name(), ".pcap")) {
+                    char display_name[64];
+                    const char* fname = file.name();
+                    if (strrchr(fname, '/')) fname = strrchr(fname, '/') + 1;
+                    
+                    snprintf(display_name, sizeof(display_name), "%s (%d B)", fname, (int)file.size());
+                    
+                    lv_obj_t* file_btn = lv_list_add_button(list, nullptr, display_name);
+                    lv_obj_set_style_bg_color(file_btn, BG, 0);
+                    lv_obj_set_style_text_color(lv_obj_get_child(file_btn, 0), G, 0);
+                    file_count++;
+                }
+                file = root.openNextFile();
+            }
+            if (file_count == 0) {
+                lv_obj_t* empty_lbl = lv_label_create(modal);
+                lv_label_set_text(empty_lbl, "No loot captured yet.");
+                lv_obj_set_style_text_color(empty_lbl, D, 0);
+                lv_obj_center(empty_lbl);
+            }
+        } else {
+            lv_obj_t* err_lbl = lv_label_create(modal);
+            lv_label_set_text(err_lbl, "No /bit folder found.");
+            lv_obj_set_style_text_color(err_lbl, D, 0);
+            lv_obj_center(err_lbl);
+        }
+    } else {
+        lv_obj_t* err_lbl = lv_label_create(modal);
+        lv_label_set_text(err_lbl, "SD Card Error!");
+        lv_obj_set_style_text_color(err_lbl, lv_color_hex(0xFF3300), 0);
+        lv_obj_center(err_lbl);
     }
 }
 
@@ -372,6 +471,12 @@ void pet_app_create(lv_obj_t *parent) {
     lv_obj_remove_style_all(pet_container);
     lv_obj_set_size(pet_container, 100, 110);
     lv_obj_align(pet_container, LV_ALIGN_CENTER, 0, -10);
+
+    lbl_hat = lv_label_create(pet_container);
+    lv_label_set_text(lbl_hat, "🎩");
+    lv_obj_set_pos(lbl_hat, 38, 2);
+    lv_obj_set_style_text_font(lbl_hat, &lv_font_montserrat_16, 0);
+    lv_obj_add_flag(lbl_hat, LV_OBJ_FLAG_HIDDEN);
 
     pet_antenna = lv_obj_create(pet_container);
     lv_obj_set_size(pet_antenna, 2, 16);
@@ -446,7 +551,6 @@ void pet_app_create(lv_obj_t *parent) {
     make_btn(scr, 240, SAFE_TOP + 100, BW, BH, "CLEAN", clean_cb);
     make_btn(scr, 314, SAFE_TOP + 100, BW, BH, "STATUS", status_cb);
 
-    
     btn_bitgotchi = lv_button_create(scr);
     lv_obj_set_size(btn_bitgotchi, BW * 2 + 6, 40);
     lv_obj_set_pos(btn_bitgotchi, 240, SAFE_TOP + 185);
@@ -548,6 +652,8 @@ void pet_app_create(lv_obj_t *parent) {
     lv_label_set_long_mode(lbl_console, LV_LABEL_LONG_WRAP);
     lv_obj_align(lbl_console, LV_ALIGN_TOP_LEFT, 8, 5);
 
+    make_btn(scr, SAFE_LEFT, 422, SCREEN_WIDTH - SAFE_LEFT - SAFE_RIGHT, 35, "SD LOG LOOT", loot_cb);
+
     update_bars();
     update_pet_visuals();
     log_message("System Online.");
@@ -559,6 +665,8 @@ void pet_app_update(void) {
     static uint32_t last_decay_ms = 0;
     static uint32_t last_bounce_ms = 0;
     static bool bounce_up = false;
+    static int last_handshakes = 0;
+    static bool was_active = false;
     uint32_t now = millis();
 
     if (now - last_decay_ms > 15000) {
@@ -597,12 +705,56 @@ void pet_app_update(void) {
         update_pet_visuals();
     }
 
-    
     if (recon_is_bitgotchi_active()) {
         if (pet_viewport) {
             lv_obj_set_style_bg_color(pet_viewport, lv_color_hex(0x001518), 0);
             lv_obj_set_style_border_color(pet_viewport, G, 0);
         }
+
+        int current_handshakes = recon_bitgotchi_handshakes_count();
+        
+        if (!was_active) {
+            last_handshakes = current_handshakes;
+            was_active = true;
+        }
+
+        if (current_handshakes > last_handshakes) {
+            last_handshakes = current_handshakes;
+            
+            
+            pet_energy = (pet_energy + 15 > 100) ? 100 : pet_energy + 15;
+            pet_xp = (pet_xp + 25 > 100) ? 100 : pet_xp + 25;
+            if (pet_xp >= 100) {
+                pet_xp = 0;
+                if (pet_level == 1) pet_level = 2;
+            }
+            
+            
+            set_override_expression("Ƹ̵̡Ӝ̵̨̄Ʒ 🕸️", 3000);
+            log_message("Yum! Captured a handshake!");
+            update_bars();
+            update_pet_visuals();
+            save_pet_state();
+            haptic_click();
+        }
+
+        
+        if (current_handshakes >= 1 && !badge_first_step) {
+            badge_first_step = true;
+            log_message("UNLOCKED: First Step Badge!");
+            save_pet_state();
+        }
+        if (current_handshakes >= 5 && !badge_silent_detective) {
+            badge_silent_detective = true;
+            log_message("UNLOCKED: Silent Detective!");
+            save_pet_state();
+        }
+        if (strstr(recon_bitgotchi_last_event(), "PMKID") && !badge_pmkid_hunter) {
+            badge_pmkid_hunter = true;
+            log_message("UNLOCKED: PMKID Hunter!");
+            save_pet_state();
+        }
+
         if (recon_bitgotchi_has_new_event()) {
             char buf[160];
             snprintf(buf, sizeof(buf),
@@ -612,6 +764,8 @@ void pet_app_update(void) {
                 recon_bitgotchi_handshakes_count());
             if (lbl_console) lv_label_set_text(lbl_console, buf);
         }
+    } else {
+        was_active = false;
     }
 }
 
@@ -627,6 +781,7 @@ void pet_app_destroy(void) {
     pet_tracks = nullptr;
     pet_arms[0] = nullptr;
     pet_arms[1] = nullptr;
+    lbl_hat = nullptr;
     for (int i = 0; i < 6; i++) pet_pins[i] = nullptr;
     for (int i = 0; i < 5; i++) poop_objs[i] = nullptr;
 

@@ -53,9 +53,12 @@ bool recon_is_deauthing(void);
 bool recon_is_sniffing(void);
 bool recon_is_evil_twin(void);
 bool recon_is_beacon_spamming(void);
+bool recon_is_deauth_detecting(void);
 
 int recon_sniffer_packet_count(void);
 int recon_deauth_detect_count(void);
+int recon_get_deauth_event_count(void);
+bool recon_get_deauth_event(int idx, uint8_t* src, uint8_t* dst, uint8_t* bssid, uint8_t* subtype, uint32_t* time);
 int recon_beacon_active_count(void);
 
 const char* recon_et_last_cred(void);
@@ -86,3 +89,25 @@ int  recon_bitgotchi_friends_count(void);
 int  recon_bitgotchi_handshakes_count(void);
 const char* recon_bitgotchi_last_event(void);
 bool recon_bitgotchi_has_new_event(void);
+
+struct AdsbAircraft {
+    char flight[16];
+    char reg[16];
+    char type[16];
+    int alt_baro;
+    float gs;
+    float true_heading;
+    int baro_rate;
+    char squawk[8];
+    char emergency[16];
+    char route[32];
+    float distance;
+    float bearing;
+};
+
+void recon_request_adsb_track(double lat, double lon, const char* name);
+bool recon_is_adsb_tracking(void);
+bool recon_adsb_has_aircraft(void);
+const AdsbAircraft* recon_get_adsb_aircraft(void);
+const char* recon_get_adsb_status(void);
+

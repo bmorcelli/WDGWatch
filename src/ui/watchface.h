@@ -28,4 +28,5 @@ void watchface_set_temperature(int16_t temp_c);
 void watchface_set_sync_status(bool wifi, bool ntp_ok, bool gps_fix);
 bool watchface_alarm_is_ringing(void);
 bool watchface_alarm_is_enabled(void);
+void watchface_alarm_get_time(uint8_t *hour, uint8_t *min);
 
