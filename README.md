@@ -70,7 +70,7 @@ The device utilizes the onboard SX1262 transceiver to interface with multiple de
     Configurable RIC pager transmission (default `439.9875 MHz` FSK) with ASCII encoding. Tap the RIC code box in the "Other Devices" menu to dynamically input target RIC pager addresses.
 *   **Bruce Firmware Chat (FSK)**  
     ![Bruce Firmware](https://img.shields.io/badge/Bruce_Firmware-005f6b?style=for-the-badge&logo=gitbook&logoColor=00e5ff)  
-    FSK compatibility with Bruce firmware Sub-GHz chat devices, running on selected presets (`433.920 MHz`, `868.000 MHz`, `915.000 MHz`).
+    FSK compatibility with Bruce firmware LORA chat devices, running on selected presets (`433.920 MHz`, `868.000 MHz`, `915.000 MHz`).
 *   **LoRa Web & Watch Terminal UI:** Includes a dynamic, 4-direction scrollable console terminal logging incoming messages across all networks in real-time, with automated session-specific logging to the SD card (`/lora/`).
 
 ### 6. 🏷️ NFC Scan, Save & Emulation
@@ -344,7 +344,7 @@ Cihaz, dahili SX1262 alıcı-vericisini kullanarak çeşitli merkeziyetsiz telsi
     Alfanümerik çağrı cihazlarına ASCII formatında mesaj göndermek için ayarlanabilir RIC kodlu FSK modülasyonu (varsayılan `439.9875 MHz`). "Other Devices" ayar ekranından hedef çağrı kodunu (RIC) dinamik olarak değiştirebilirsiniz.
 *   **Bruce Firmware Chat (FSK)**  
     ![Bruce Firmware](https://img.shields.io/badge/Bruce_Firmware-005f6b?style=for-the-badge&logo=gitbook&logoColor=00e5ff)  
-    Bruce yazılımı kullanan cihazlarla FSK tabanlı Sub-GHz mesajlaşma uyumluluğu. En çok kullanılan frekanslar (`433.920 MHz`, `868.000 MHz`, `915.000 MHz`) arasında dinamik geçiş imkanı sağlar.
+    Bruce yazılımı kullanan cihazlarla FSK tabanlı LORA mesajlaşma uyumluluğu. En çok kullanılan frekanslar (`433.920 MHz`, `868.000 MHz`, `915.000 MHz`) arasında dinamik geçiş imkanı sağlar.
 *   **LoRa Web ve Saat Terminal Arayüzü:** Gelen mesajları anlık olarak gösteren, 4 yöne kaydırılabilir retro konsol ekranı ve her protokol oturumu için SD kartta `/lora/` dizininde otomatik dosya tabanlı kayıt (log) tutma sistemi.
 
 ### 6. 🏷️ NFC Tarama ve Emülasyon
