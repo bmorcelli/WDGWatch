@@ -113,6 +113,65 @@ The SCR-Bit virtual pet evolves into an autonomous cyber-recon agent via the **P
     *   `🏹 PMKID Hunter` — Unlocked when a PMKID packet is captured.
 *   **Badge Display:** Pressing the **STATUS** button prints the pet's level, XP, health, and all unlocked badges to the terminal console.
 
+### 11. 📟 Responsive Web UI & CLI Terminal
+<table>
+  <tr>
+    <td width="40%"><img src="cli.png" alt="SCR Terminal Web UI" width="100%"></td>
+    <td width="60%" valign="top">
+      The watch features an integrated Web Server allowing you to control and interact with the SCR Terminal remotely from any browser.
+      <br/><br/>
+      <b>How to Connect:</b>
+      <ol>
+        <li>Open the <b>WiFi / WEB</b> app on the watch screen.</li>
+        <li>Tap the <b>WEB SERVER ON / OFF</b> button to turn the web server ON.</li>
+        <li>Connect your computer or smartphone to the WiFi Access Point:
+          <ul>
+            <li><b>SSID:</b> <code>SCR Terminal</code></li>
+            <li><b>Password:</b> <code>pip12345</code></li>
+          </ul>
+        </li>
+        <li>Open your browser and navigate to: <b><code>http://192.168.4.1</code></b></li>
+      </ol>
+      <b>Web UI Enhancements:</b>
+      <ul>
+        <li><b>Full-Viewport Responsive Layout:</b> Re-engineered CSS using flexbox, allowing the Terminal, SD File Browser, and Nano Editor to occupy 100% height of your browser window.</li>
+        <li><b>Retro CLI Solid Blinking Cursor:</b> Custom simulated blinking solid box cursor following retro green terminal UX.</li>
+        <li><b>Automated Scan Output:</b> WiFi/BLE scans automatically dump formatted results directly to your terminal session when completed.</li>
+        <li><b>Flipper Zero Identification:</b> BLE scan automatically tags active Flipper Zero devices with a <code>[FLIPPER]</code> label.</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+#### 💻 Web UI Terminal Commands:
+*   **Global Utilities:** `help`, `clear`, `exit`, `sysinfo`, `status`, `brightness <10-255>`, `haptic`, `reboot`, `watchface`
+*   **Shortcut Aliases:** 
+    *   `wifi scan` or `scan wifi` or `wifi` -> Trigger background WiFi AP scanning.
+    *   `ble scan [sec]` or `scan ble` or `ble` -> Trigger BLE device scanning (default 10s).
+    *   `results` or `scan results` or `wifi results` -> List last discovered APs and BLE devices.
+*   **Recon Sub-commands:**
+    *   `recon wifi` / `recon ble [seconds]` / `recon stop` / `recon results`
+    *   `deauth <bssid> <ch>` -> Targeted deauthentication attack.
+    *   `blackout` -> Deauth attack all discovered APs.
+    *   `sniffer <ch>` / `sniffer stop` -> Capture raw frames on channel.
+    *   `deauth detect` -> Monitor for incoming deauth management frame attacks.
+    *   `eviltwin <ssid> [ch]` / `eviltwin stop` -> Launch Evil Twin captive portal.
+    *   `arp scan` / `arp results` -> Map active hosts in local subnet.
+    *   `ipsniff <ip>` / `ipsniff results` -> Perform network traffic analysis.
+    *   `beaconspam <ssids>` / `beaconspam stop` -> Flood area with fake SSIDs.
+    *   `adsb start <lat> <lon>` / `adsb status` -> Track local aircraft.
+*   **LoRa & Radio:**
+    *   `lora start [0:Mesh, 1:Meshtastic, 2:POCSAG, 3:Bruce]` / `lora stop` / `lora send <msg>`
+    *   `lora history` -> Show last 20 received mesh/chat messages.
+    *   `lora setname <name>` / `lora setfreq <mhz>` / `lora setric <ric>`
+*   **NFC Transceiver:**
+    *   `nfc scan` / `nfc stop` / `nfc save` / `nfc list` / `nfc emulate` / `nfc delete <idx>`
+*   **RF Sub-GHz:**
+    *   `rf jam <freq_hz> [seconds]` / `rf stop` / `rf status` / `tesla`
+*   **SD File System:**
+    *   `ls` / `cd <dir>` / `mkdir <name>` / `rm <path>` / `mv <src> <dst>` / `cp <src> <dst>`
+    *   `cat <file>` / `write <file> <text>` / `nano <file>` / `upload` / `download`
+
 ---
 
 ## 📊 Feature Matrix (English)
@@ -386,6 +445,65 @@ SCR-Bit sanal peti, **Politician** pasif yakalama motoru sayesinde otonom bir si
     *   `🕵️ Silent Detective` — Toplam 5 yakalama sonrasında açılır.
     *   `🏹 PMKID Hunter` — Bir PMKID paketi yakalandığında açılır.
 *   **Rozet Görüntüleme:** **STATUS** butonuna basıldığında pet'in seviyesi, XP'si, canı ve kazanılan tüm rozetler terminal konsoluna yazdırılır.
+
+### 11. 📟 Duyarlı Web Arayüzü & CLI Terminali
+<table>
+  <tr>
+    <td width="40%"><img src="cli.png" alt="SCR Terminal Web UI" width="100%"></td>
+    <td width="60%" valign="top">
+      Saat, herhangi bir tarayıcıdan SCR Terminali ile uzaktan etkileşim kurmanıza ve onu kontrol etmenize olanak tanıyan entegre bir Web Sunucusuna sahiptir.
+      <br/><br/>
+      <b>Nasıl Bağlanılır:</b>
+      <ol>
+        <li>Saat ekranındaki <b>WiFi / WEB</b> uygulamasını açın.</li>
+        <li><b>WEB SERVER ON / OFF</b> butonuna basarak web sunucusunu açın.</li>
+        <li>Bilgisayarınızı veya akıllı telefonunuzu şu WiFi Erişim Noktasına bağlayın:
+          <ul>
+            <li><b>SSID:</b> <code>SCR Terminal</code></li>
+            <li><b>Şifre:</b> <code>pip12345</code></li>
+          </ul>
+        </li>
+        <li>Tarayıcınızı açın ve şu adrese gidin: <b><code>http://192.168.4.1</code></b></li>
+      </ol>
+      <b>Web Arayüzü Geliştirmeleri:</b>
+      <ul>
+        <li><b>Tam Ekran Esnek Arayüz:</b> CSS Flexbox kullanılarak yenilenen düzen sayesinde Terminal, SD Dosya Tarayıcısı ve Nano Editör tarayıcı pencerenizin %100 yüksekliğini doldurur.</li>
+        <li><b>Retro CLI Kutu İmleç:</b> Premium retro yeşil terminal havası veren, içi dolu yanıp sönen kutu şeklinde tasarlanmış özel imleç.</li>
+        <li><b>Otomatik Tarama Çıktısı:</b> WiFi/BLE taramaları tamamlandığında, sonuçları doğrudan terminal ekranına otomatik ve biçimlendirilmiş olarak döker.</li>
+        <li><b>Flipper Zero Tespiti:</b> BLE taramalarında çevredeki Flipper Zero cihazlarını otomatik olarak <code>[FLIPPER]</code> etiketiyle işaretler.</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+#### 💻 Web Arayüzü Terminal Komutları:
+*   **Genel Araçlar:** `help`, `clear`, `exit`, `sysinfo`, `status`, `brightness <10-255>`, `haptic`, `reboot`, `watchface`
+*   **Kısayollar (Alias'lar):** 
+    *   `wifi scan` veya `scan wifi` veya `wifi` -> Arka planda WiFi taraması başlatır.
+    *   `ble scan [süre]` veya `scan ble` veya `ble` -> BLE taraması başlatır (varsayılan 10 saniye).
+    *   `results` veya `scan results` veya `wifi results` -> En son taranan ağları ve cihazları listeler.
+*   **Recon Alt Komutları:**
+    *   `recon wifi` / `recon ble [süre]` / `recon stop` / `recon results`
+    *   `deauth <bssid> <ch>` -> Hedef BSSID ve kanala yönelik deauth saldırısı başlatır.
+    *   `blackout` -> Tespit edilen tüm AP'lere deauth saldırısı düzenler.
+    *   `sniffer <ch>` / `sniffer stop` -> Belirtilen kanalda ham paket yakalar.
+    *   `deauth detect` -> Gelen yönetim çerçevesi saldırılarını izler.
+    *   `eviltwin <ssid> [ch]` / `eviltwin stop` -> Evil Twin sahte portalı başlatır.
+    *   `arp scan` / `arp results` -> Yerel alt ağdaki aktif cihazları listeler.
+    *   `ipsniff <ip>` / `ipsniff results` -> Ağ trafiğini analiz eder.
+    *   `beaconspam <ssids>` / `beaconspam stop` -> Sahte SSID yayını başlatır.
+    *   `adsb start <lat> <lon>` / `adsb status` -> Bölgedeki uçakları canlı takip eder.
+*   **LoRa ve Telsiz:**
+    *   `lora start [0:Mesh, 1:Meshtastic, 2:POCSAG, 3:Bruce]` / `lora stop` / `lora send <mesaj>`
+    *   `lora history` -> Son alınan 20 telsiz/sohbet mesajını gösterir.
+    *   `lora setname <isim>` / `lora setfreq <mhz>` / `lora setric <ric>`
+*   **NFC İşlemleri:**
+    *   `nfc scan` / `nfc stop` / `nfc save` / `nfc list` / `nfc emulate` / `nfc delete <idx>`
+*   **RF Sub-GHz:**
+    *   `rf jam <frekans_hz> [süre]` / `rf stop` / `rf status` / `tesla`
+*   **SD Dosya Sistemi:**
+    *   `ls` / `cd <klasör>` / `mkdir <ad>` / `rm <yol>` / `mv <kaynak> <hedef>` / `cp <kaynak> <hedef>`
+    *   `cat <dosya>` / `write <dosya> <metin>` / `nano <dosya>` / `upload` / `download`
 
 ---
 

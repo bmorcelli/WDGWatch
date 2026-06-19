@@ -585,7 +585,7 @@ void lora_app_update(void) {
             snprintf(msg_buf + len, sizeof(msg_buf) - len, "%s\n", m->text);
             lv_label_set_text(lbl_msgs, msg_buf);
             
-            // Scroll to bottom of terminal box container
+            
             lv_obj_scroll_to_y(lv_obj_get_parent(lbl_msgs), 9999, LV_ANIM_ON);
         }
     }

@@ -19,6 +19,8 @@
 #include "../apps/gps_app.h"
 
 static api_event_cb_t event_cb = nullptr;
+static uint32_t jammer_end_time = 0;
+static bool jammer_has_timeout = false;
 
 static void push_event(const char *json) {
     if (event_cb) event_cb(json);
@@ -116,7 +118,16 @@ static char* cmd_nfc_download(int idx) {
     return buf;
 }
 
-static char* cmd_lora_start(void)  { lora_svc_start(MODE_MESHCORE); return strdup("{\"ok\":true,\"msg\":\"meshcore started\"}"); }
+static char* cmd_lora_start(int mode) {
+    lora_svc_start((LoraMode)mode);
+    const char *mode_name = "meshcore";
+    if (mode == 1) mode_name = "meshtastic";
+    else if (mode == 2) mode_name = "pocsag";
+    else if (mode == 3) mode_name = "bruce";
+    char *buf = (char*)malloc(64);
+    snprintf(buf, 64, "{\"ok\":true,\"msg\":\"%s started\"}", mode_name);
+    return buf;
+}
 static char* cmd_lora_stop(void)   { lora_svc_stop(); return strdup("{\"ok\":true}"); }
 static char* cmd_lora_advert(void) { lora_svc_send_advert(); return strdup("{\"ok\":true}"); }
 
@@ -139,6 +150,62 @@ static char* cmd_lora_history(void) {
     }
     char *buf = (char*)malloc(2048);
     serializeJson(doc, buf, 2048);
+    return buf;
+}
+
+static char* cmd_lora_set_ric(uint32_t ric) {
+    lora_svc_set_ric(ric);
+    return strdup("{\"ok\":true,\"msg\":\"ric updated\"}");
+}
+
+static char* cmd_lora_set_freq(float freq) {
+    lora_svc_set_freq(freq);
+    return strdup("{\"ok\":true,\"msg\":\"freq updated\"}");
+}
+
+static char* cmd_lora_set_name(const char *name) {
+    lora_svc_set_node_name(name);
+    return strdup("{\"ok\":true,\"msg\":\"node name updated\"}");
+}
+
+static char* cmd_nfc_emulate(void) {
+    nfc_svc_request_emulate();
+    return strdup("{\"ok\":true,\"msg\":\"emulation status toggled\"}");
+}
+
+static char* cmd_nfc_select_next(void) {
+    nfc_svc_request_select_next();
+    JsonDocument doc;
+    doc["ok"] = true;
+    doc["msg"] = "selected next card";
+    doc["idx"] = nfc_svc_selected_idx();
+    int idx = nfc_svc_selected_idx();
+    doc["name"] = (idx >= 0 && idx < nfc_svc_saved_count()) ? nfc_svc_tag_name(idx) : "none";
+    char *buf = (char*)malloc(128);
+    serializeJson(doc, buf, 128);
+    return buf;
+}
+
+static char* cmd_nfc_status(void) {
+    JsonDocument doc;
+    doc["type"] = "nfc_status";
+    doc["scanning"] = nfc_svc_is_scanning();
+    doc["emulating"] = nfc_svc_is_emulating();
+    doc["selected_idx"] = nfc_svc_selected_idx();
+    int idx = nfc_svc_selected_idx();
+    doc["selected_name"] = (idx >= 0 && idx < nfc_svc_saved_count()) ? nfc_svc_tag_name(idx) : "none";
+    char *buf = (char*)malloc(256);
+    serializeJson(doc, buf, 256);
+    return buf;
+}
+
+static char* cmd_gps_status(void) {
+    JsonDocument doc;
+    doc["type"] = "gps_status";
+    doc["enabled"] = gps_app_is_enabled();
+    doc["wardriving"] = gps_app_is_wardriving_active();
+    char *buf = (char*)malloc(128);
+    serializeJson(doc, buf, 128);
     return buf;
 }
 
@@ -167,10 +234,99 @@ static char* cmd_recon_results(void) {
         if (!d) continue;
         JsonObject o = bl.add<JsonObject>();
         o["mac"] = d->mac; o["name"] = d->name;
-        o["rssi"] = d->rssi; o["airtag"] = d->is_airtag;
+        o["rssi"] = d->rssi; o["airtag"] = d->is_airtag; o["flipper"] = d->is_flipper;
     }
     char *buf = (char*)malloc(4096);
     serializeJson(doc, buf, 4096);
+    return buf;
+}
+
+static char* cmd_recon_arp_start(void) {
+    recon_request_arp_scan();
+    return strdup("{\"ok\":true,\"msg\":\"arp scan started\"}");
+}
+
+static char* cmd_recon_arp_results(void) {
+    JsonDocument doc;
+    doc["type"] = "arp_results";
+    doc["scanning"] = recon_is_arp_scanning();
+    doc["progress"] = recon_arp_scan_progress();
+    JsonArray arr = doc["devices"].to<JsonArray>();
+    for (int i = 0; i < recon_arp_count(); i++) {
+        const ArpDevice *d = recon_get_arp_device(i);
+        if (!d) continue;
+        JsonObject o = arr.add<JsonObject>();
+        o["ip"] = d->ip; o["mac"] = d->mac; o["vendor"] = d->vendor;
+    }
+    char *buf = (char*)malloc(2048);
+    serializeJson(doc, buf, 2048);
+    return buf;
+}
+
+static char* cmd_recon_ip_sniff(const char *ip) {
+    recon_request_ip_sniff(ip);
+    return strdup("{\"ok\":true,\"msg\":\"ip sniff started\"}");
+}
+
+static char* cmd_recon_ip_sniff_results(void) {
+    JsonDocument doc;
+    doc["type"] = "ip_sniff_results";
+    doc["active"] = recon_is_ip_sniffing();
+    doc["target"] = recon_sniff_target_ip();
+    JsonArray arr = doc["ips"].to<JsonArray>();
+    for (int i = 0; i < recon_sniff_unique_ip_count(); i++) {
+        arr.add(recon_sniff_get_ip(i));
+    }
+    char *buf = (char*)malloc(1024);
+    serializeJson(doc, buf, 1024);
+    return buf;
+}
+
+static char* cmd_recon_beacon_spam(JsonArray ssids) {
+    char ssid_array[BEACON_SSID_COUNT][BEACON_SSID_LEN];
+    int count = 0;
+    for (size_t i = 0; i < ssids.size() && i < BEACON_SSID_COUNT; i++) {
+        const char *val = ssids[i];
+        if (val) {
+            strncpy(ssid_array[count], val, BEACON_SSID_LEN - 1);
+            ssid_array[count][BEACON_SSID_LEN - 1] = 0;
+            count++;
+        }
+    }
+    recon_request_beacon_spam(ssid_array, count);
+    return strdup("{\"ok\":true,\"msg\":\"beacon spam started\"}");
+}
+
+static char* cmd_recon_adsb_start(double lat, double lon, const char *name) {
+    recon_request_adsb_track(lat, lon, name);
+    return strdup("{\"ok\":true,\"msg\":\"adsb tracking started\"}");
+}
+
+static char* cmd_recon_adsb_status(void) {
+    JsonDocument doc;
+    doc["type"] = "adsb_status";
+    doc["active"] = recon_is_adsb_tracking();
+    doc["status"] = recon_get_adsb_status();
+    doc["has_aircraft"] = recon_adsb_has_aircraft();
+    if (recon_adsb_has_aircraft()) {
+        const AdsbAircraft *a = recon_get_adsb_aircraft();
+        if (a) {
+            JsonObject ac = doc["aircraft"].to<JsonObject>();
+            ac["flight"] = a->flight;
+            ac["reg"] = a->reg;
+            ac["type"] = a->type;
+            ac["alt"] = a->alt_baro;
+            ac["gs"] = a->gs;
+            ac["hdg"] = a->true_heading;
+            ac["squawk"] = a->squawk;
+            ac["emergency"] = a->emergency;
+            ac["route"] = a->route;
+            ac["dist"] = a->distance;
+            ac["bearing"] = a->bearing;
+        }
+    }
+    char *buf = (char*)malloc(512);
+    serializeJson(doc, buf, 512);
     return buf;
 }
 
@@ -201,6 +357,179 @@ static char* cmd_compass(void) {
     char *buf = (char*)malloc(128);
     snprintf(buf, 128, "{\"heading\":0,\"roll\":0,\"pitch\":0}");
     return buf;
+}
+
+static char* cmd_hid_airmouse_start(void) {
+    bool ok = hid_airmouse_start();
+    if (ok) return strdup("{\"ok\":true,\"msg\":\"airmouse started\"}");
+    else return strdup("{\"error\":\"failed to start airmouse (check USB/BLE connection)\"}");
+}
+
+static char* cmd_hid_airmouse_stop(void) {
+    hid_airmouse_stop();
+    return strdup("{\"ok\":true,\"msg\":\"airmouse stopped\"}");
+}
+
+static char* cmd_hid_airmouse_calibrate(void) {
+    hid_airmouse_calibrate();
+    return strdup("{\"ok\":true,\"msg\":\"airmouse calibrated\"}");
+}
+
+static char* cmd_hid_media(const char *action) {
+    if (strcmp(action, "vol_up") == 0) hid_media_vol_up();
+    else if (strcmp(action, "vol_down") == 0) hid_media_vol_down();
+    else if (strcmp(action, "screenshot") == 0) hid_media_screenshot();
+    else return strdup("{\"error\":\"invalid media action\"}");
+    return strdup("{\"ok\":true}");
+}
+
+static char* cmd_hid_mouse_click(int buttons) {
+    hid_mouse_click(buttons);
+    return strdup("{\"ok\":true}");
+}
+
+static char* cmd_hid_mouse_scroll(int wheel) {
+    hid_mouse_scroll(wheel);
+    return strdup("{\"ok\":true}");
+}
+
+static char* cmd_sd_list(const char *path) {
+    JsonDocument doc;
+    doc["type"] = "sd_list";
+    doc["path"] = path;
+    JsonArray arr = doc["items"].to<JsonArray>();
+
+    File dir = SD.open(path);
+    if (dir && dir.isDirectory()) {
+        File f = dir.openNextFile();
+        int count = 0;
+        while (f && count < 64) {
+            JsonObject o = arr.add<JsonObject>();
+            const char *fname = f.name();
+            const char *slash = strrchr(fname, '/');
+            if (slash) fname = slash + 1;
+            o["name"] = fname;
+            o["is_dir"] = f.isDirectory();
+            o["size"] = f.size();
+            count++;
+            f = dir.openNextFile();
+        }
+        dir.close();
+    } else {
+        return strdup("{\"error\":\"invalid directory\"}");
+    }
+    char *buf = (char*)malloc(3072);
+    serializeJson(doc, buf, 3072);
+    return buf;
+}
+
+static char* cmd_sd_mkdir(const char *path) {
+    if (SD.mkdir(path)) {
+        return strdup("{\"ok\":true,\"msg\":\"directory created\"}");
+    } else {
+        return strdup("{\"error\":\"failed to create directory\"}");
+    }
+}
+
+static char* cmd_sd_delete(const char *path) {
+    bool ok = false;
+    if (SD.exists(path)) {
+        File f = SD.open(path);
+        if (f) {
+            bool isDir = f.isDirectory();
+            f.close();
+            if (isDir) {
+                ok = SD.rmdir(path);
+            } else {
+                ok = SD.remove(path);
+            }
+        }
+    }
+    if (ok) return strdup("{\"ok\":true,\"msg\":\"deleted\"}");
+    else return strdup("{\"error\":\"failed to delete\"}");
+}
+
+static char* cmd_sd_rename(const char *old_path, const char *new_path) {
+    if (SD.rename(old_path, new_path)) {
+        return strdup("{\"ok\":true,\"msg\":\"renamed/moved\"}");
+    } else {
+        return strdup("{\"error\":\"failed to rename/move\"}");
+    }
+}
+
+static char* cmd_sd_copy(const char *src, const char *dest) {
+    if (!SD.exists(src)) return strdup("{\"error\":\"source file not found\"}");
+    File sFile = SD.open(src, FILE_READ);
+    if (!sFile) return strdup("{\"error\":\"failed to open source file\"}");
+    if (sFile.isDirectory()) {
+        sFile.close();
+        return strdup("{\"error\":\"cannot copy directories\"}");
+    }
+    File dFile = SD.open(dest, FILE_WRITE);
+    if (!dFile) {
+        sFile.close();
+        return strdup("{\"error\":\"failed to create destination file\"}");
+    }
+    
+    uint8_t *buffer = (uint8_t*)malloc(512);
+    if (!buffer) {
+        sFile.close();
+        dFile.close();
+        return strdup("{\"error\":\"out of memory\"}");
+    }
+    
+    while (sFile.available()) {
+        size_t bytesRead = sFile.read(buffer, 512);
+        dFile.write(buffer, bytesRead);
+    }
+    
+    free(buffer);
+    sFile.close();
+    dFile.close();
+    return strdup("{\"ok\":true,\"msg\":\"file copied\"}");
+}
+
+static char* cmd_sd_read(const char *path) {
+    if (!SD.exists(path)) return strdup("{\"error\":\"file not found\"}");
+    File f = SD.open(path, FILE_READ);
+    if (!f) return strdup("{\"error\":\"failed to open file\"}");
+    if (f.isDirectory()) {
+        f.close();
+        return strdup("{\"error\":\"cannot read a directory\"}");
+    }
+    
+    size_t fsize = f.size();
+    if (fsize > 8192) {
+        f.close();
+        return strdup("{\"error\":\"file too large to view (max 8KB)\"}");
+    }
+    
+    char *content = (char*)malloc(fsize + 1);
+    if (!content) {
+        f.close();
+        return strdup("{\"error\":\"out of memory\"}");
+    }
+    f.readBytes(content, fsize);
+    content[fsize] = 0;
+    f.close();
+    
+    JsonDocument doc;
+    doc["type"] = "sd_file_content";
+    doc["path"] = path;
+    doc["content"] = content;
+    free(content);
+    
+    char *buf = (char*)malloc(fsize + 256);
+    serializeJson(doc, buf, fsize + 256);
+    return buf;
+}
+
+static char* cmd_sd_write(const char *path, const char *content) {
+    File f = SD.open(path, FILE_WRITE);
+    if (!f) return strdup("{\"error\":\"failed to open file for writing\"}");
+    f.print(content);
+    f.close();
+    return strdup("{\"ok\":true,\"msg\":\"file written\"}");
 }
 
 static char* cmd_sensor_data(void) {
@@ -306,6 +635,9 @@ char* api_handle_command(const char *json_cmd) {
     if (strcmp(cmd, "reboot") == 0)     return cmd_reboot();
     if (strcmp(cmd, "gps_on") == 0)     return cmd_gps_on();
     if (strcmp(cmd, "gps_off") == 0)    return cmd_gps_off();
+    if (strcmp(cmd, "gps_status") == 0) return cmd_gps_status();
+    if (strcmp(cmd, "gps_wardriving_start") == 0) { gps_app_set_wardriving(true); return strdup("{\"ok\":true,\"msg\":\"wardriving started\"}"); }
+    if (strcmp(cmd, "gps_wardriving_stop") == 0)  { gps_app_set_wardriving(false); return strdup("{\"ok\":true,\"msg\":\"wardriving stopped\"}"); }
     if (strcmp(cmd, "compass") == 0)    return cmd_compass();
     if (strcmp(cmd, "sensor_data") == 0) return cmd_sensor_data();
 
@@ -316,12 +648,29 @@ char* api_handle_command(const char *json_cmd) {
     if (strcmp(cmd, "nfc_export") == 0) return cmd_nfc_export();
     if (strcmp(cmd, "nfc_delete") == 0) return cmd_nfc_delete(doc["params"]["idx"] | 0);
     if (strcmp(cmd, "nfc_download") == 0) return cmd_nfc_download(doc["params"]["idx"] | 0);
+    if (strcmp(cmd, "nfc_emulate") == 0) return cmd_nfc_emulate();
+    if (strcmp(cmd, "nfc_select_next") == 0) return cmd_nfc_select_next();
+    if (strcmp(cmd, "nfc_status") == 0) return cmd_nfc_status();
 
-    if (strcmp(cmd, "lora_start") == 0)   return cmd_lora_start();
+    if (strcmp(cmd, "lora_start") == 0) {
+        int mode = doc["params"]["mode"] | 0;
+        if (doc["params"].containsKey("freq")) {
+            float freq = doc["params"]["freq"] | 868.0f;
+            lora_svc_set_freq(freq);
+        }
+        if (doc["params"].containsKey("ric")) {
+            uint32_t ric = doc["params"]["ric"] | 1234567;
+            lora_svc_set_ric(ric);
+        }
+        return cmd_lora_start(mode);
+    }
     if (strcmp(cmd, "lora_stop") == 0)    return cmd_lora_stop();
     if (strcmp(cmd, "lora_send") == 0)    return cmd_lora_send(doc["params"]["text"] | "");
     if (strcmp(cmd, "lora_advert") == 0)  return cmd_lora_advert();
     if (strcmp(cmd, "lora_history") == 0) return cmd_lora_history();
+    if (strcmp(cmd, "lora_set_ric") == 0) return cmd_lora_set_ric(doc["params"]["ric"] | 1234567);
+    if (strcmp(cmd, "lora_set_freq") == 0) return cmd_lora_set_freq(doc["params"]["freq"] | 868.0f);
+    if (strcmp(cmd, "lora_set_name") == 0) return cmd_lora_set_name(doc["params"]["name"] | "");
 
     if (strcmp(cmd, "recon_wifi") == 0)   return cmd_recon_wifi();
     if (strcmp(cmd, "recon_ble") == 0)    return cmd_recon_ble(doc["params"]["duration"] | 10);
@@ -334,10 +683,24 @@ char* api_handle_command(const char *json_cmd) {
     if (strcmp(cmd, "deauth_detect") == 0) { recon_request_deauth_detect(); return strdup("{\"ok\":true,\"msg\":\"deauth detector started\"}"); }
     if (strcmp(cmd, "evil_twin") == 0)     { recon_request_evil_twin(doc["params"]["ssid"] | "FreeWiFi", doc["params"]["ch"] | 6); return strdup("{\"ok\":true,\"msg\":\"evil twin started\"}"); }
     if (strcmp(cmd, "evil_twin_stop") == 0) { recon_request_stop(); return strdup("{\"ok\":true}"); }
+    if (strcmp(cmd, "recon_arp_start") == 0) return cmd_recon_arp_start();
+    if (strcmp(cmd, "recon_arp_results") == 0) return cmd_recon_arp_results();
+    if (strcmp(cmd, "recon_ip_sniff") == 0) return cmd_recon_ip_sniff(doc["params"]["ip"] | "");
+    if (strcmp(cmd, "recon_ip_sniff_results") == 0) return cmd_recon_ip_sniff_results();
+    if (strcmp(cmd, "recon_beacon_spam") == 0) return cmd_recon_beacon_spam(doc["params"]["ssids"].as<JsonArray>());
+    if (strcmp(cmd, "recon_adsb_start") == 0) return cmd_recon_adsb_start(doc["params"]["lat"] | 0.0, doc["params"]["lon"] | 0.0, doc["params"]["name"] | "");
+    if (strcmp(cmd, "recon_adsb_status") == 0) return cmd_recon_adsb_status();
 
     if (strcmp(cmd, "rf_jammer_start") == 0) {
         uint32_t freq = doc["params"]["freq"] | 433920000;
+        int duration = doc["params"]["duration"] | 0;
         rf_jammer_start(freq);
+        if (duration > 0) {
+            jammer_has_timeout = true;
+            jammer_end_time = millis() + (duration * 1000);
+        } else {
+            jammer_has_timeout = false;
+        }
         return strdup("{\"ok\":true,\"msg\":\"rf jammer active\"}");
     }
     if (strcmp(cmd, "rf_jammer_stop") == 0) {
@@ -544,6 +907,21 @@ char* api_handle_command(const char *json_cmd) {
         return buf;
     }
 
+    if (strcmp(cmd, "hid_airmouse_start") == 0) return cmd_hid_airmouse_start();
+    if (strcmp(cmd, "hid_airmouse_stop") == 0) return cmd_hid_airmouse_stop();
+    if (strcmp(cmd, "hid_airmouse_calibrate") == 0) return cmd_hid_airmouse_calibrate();
+    if (strcmp(cmd, "hid_media") == 0) return cmd_hid_media(doc["params"]["action"] | "");
+    if (strcmp(cmd, "hid_mouse_click") == 0) return cmd_hid_mouse_click(doc["params"]["buttons"] | 1);
+    if (strcmp(cmd, "hid_mouse_scroll") == 0) return cmd_hid_mouse_scroll(doc["params"]["wheel"] | 0);
+
+    if (strcmp(cmd, "sd_list") == 0) return cmd_sd_list(doc["params"]["path"] | "/");
+    if (strcmp(cmd, "sd_mkdir") == 0) return cmd_sd_mkdir(doc["params"]["path"] | "");
+    if (strcmp(cmd, "sd_delete") == 0) return cmd_sd_delete(doc["params"]["path"] | "");
+    if (strcmp(cmd, "sd_rename") == 0) return cmd_sd_rename(doc["params"]["old_path"] | "", doc["params"]["new_path"] | "");
+    if (strcmp(cmd, "sd_copy") == 0) return cmd_sd_copy(doc["params"]["src"] | "", doc["params"]["dest"] | "");
+    if (strcmp(cmd, "sd_read") == 0) return cmd_sd_read(doc["params"]["path"] | "");
+    if (strcmp(cmd, "sd_write") == 0) return cmd_sd_write(doc["params"]["path"] | "", doc["params"]["content"] | "");
+
     if (strcmp(cmd, "pet_feed") == 0) {
         pet_feed_action();
         return strdup("{\"ok\":true,\"msg\":\"pet fed\"}");
@@ -584,6 +962,14 @@ void api_set_event_callback(api_event_cb_t cb) {
 }
 
 void api_loop(void) {
+    if (jammer_has_timeout && rf_jammer_is_active()) {
+        if (millis() >= jammer_end_time) {
+            rf_jammer_stop();
+            jammer_has_timeout = false;
+            push_event("{\"event\":\"rf_jammer_stopped\"}");
+        }
+    }
+
     static bool was_scanning = false;
     bool scanning_now = recon_is_scanning();
     if (was_scanning && !scanning_now) {

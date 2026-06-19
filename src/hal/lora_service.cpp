@@ -256,18 +256,18 @@ static void send_meshtastic_nodeinfo(void) {
     uint8_t plain_payload[256];
     int plain_len = 0;
     plain_payload[plain_len++] = 0x08;
-    plain_payload[plain_len++] = 0x04; // PortNum = NODEINFO_APP
+    plain_payload[plain_len++] = 0x04; 
     plain_payload[plain_len++] = 0x12;
     plain_len += encode_varint(plain_payload + plain_len, user_len);
     memcpy(plain_payload + plain_len, user_buf, user_len);
     plain_len += user_len;
     
-    uint32_t dest = 0xFFFFFFFF; // Broadcast
+    uint32_t dest = 0xFFFFFFFF; 
     memcpy(tx_buf, &dest, 4);
     memcpy(tx_buf + 4, &our_node_num, 4);
     memcpy(tx_buf + 8, &pkt_id, 4);
-    tx_buf[12] = 3; // hop_limit = 3
-    tx_buf[13] = calc_channel_hash("LongFast", defaultpsk, sizeof(defaultpsk)); // Dynamic LongFast hash
+    tx_buf[12] = 3; 
+    tx_buf[13] = calc_channel_hash("LongFast", defaultpsk, sizeof(defaultpsk)); 
     tx_buf[14] = 0;
     tx_buf[15] = 0;
     
@@ -486,7 +486,7 @@ static void decode_packet(uint8_t *data, int len, float rssi, float snr) {
             }
         }
         
-        if (portnum == 4 && payload_ptr && payload_len > 0) { // NODEINFO_APP
+        if (portnum == 4 && payload_ptr && payload_len > 0) { 
             const uint8_t *uptr = payload_ptr;
             const uint8_t *uend = payload_ptr + payload_len;
             char name[32] = "";
@@ -736,7 +736,7 @@ static bool configure_radio(void) {
         bw = 125.0f;
         sf = 7;
         cr = 5;
-        sync = 0x12; // Standard public SyncWord
+        sync = 0x12; 
     }
 
     err = radio.begin(freq, bw, sf, cr, sync, 14, MC_PREAMBLE, 1.6f);
@@ -815,21 +815,21 @@ void lora_service_loop(void) {
             uint8_t plain_payload[256];
             int plain_len = 0;
             plain_payload[plain_len++] = 0x08;
-            plain_payload[plain_len++] = 0x01; // PortNum = TEXT_MESSAGE_APP
+            plain_payload[plain_len++] = 0x01; 
             plain_payload[plain_len++] = 0x12;
             int text_len = strlen(pending_msg);
             plain_len += encode_varint(plain_payload + plain_len, text_len);
             memcpy(plain_payload + plain_len, pending_msg, text_len);
             plain_len += text_len;
             
-            uint32_t dest = 0xFFFFFFFF; // Broadcast
+            uint32_t dest = 0xFFFFFFFF; 
             memcpy(tx_buf, &dest, 4);
             memcpy(tx_buf + 4, &our_node_num, 4);
             memcpy(tx_buf + 8, &pkt_id, 4);
-            tx_buf[12] = 3; // hop_limit = 3
-            tx_buf[13] = calc_channel_hash("LongFast", defaultpsk, sizeof(defaultpsk)); // Dynamic LongFast hash
-            tx_buf[14] = 0; // next_hop
-            tx_buf[15] = 0; // relay_node
+            tx_buf[12] = 3; 
+            tx_buf[13] = calc_channel_hash("LongFast", defaultpsk, sizeof(defaultpsk)); 
+            tx_buf[14] = 0; 
+            tx_buf[15] = 0; 
             
             uint8_t nonce[16] = {0};
             uint64_t pkt_id_64 = pkt_id;

@@ -7,3 +7,5 @@ void gps_app_destroy(void);
 bool gps_app_is_enabled(void);
 void gps_app_set_enabled(bool enabled);
 bool gps_app_is_wardriving_active(void);
+void gps_app_set_wardriving(bool active);
+

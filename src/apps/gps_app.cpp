@@ -296,3 +296,35 @@ void gps_app_set_enabled(bool enabled) {
 bool gps_app_is_wardriving_active(void) {
     return wardriving_active;
 }
+
+void gps_app_set_wardriving(bool active) {
+    if (wardriving_active == active) return;
+    if (active) {
+        if (!gps_enabled) {
+            gps_app_set_enabled(true);
+        }
+        if (!SD.exists("/")) {
+            Serial.println("[GPS] Wardriving start failed: No SD card");
+            return;
+        }
+        wardriving_filepath = get_next_trip_filename();
+        File f = SD.open(wardriving_filepath, FILE_WRITE);
+        if (f) {
+            f.println("Date,Time,Latitude,Longitude,Altitude,Speed,Heading,Satellites,HDOP");
+            f.close();
+            wardriving_active = true;
+            Serial.printf("[GPS] Wardriving started: %s\n", wardriving_filepath.c_str());
+        }
+    } else {
+        wardriving_active = false;
+        Serial.println("[GPS] Wardriving stopped");
+    }
+    if (btn_wardriving) {
+        update_btn_style(btn_wardriving, wardriving_active);
+        lv_obj_t *lbl = lv_obj_get_child(btn_wardriving, 0);
+        if (lbl) {
+            lv_label_set_text(lbl, "WARDRIVING");
+        }
+    }
+}
+
