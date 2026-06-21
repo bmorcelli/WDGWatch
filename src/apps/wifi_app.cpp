@@ -227,7 +227,7 @@ static void show_scan_results(int n) {
     lv_obj_set_style_text_font(title, &lv_font_montserrat_18, 0);
 
     lv_obj_t *btn_close = lv_button_create(wifi_scan_list);
-    lv_obj_set_size(btn_close, LV_PCT(100), 40);
+    lv_obj_set_size(btn_close, LV_PCT(100), 48);
     lv_obj_set_style_border_width(btn_close, 1, 0);
     lv_obj_set_style_border_color(btn_close, lv_color_hex(0xFF3B30), 0);
     lv_obj_set_style_radius(btn_close, 0, 0);
@@ -247,7 +247,7 @@ static void show_scan_results(int n) {
         scan_ssids[count][sizeof(scan_ssids[count])-1] = '\0';
 
         lv_obj_t *btn = lv_button_create(wifi_scan_list);
-        lv_obj_set_size(btn, LV_PCT(100), 40);
+        lv_obj_set_size(btn, LV_PCT(100), 48);
         lv_obj_set_style_border_width(btn, 1, 0);
         lv_obj_set_style_border_color(btn, D, 0);
         lv_obj_set_style_radius(btn, 0, 0);
@@ -433,7 +433,7 @@ static void show_city_list(void) {
     lv_obj_set_style_text_font(title, &lv_font_montserrat_18, 0);
 
     lv_obj_t *btn_close = lv_button_create(clock_city_list);
-    lv_obj_set_size(btn_close, LV_PCT(100), 40);
+    lv_obj_set_size(btn_close, LV_PCT(100), 48);
     lv_obj_set_style_border_width(btn_close, 1, 0);
     lv_obj_set_style_border_color(btn_close, lv_color_hex(0xFF3B30), 0);
     lv_obj_set_style_radius(btn_close, 0, 0);
@@ -447,7 +447,7 @@ static void show_city_list(void) {
     int count = sizeof(timezoneMappings) / sizeof(timezoneMappings[0]);
     for (int i = 0; i < count; i++) {
         lv_obj_t *btn = lv_button_create(clock_city_list);
-        lv_obj_set_size(btn, LV_PCT(100), 40);
+        lv_obj_set_size(btn, LV_PCT(100), 48);
         lv_obj_set_style_border_width(btn, 1, 0);
         lv_obj_set_style_border_color(btn, D, 0);
         lv_obj_set_style_radius(btn, 0, 0);
@@ -526,9 +526,9 @@ void wifi_app_create(lv_obj_t *parent) {
     make_btn(scr, x, y, bw, bh, LV_SYMBOL_WIFI " WEB SERVER ON / OFF", toggle_web_cb);
 
     y += bh + 8;
-    make_btn(scr, x, y, bw, 45, LV_SYMBOL_BLUETOOTH " Watch Dogs Connect", toggle_ble_cb);
+    make_btn(scr, x, y, bw, 48, LV_SYMBOL_BLUETOOTH " Watch Dogs Connect", toggle_ble_cb);
 
-    y += 53;
+    y += 48 + 8;
     lbl_ble_status = lv_label_create(scr);
     lv_label_set_text(lbl_ble_status, ble_uart_is_connected() ? "BLE: CONNECTED" : "BLE: OFF");
     lv_obj_set_style_text_color(lbl_ble_status, D, 0);
@@ -536,13 +536,13 @@ void wifi_app_create(lv_obj_t *parent) {
     lv_obj_set_pos(lbl_ble_status, x, y);
 
     y += 20;
-    make_btn(scr, x, y, bw, 40, LV_SYMBOL_REFRESH " NTP SYNC", ntp_cb);
+    make_btn(scr, x, y, bw, 48, LV_SYMBOL_REFRESH " NTP SYNC", ntp_cb);
 
-    y += 48;
-    make_btn(scr, x, y, 165, 40, "WIFI ON/OFF", toggle_wifi_cb);
-    btn_clock = make_btn(scr, x + 175, y, 165, 40, "CLOCK", toggle_clock_cb);
+    y += 48 + 8;
+    make_btn(scr, x, y, 165, 48, "WIFI ON/OFF", toggle_wifi_cb);
+    btn_clock = make_btn(scr, x + 175, y, 165, 48, "CLOCK", toggle_clock_cb);
 
-    y += 50;
+    y += 48 + 8;
     lv_obj_t *hint = lv_label_create(scr);
     lv_label_set_text(hint, "1. Tap WEB ON/OFF\n2. Connect phone to\n   WiFi: SCR Terminal\n   Pass: pip12345\n3. Open 192.168.4.1");
     lv_obj_set_style_text_color(hint, D, 0);
@@ -569,6 +569,9 @@ void wifi_app_update(void) {
             if (lbl_ip) lv_label_set_text(lbl_ip, "");
             if (lbl_clients) lv_label_set_text(lbl_clients, "");
         } else {
+            if (ble_uart_is_active()) {
+                ble_uart_stop();
+            }
             if (lbl_status) lv_label_set_text(lbl_status, "STARTING AP...");
             lv_timer_handler();
             web_server_init();
@@ -585,6 +588,12 @@ void wifi_app_update(void) {
         if (ble_uart_is_active()) {
             ble_uart_stop();
         } else {
+            if (web_server_is_active()) {
+                web_server_stop();
+                if (lbl_status) lv_label_set_text(lbl_status, "WEB SERVER OFF");
+                if (lbl_ip) lv_label_set_text(lbl_ip, "");
+                if (lbl_clients) lv_label_set_text(lbl_clients, "");
+            }
             ble_uart_init();
         }
     }

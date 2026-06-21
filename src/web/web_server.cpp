@@ -34,6 +34,11 @@ static volatile bool show_overlay_scan = false;
 static volatile bool show_overlay_emit = false;
 static volatile bool hide_overlay_flag = false;
 
+static volatile bool show_overlay_exfil = false;
+static char exfil_overlay_title[32] = "";
+static char exfil_overlay_status[64] = "";
+static volatile bool exfil_overlay_finished = false;
+
 static volatile bool flag_haptic = false;
 static volatile bool flag_brightness = false;
 static volatile int  pending_brightness = 128;
@@ -446,17 +451,25 @@ static void setup_routes(void) {
             req->send(404, "text/plain", "File not found");
             return;
         }
-        req->send(SD, path, "application/octet-stream", true);
+        
+        
+        snprintf(exfil_overlay_title, sizeof(exfil_overlay_title), "GET: %s", path.substring(path.lastIndexOf('/') + 1).c_str());
+        snprintf(exfil_overlay_status, sizeof(exfil_overlay_status), "Downloading...");
+        show_overlay_exfil = true;
+        exfil_overlay_finished = true;
+        
+        AsyncWebServerResponse *response = req->beginResponse(SD, path, "application/octet-stream", true);
+        req->send(response);
     });
 
     server.on("/api/sd/upload", HTTP_POST, [](AsyncWebServerRequest *request){
-        if (request->_tempObject) {
+        if (request->_tempObject == (void*)1) {
             request->send(500, "application/json", "{\"error\":\"Upload failed\"}");
         } else {
             request->send(200, "application/json", "{\"ok\":true}");
         }
     }, [](AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final){
-        static File uploadFile;
+        File *uploadFile = (File *)request->_tempObject;
         if(!index){
             String path = "/";
             if(request->hasParam("path")) {
@@ -466,23 +479,100 @@ static void setup_routes(void) {
             String fullPath = path + filename;
             if(!fullPath.startsWith("/")) fullPath = "/" + fullPath;
             
+            
+            String dirPath = path;
+            if (dirPath.endsWith("/")) {
+                dirPath = dirPath.substring(0, dirPath.length() - 1);
+            }
+            if (dirPath.length() > 0 && !SD.exists(dirPath)) {
+                SD.mkdir(dirPath);
+            }
+
             if (SD.exists(fullPath)) {
                 SD.remove(fullPath);
             }
-            uploadFile = SD.open(fullPath, FILE_WRITE);
-            if (!uploadFile) {
+            
+            uploadFile = new File(SD.open(fullPath, FILE_WRITE));
+            if (!uploadFile || !(*uploadFile)) {
+                if (uploadFile) {
+                    delete uploadFile;
+                }
                 request->_tempObject = (void*)1;
+                uploadFile = nullptr;
             } else {
+                request->_tempObject = (void*)uploadFile;
+            }
+            
+            
+            snprintf(exfil_overlay_title, sizeof(exfil_overlay_title), "UPLOAD: %s", filename.c_str());
+            snprintf(exfil_overlay_status, sizeof(exfil_overlay_status), "Uploading...");
+            show_overlay_exfil = true;
+            exfil_overlay_finished = false;
+        }
+        
+        if (uploadFile && *uploadFile && request->_tempObject != (void*)1) {
+            if (uploadFile->write(data, len) != len) {
+                request->_tempObject = (void*)1;
+            }
+        }
+        
+        if(final){
+            if (uploadFile) {
+                if (*uploadFile) {
+                    uploadFile->close();
+                }
+                delete uploadFile;
+            }
+            
+            if (request->_tempObject != (void*)1) {
+                request->_tempObject = nullptr;
+                snprintf(exfil_overlay_status, sizeof(exfil_overlay_status), "Done 100%%");
+            } else {
+                snprintf(exfil_overlay_status, sizeof(exfil_overlay_status), "Failed");
+            }
+            show_overlay_exfil = true;
+            exfil_overlay_finished = true;
+        }
+    });
+
+    server.on("/exfil", HTTP_POST, [](AsyncWebServerRequest *request) {
+        request->send(200, "text/plain", "OK");
+    }, NULL, [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
+        File *exfilFile = (File *)request->_tempObject;
+        if (!index) {
+            if (!SD.exists("/exfil")) {
+                SD.mkdir("/exfil");
+            }
+            
+            String filename = "/exfil/data_" + String(millis()) + ".txt";
+            exfilFile = new File(SD.open(filename, FILE_WRITE));
+            request->_tempObject = (void *)exfilFile;
+            
+            snprintf(exfil_overlay_title, sizeof(exfil_overlay_title), "POST EXFIL");
+            snprintf(exfil_overlay_status, sizeof(exfil_overlay_status), "Receiving: 0%%");
+            show_overlay_exfil = true;
+            exfil_overlay_finished = false;
+        }
+        
+        if (exfilFile && *exfilFile) {
+            exfilFile->write(data, len);
+        }
+        
+        if (total > 0) {
+            int progress = (int)((float)(index + len) / total * 100.0f);
+            snprintf(exfil_overlay_status, sizeof(exfil_overlay_status), "Receiving: %d%%", progress);
+            show_overlay_exfil = true; 
+        }
+        
+        if (index + len == total) {
+            if (exfilFile) {
+                exfilFile->close();
+                delete exfilFile;
                 request->_tempObject = nullptr;
             }
-        }
-        if(uploadFile){
-            if (uploadFile.write(data, len) != len) {
-                request->_tempObject = (void*)1;
-            }
-        }
-        if(final){
-            if(uploadFile) uploadFile.close();
+            snprintf(exfil_overlay_status, sizeof(exfil_overlay_status), "Done 100%%");
+            show_overlay_exfil = true;
+            exfil_overlay_finished = true;
         }
     });
 
@@ -678,6 +768,28 @@ void web_server_loop(void) {
             serializeJson(doc, buf, sizeof(buf));
             ws_broadcast(buf);
         }
+    }
+
+    if (show_overlay_exfil) {
+        show_overlay_exfil = false;
+        if (!action_overlay_is_active()) {
+            action_overlay_show(exfil_overlay_title);
+        }
+        action_overlay_set_status(exfil_overlay_status);
+        power_hal_reset_activity();
+    }
+
+    static uint32_t overlay_finished_time = 0;
+    if (exfil_overlay_finished) {
+        if (overlay_finished_time == 0) {
+            overlay_finished_time = millis();
+        } else if (millis() - overlay_finished_time > 4000) { 
+            exfil_overlay_finished = false;
+            overlay_finished_time = 0;
+            action_overlay_hide();
+        }
+    } else {
+        overlay_finished_time = 0;
     }
 
     if (action_overlay_is_active()) {

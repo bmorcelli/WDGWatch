@@ -278,31 +278,66 @@ function handleWS(d){
       termPrint("\n[System Notification] RF Jammer timeout reached. Broadcast stopped.", 'info');
     }
     else if (d.event === 'scan_done') {
-      termPrint(`\n[System Notification] Recon Scan completed. Found: ${d.wifi} WiFi APs, ${d.ble} BLE devices.`, 'success');
-      api('/api/cmd', 'POST', {cmd: 'recon_results'}).then(r => {
-        if (r) {
-          let out = `\n<span style="color:#00ff66;font-weight:bold;">[WiFi APs Discovered]</span>\n`;
-          if (r.wifi && r.wifi.length > 0) {
-            r.wifi.forEach(n => {
-              out += `  SSID: ${n.ssid.padEnd(20)} | BSSID: ${n.bssid} | CH: ${String(n.ch).padEnd(2)} | RSSI: ${n.rssi} dBm (${n.auth})\n`;
-            });
-          } else {
-            out += `  No WiFi networks found.\n`;
+      if (d.type === 'wifi') {
+        termPrint(`\n[System Notification] WiFi Recon Scan completed. Found: ${d.wifi} WiFi APs.`, 'success');
+        api('/api/cmd', 'POST', {cmd: 'recon_results'}).then(r => {
+          if (r) {
+            let out = `\n<span style="color:#00ff66;font-weight:bold;">[WiFi APs Discovered]</span>\n`;
+            if (r.wifi && r.wifi.length > 0) {
+              r.wifi.forEach(n => {
+                out += `  SSID: ${n.ssid.padEnd(20)} | BSSID: ${n.bssid} | CH: ${String(n.ch).padEnd(2)} | RSSI: ${n.rssi} dBm (${n.auth})\n`;
+              });
+            } else {
+              out += `  No WiFi networks found.\n`;
+            }
+            termPrint(out + "\n", 'normal');
           }
-          out += `\n<span style="color:#00ff66;font-weight:bold;">[BLE Devices Discovered]</span>\n`;
-          if (r.ble && r.ble.length > 0) {
-            r.ble.forEach(b => {
-              let info = "";
-              if (b.airtag) info = " [AIRTAG]";
-              else if (b.flipper) info = " [FLIPPER]";
-              out += `  MAC: ${b.mac} | Name: ${(b.name || 'N/A').padEnd(20)} | RSSI: ${b.rssi} dBm${info}\n`;
-            });
-          } else {
-            out += `  No BLE devices found.\n`;
+        }).catch(err => {});
+      } else if (d.type === 'ble') {
+        termPrint(`\n[System Notification] BLE Recon Scan completed. Found: ${d.ble} BLE devices.`, 'success');
+        api('/api/cmd', 'POST', {cmd: 'recon_results'}).then(r => {
+          if (r) {
+            let out = `\n<span style="color:#00ff66;font-weight:bold;">[BLE Devices Discovered]</span>\n`;
+            if (r.ble && r.ble.length > 0) {
+              r.ble.forEach(b => {
+                let info = "";
+                if (b.airtag) info = " [AIRTAG]";
+                else if (b.flipper) info = " [FLIPPER]";
+                out += `  MAC: ${b.mac} | Name: ${(b.name || 'N/A').padEnd(20)} | RSSI: ${b.rssi} dBm${info}\n`;
+              });
+            } else {
+              out += `  No BLE devices found.\n`;
+            }
+            termPrint(out + "\n", 'normal');
           }
-          termPrint(out + "\n", 'normal');
-        }
-      }).catch(err => {});
+        }).catch(err => {});
+      } else {
+        termPrint(`\n[System Notification] Recon Scan completed. Found: ${d.wifi} WiFi APs, ${d.ble} BLE devices.`, 'success');
+        api('/api/cmd', 'POST', {cmd: 'recon_results'}).then(r => {
+          if (r) {
+            let out = `\n<span style="color:#00ff66;font-weight:bold;">[WiFi APs Discovered]</span>\n`;
+            if (r.wifi && r.wifi.length > 0) {
+              r.wifi.forEach(n => {
+                out += `  SSID: ${n.ssid.padEnd(20)} | BSSID: ${n.bssid} | CH: ${String(n.ch).padEnd(2)} | RSSI: ${n.rssi} dBm (${n.auth})\n`;
+              });
+            } else {
+              out += `  No WiFi networks found.\n`;
+            }
+            out += `\n<span style="color:#00ff66;font-weight:bold;">[BLE Devices Discovered]</span>\n`;
+            if (r.ble && r.ble.length > 0) {
+              r.ble.forEach(b => {
+                let info = "";
+                if (b.airtag) info = " [AIRTAG]";
+                else if (b.flipper) info = " [FLIPPER]";
+                out += `  MAC: ${b.mac} | Name: ${(b.name || 'N/A').padEnd(20)} | RSSI: ${b.rssi} dBm${info}\n`;
+              });
+            } else {
+              out += `  No BLE devices found.\n`;
+            }
+            termPrint(out + "\n", 'normal');
+          }
+        }).catch(err => {});
+      }
     }
     else if (d.event === 'deauth_detected') {
       termPrint(`\n[ALERT] WiFi Deauthentication attack detected! Count: ${d.count}`, 'error');
@@ -472,10 +507,15 @@ async function executeCLI(cmdLine) {
   let lowerLine = line.toLowerCase();
   if (lowerLine === 'wifi scan' || lowerLine === 'scan wifi' || lowerLine === 'wifi') {
     line = 'recon wifi';
-  } else if (lowerLine.startsWith('ble scan') || lowerLine.startsWith('scan ble') || lowerLine === 'ble') {
+  } else if (lowerLine.startsWith('ble scan') || lowerLine.startsWith('scan ble') || lowerLine.startsWith('ble ') || lowerLine === 'ble') {
     let parts = lowerLine.split(/\s+/);
-    let dur = parts[2] || '';
-    line = 'recon ble ' + dur;
+    let dur = '';
+    if (lowerLine.startsWith('ble scan') || lowerLine.startsWith('scan ble')) {
+      dur = parts[2] || '';
+    } else {
+      dur = parts[1] || '';
+    }
+    line = ('recon ble ' + dur).trim();
   } else if (lowerLine === 'wifi results' || lowerLine === 'ble results' || lowerLine === 'scan results' || lowerLine === 'results') {
     line = 'recon results';
   }

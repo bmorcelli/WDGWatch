@@ -156,10 +156,10 @@ void gps_app_create(lv_obj_t *parent) {
     lv_obj_set_style_text_font(title, &lv_font_montserrat_22, 0);
     lv_obj_align(title, LV_ALIGN_TOP_MID, 0, SAFE_TOP);
 
-    btn_gps_toggle = make_btn(scr, SAFE_LEFT + 20, SAFE_TOP + 30, 340, 45, "GPS", toggle_gps_cb);
+    btn_gps_toggle = make_btn(scr, SAFE_LEFT + 20, SAFE_TOP + 30, 340, 50, "GPS", toggle_gps_cb);
     update_btn_style(btn_gps_toggle, gps_enabled);
 
-    int y = SAFE_TOP + 85;
+    int y = SAFE_TOP + 90;
     lbl_fix    = row(scr, y, "FIX");       y += 35;
     lbl_sats   = row(scr, y, "SATS");      y += 35;
     lbl_lat    = row(scr, y, "LAT");       y += 35;
@@ -169,7 +169,7 @@ void gps_app_create(lv_obj_t *parent) {
     lbl_heading= row(scr, y, "HDG");       y += 35;
     lbl_hdop   = row(scr, y, "HDOP");
 
-    btn_wardriving = make_btn(scr, SAFE_LEFT + 20, 420, 340, 45, "WARDRIVING", toggle_wardriving_cb);
+    btn_wardriving = make_btn(scr, SAFE_LEFT + 20, 420, 340, 50, "WARDRIVING", toggle_wardriving_cb);
     update_btn_style(btn_wardriving, wardriving_active);
 }
 

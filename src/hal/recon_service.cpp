@@ -446,6 +446,14 @@ bool recon_is_scanning(void) {
     return state == RECON_WIFI_SCANNING || state == RECON_BLE_SCANNING;
 }
 
+bool recon_is_wifi_scanning(void) {
+    return state == RECON_WIFI_SCANNING;
+}
+
+bool recon_is_ble_scanning(void) {
+    return state == RECON_BLE_SCANNING;
+}
+
 bool recon_is_deauthing(void) {
     return state == RECON_DEAUTH_ACTIVE || state == RECON_DEAUTH_SENDING || state == RECON_DEAUTH_RESTORE;
 }

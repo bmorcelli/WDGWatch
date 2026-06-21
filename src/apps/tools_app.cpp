@@ -214,10 +214,10 @@ void tools_app_create(lv_obj_t *parent) {
     lv_obj_set_pos(fl_lbl, 0, y);
     y += 20;
 
-    lv_obj_t *fl_btn = make_btn(scr, CW / 2, 44,
+    lv_obj_t *fl_btn = make_btn(scr, CW / 2, 48,
                                 LV_SYMBOL_EYE_OPEN "  TOGGLE", flashlight_cb);
     lv_obj_set_pos(fl_btn, CW / 4 - CW / 8, y);
-    y += 54;
+    y += 58;
 
     lv_obj_t *sw_sec = make_section_label(scr, "STOPWATCH");
     lv_obj_set_pos(sw_sec, 0, y);
@@ -230,19 +230,19 @@ void tools_app_create(lv_obj_t *parent) {
     lv_obj_set_pos(lbl_stopwatch, 0, y);
     y += 56;
 
-    lv_obj_t *sw_btn1 = make_btn(scr, 140, 40, "START / STOP", stopwatch_cb);
+    lv_obj_t *sw_btn1 = make_btn(scr, 140, 48, "START / STOP", stopwatch_cb);
     lv_obj_set_pos(sw_btn1, 0, y);
-    lv_obj_t *sw_btn2 = make_btn(scr, 100, 40, "RESET", stopwatch_reset_cb);
+    lv_obj_t *sw_btn2 = make_btn(scr, 100, 48, "RESET", stopwatch_reset_cb);
     lv_obj_set_pos(sw_btn2, 150, y);
-    y += 52;
+    y += 60;
 
     lv_obj_t *ct_sec = make_section_label(scr, "COUNTDOWN TIMER");
     lv_obj_set_pos(ct_sec, 0, y);
     y += 22;
 
-    lv_obj_t *preset_btn = make_btn(scr, 120, 40, "SET TIME", ct_preset_cb);
+    lv_obj_t *preset_btn = make_btn(scr, 120, 48, "SET TIME", ct_preset_cb);
     lv_obj_set_pos(preset_btn, 0, y);
-    y += 48;
+    y += 56;
 
     lbl_timer = lv_label_create(scr);
     lv_obj_set_style_text_color(lbl_timer, G, 0);
@@ -258,11 +258,11 @@ void tools_app_create(lv_obj_t *parent) {
     lv_obj_set_pos(lbl_timer_status, 0, y);
     y += 22;
 
-    btn_timer_start = make_btn(scr, 140, 40, "START / STOP", ct_start_cb);
+    btn_timer_start = make_btn(scr, 140, 48, "START / STOP", ct_start_cb);
     lv_obj_set_pos(btn_timer_start, 0, y);
-    btn_timer_reset = make_btn(scr, 100, 40, "RESET", ct_reset_cb);
+    btn_timer_reset = make_btn(scr, 100, 48, "RESET", ct_reset_cb);
     lv_obj_set_pos(btn_timer_reset, 150, y);
-    y += 50;
+    y += 58;
 
     sw_timer = lv_timer_create(sw_tick, 50, nullptr);
     ct_timer = lv_timer_create(ct_tick, 250, nullptr);

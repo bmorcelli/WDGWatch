@@ -281,7 +281,7 @@ void sensor_app_create(lv_obj_t *parent) {
 
     cal_btn_ref = lv_button_create(scr);
     lv_obj_t *cal_btn = cal_btn_ref;
-    lv_obj_set_size(cal_btn, 200, 35);
+    lv_obj_set_size(cal_btn, 200, 48);
     lv_obj_set_pos(cal_btn, SCREEN_WIDTH/2 - 100, compass_cy + COMPASS_R + 25);
     lv_obj_set_style_bg_color(cal_btn, BG, 0);
     lv_obj_set_style_border_color(cal_btn, D, 0);

@@ -258,7 +258,7 @@ static void adsb_open_overlay(const char* airport_name, double lat, double lon) 
     lv_obj_align(adsb_lbl_title, LV_ALIGN_TOP_MID, 0, SAFE_TOP);
 
     lv_obj_t* btn_close = lv_button_create(adsb_overlay);
-    lv_obj_set_size(btn_close, 90, 32);
+    lv_obj_set_size(btn_close, 100, 42);
     lv_obj_set_pos(btn_close, SAFE_LEFT+5, SAFE_TOP-2);
     lv_obj_set_style_bg_color(btn_close, lv_color_hex(0x000000), 0);
     lv_obj_set_style_border_color(btn_close, lv_color_hex(0xFF3300), 0);
@@ -349,7 +349,7 @@ static void adsb_open_overlay(const char* airport_name, double lat, double lon) 
 
     int nav_y = 455;
     lv_obj_t* bp = lv_button_create(adsb_overlay);
-    lv_obj_set_size(bp, 110, 34); lv_obj_set_pos(bp, SAFE_LEFT+5, nav_y);
+    lv_obj_set_size(bp, 110, 42); lv_obj_set_pos(bp, SAFE_LEFT+5, nav_y);
     lv_obj_set_style_bg_color(bp, lv_color_hex(0x000000), 0);
     lv_obj_set_style_border_color(bp, lv_color_hex(0x007280), 0);
     lv_obj_set_style_border_width(bp, 1, 0); lv_obj_set_style_radius(bp, 0, 0);
@@ -365,7 +365,7 @@ static void adsb_open_overlay(const char* airport_name, double lat, double lon) 
     lv_obj_align(adsb_lbl_page, LV_ALIGN_BOTTOM_MID, 0, -10);
 
     lv_obj_t* bn = lv_button_create(adsb_overlay);
-    lv_obj_set_size(bn, 110, 34); lv_obj_set_pos(bn, 410-SAFE_LEFT-5-110, nav_y);
+    lv_obj_set_size(bn, 110, 42); lv_obj_set_pos(bn, 410-SAFE_LEFT-5-110, nav_y);
     lv_obj_set_style_bg_color(bn, lv_color_hex(0x000000), 0);
     lv_obj_set_style_border_color(bn, lv_color_hex(0x007280), 0);
     lv_obj_set_style_border_width(bn, 1, 0); lv_obj_set_style_radius(bn, 0, 0);
@@ -836,7 +836,7 @@ static void beacon_btn_cb(lv_event_t *e) {
     lv_obj_t* modal = create_modal("CONFIG BEACON SPAM");
     
     
-    lv_obj_t* btn_start = make_btn(modal, 10, 30, 350, 40, "START BEACON SPAM", beacon_start_cb);
+    lv_obj_t* btn_start = make_btn(modal, 10, 30, 350, 48, "START BEACON SPAM", beacon_start_cb);
     lv_obj_align(btn_start, LV_ALIGN_TOP_MID, 0, 20);
 
     

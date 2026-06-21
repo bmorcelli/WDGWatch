@@ -770,6 +770,17 @@ static void check_lora_init(void);
 static void generate_node_name(void) {
     if (node_name[0]) return;
 
+    Preferences prefs;
+    if (prefs.begin("lora_svc", true)) {
+        String saved = prefs.getString("node_name", "");
+        if (saved.length() > 0) {
+            strncpy(node_name, saved.c_str(), sizeof(node_name) - 1);
+            prefs.end();
+            return;
+        }
+        prefs.end();
+    }
+
     uint8_t mac[6];
     esp_efuse_mac_get_default(mac);
 
@@ -1044,6 +1055,16 @@ void lora_svc_send_advert(void) { advert_requested = true; }
 
 void lora_svc_set_node_name(const char *name) {
     strncpy(node_name, name, sizeof(node_name) - 1);
+    Preferences prefs;
+    if (prefs.begin("lora_svc", false)) {
+        prefs.putString("node_name", name);
+        prefs.end();
+    }
+}
+
+const char* lora_svc_get_node_name(void) {
+    generate_node_name();
+    return node_name;
 }
 
 bool lora_svc_is_running(void) { return running; }

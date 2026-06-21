@@ -37,6 +37,7 @@ void lora_svc_stop(void);
 void lora_svc_send_message(const char *text);
 void lora_svc_send_advert(void);
 void lora_svc_set_node_name(const char *name);
+const char* lora_svc_get_node_name(void);
 
 bool lora_svc_is_running(void);
 LoraMode lora_svc_get_mode(void);

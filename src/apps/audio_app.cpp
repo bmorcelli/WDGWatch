@@ -158,7 +158,7 @@ void audio_app_create(lv_obj_t *parent) {
     make_btn(scr, x + 175, y, 155, 55, LV_SYMBOL_PLAY " PLAY", play_cb);
 
     y += 65;
-    make_btn(scr, x, y, 155, 45, LV_SYMBOL_TRASH " CLEAR", clear_cb);
+    make_btn(scr, x, y, 155, 50, LV_SYMBOL_TRASH " CLEAR", clear_cb);
 
     y += 60;
     lv_obj_t *info = lv_label_create(scr);

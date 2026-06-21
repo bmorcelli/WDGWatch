@@ -1,6 +1,8 @@
 #include "app_common.h"
 #include "rf_app.h"
 #include <LilyGoLib.h>
+#include <bosch/bhy2_parse.h>
+#include <cmath>
 #include "../config.h"
 #include "../hal/rf_service.h"
 #include "../hal/haptic.h"
@@ -125,9 +127,6 @@ static void tesla_cb(lv_event_t *e) {
 }
 
 void rf_app_create(lv_obj_t *parent) {
-    
-    rf_radio_wake(433.92f);
-
     scr = lv_obj_create(parent);
     lv_obj_remove_style_all(scr);
     lv_obj_set_size(scr, SCREEN_WIDTH, SCREEN_HEIGHT);
@@ -154,7 +153,7 @@ void rf_app_create(lv_obj_t *parent) {
     y += 22;
 
     const int FBW = 66;
-    const int FBH = 36;
+    const int FBH = 44;
     const int FGAP = 5;
     int fx = x;
     for (int i = 0; i < FREQ_COUNT; i++) {
@@ -171,7 +170,7 @@ void rf_app_create(lv_obj_t *parent) {
         }
         fx += FBW + FGAP;
     }
-    y += FBH + 10;
+    y += FBH + 8;
 
     lv_obj_t *lbl_dur_title = lv_label_create(scr);
     lv_label_set_text(lbl_dur_title, "CHOOSE DURATION:");
@@ -181,7 +180,7 @@ void rf_app_create(lv_obj_t *parent) {
     y += 18;
 
     const int DBW = 54;
-    const int DBH = 28;
+    const int DBH = 38;
     const int DGAP = 6;
     int dx = x;
     for (int i = 0; i < DURATION_COUNT; i++) {
@@ -192,7 +191,7 @@ void rf_app_create(lv_obj_t *parent) {
         if (l) lv_obj_set_style_text_color(l, D, 0);
         dx += DBW + DGAP;
     }
-    y += DBH + 12;
+    y += DBH + 10;
 
     lbl_jammer = lv_label_create(scr);
     lv_label_set_text(lbl_jammer, "JAMMER: OFF");
@@ -200,9 +199,9 @@ void rf_app_create(lv_obj_t *parent) {
     lv_obj_set_style_text_font(lbl_jammer, &lv_font_montserrat_18, 0);
     lv_obj_set_pos(lbl_jammer, x, y);
 
-    btn_jam_stop = make_btn(scr, x + 200, y - 5, 140, 32,
+    btn_jam_stop = make_btn(scr, x + 200, y - 5, 140, 44,
                             LV_SYMBOL_PLAY "  JAM / STOP", jammer_cb);
-    y += 40;
+    y += 48;
 
     lv_obj_t *line = lv_obj_create(scr);
     lv_obj_remove_style_all(line);
@@ -235,6 +234,7 @@ void rf_app_create(lv_obj_t *parent) {
     lv_obj_set_style_text_color(lbl_tesla, D, 0);
     lv_obj_set_style_text_font(lbl_tesla, &lv_font_montserrat_16, 0);
     lv_obj_set_pos(lbl_tesla, x, y);
+    y += 25;
 }
 
 void rf_app_update(void) {
@@ -274,10 +274,11 @@ void rf_app_update(void) {
             lv_obj_set_style_text_color(lbl_tesla, D, 0);
         }
     }
+
+    
 }
 
 void rf_app_destroy(void) {
-    
     rf_radio_sleep();
 
     for (int i = 0; i < FREQ_COUNT; i++) freq_btns[i] = nullptr;
@@ -286,5 +287,6 @@ void rf_app_destroy(void) {
     lbl_tesla    = nullptr;
     btn_jam_stop = nullptr;
     selected_duration_idx = -1;
+
     if (scr) { lv_obj_delete(scr); scr = nullptr; }
 }

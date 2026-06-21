@@ -61,16 +61,16 @@ Leverages the onboard SX1262 transceiver to provide RF security research tools:
 The device utilizes the onboard SX1262 transceiver to interface with multiple decentralized radio networks and paging protocols:
 *   **MeshCore Protocol**  
     ![MeshCore](https://img.shields.io/badge/MeshCore-00E5FF?style=for-the-badge&logo=hive&logoColor=black)  
-    Operates on `869.618 MHz` (SF8 / BW62.5 / CR5) for the Watch Dogs Go mesh network. Features secure packet authentication via HMAC-SHA256 and Ed25519 signature verification. Saves session message logs directly to the SD card.
+    Operates on `869.618 MHz` (SF8 / BW62.5 / CR5) for the Watch Dogs Go mesh network. Features secure packet authentication via HMAC-SHA256 and Ed25519 signature verification. Saves session message logs directly to the SD card. Allows custom node name configuration (`lora setname <name>`) directly via the Web UI terminal.
 *   **Meshtastic Protocol**  
     ![Meshtastic](https://img.shields.io/badge/Meshtastic-005f6b?style=for-the-badge&logo=esphome&logoColor=00e5ff)  
-    Operates on the Standard `869.525 MHz` LongFast channel (SF11 / BW250 / CR5) for decentralized open-mesh text messaging and automatic NodeInfo network announcements.
+    Operates on the Standard `869.525 MHz` LongFast channel (SF11 / BW250 / CR5) for decentralized open-mesh text messaging and automatic NodeInfo network announcements. Supports custom chat alias name configurations (`lora setname <name>`).
 *   **POCSAG Pager (FSK)**  
     ![POCSAG Pager](https://img.shields.io/badge/POCSAG_Pager-00E5FF?style=for-the-badge&logo=pagerduty&logoColor=black)  
     Configurable RIC pager transmission (default `439.9875 MHz` FSK) with ASCII encoding. Tap the RIC code box in the "Other Devices" menu to dynamically input target RIC pager addresses.
 *   **Bruce Firmware Chat (FSK)**  
     ![Bruce Firmware](https://img.shields.io/badge/Bruce_Firmware-005f6b?style=for-the-badge&logo=gitbook&logoColor=00e5ff)  
-    FSK compatibility with Bruce firmware LORA chat devices, running on selected presets (`433.920 MHz`, `868.000 MHz`, `915.000 MHz`).
+    FSK compatibility with Bruce firmware LORA chat devices, running on selected presets (`433.920 MHz`, `868.000 MHz`, `915.000 MHz`). Supports setting custom screen chat alias names (`lora setname <name>`).
 *   **LoRa Web & Watch Terminal UI:** Includes a dynamic, 4-direction scrollable console terminal logging incoming messages across all networks in real-time, with automated session-specific logging to the SD card (`/lora/`).
 
 ### 6. 🏷️ NFC Scan, Save & Emulation
@@ -80,10 +80,11 @@ The device utilizes the onboard SX1262 transceiver to interface with multiple de
 
 ### 7. ⌨️ HID Controller (BadUSB, BadBLE, Air Mouse)
 *   **BadUSB & BadBLE:** Emulates a keyboard/mouse over wired USB or wireless BLE HID.
-*   **Web UI DuckyScript Editor (Web UI):**
+*   **Web UI DuckyScript Editor & Exfiltration Tool (Web UI):**
     *   List and load `.txt`/`.duck` scripts from the SD card `/badusb` directory **(Web UI)**.
     *   Edit scripts directly inside the web interface and save them back to SD **(Web UI)**.
     *   Send and execute instant DuckyScript payloads over USB or BLE **(Web UI)**.
+    *   **Bidirectional File exfiltration:** Includes endpoints for fetching files from target host systems to save on the watch's microSD card `/exfil` directory (`/api/sd/upload`), and sending tools or payloads from the watch's microSD directly to target hosts (`/api/sd/download`). Features a 4-second auto-dimming UI overlay popup displaying transfer progress ("UPLOAD: emre.txt", "GET: emre.txt").
 *   **Bilingual Keyboard Layouts (Web UI):** Support for 13 keyboard layouts (US, TR, DE, FR, etc.) dynamically selectable via the layout modal **(Web UI)**.
 *   **Air Mouse:** Controls mouse cursor using built-in IMU sensor movements. Watch screen provides Left Click, Right Click, and touch-sensitive Scroll wheel.
 *   **Smart USB/HID Lifecycle Management:** Automatically disconnects/restores USB CDC serial port (`/dev/ttyACM0`) when toggling HID services to prevent connection hangs.

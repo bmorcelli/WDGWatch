@@ -15,3 +15,4 @@ uint32_t rf_jammer_get_freq(void);
 
 void rf_tesla_send(void);
 bool rf_tesla_is_sending(void);
+

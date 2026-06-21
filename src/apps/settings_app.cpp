@@ -205,7 +205,7 @@ void settings_app_create(lv_obj_t *parent) {
 
     lv_obj_t *ntp_row = lv_obj_create(cont);
     lv_obj_remove_style_all(ntp_row);
-    lv_obj_set_size(ntp_row, CW, 34);
+    lv_obj_set_size(ntp_row, CW, 48);
     lv_obj_set_style_bg_opa(ntp_row, LV_OPA_TRANSP, 0);
     lv_obj_set_style_pad_bottom(ntp_row, 6, 0);
 
@@ -217,7 +217,7 @@ void settings_app_create(lv_obj_t *parent) {
     lv_obj_align(ntp_status_label, LV_ALIGN_LEFT_MID, 0, 0);
 
     lv_obj_t *ntp_btn = lv_btn_create(ntp_row);
-    lv_obj_set_size(ntp_btn, 120, 28);
+    lv_obj_set_size(ntp_btn, 120, 44);
     lv_obj_align(ntp_btn, LV_ALIGN_RIGHT_MID, 0, 0);
     lv_obj_set_style_bg_color(ntp_btn, DK, 0);
     lv_obj_set_style_bg_color(ntp_btn, G, LV_STATE_PRESSED);

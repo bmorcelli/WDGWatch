@@ -552,7 +552,7 @@ void pet_app_create(lv_obj_t *parent) {
     make_btn(scr, 314, SAFE_TOP + 100, BW, BH, "STATUS", status_cb);
 
     btn_bitgotchi = lv_button_create(scr);
-    lv_obj_set_size(btn_bitgotchi, BW * 2 + 6, 40);
+    lv_obj_set_size(btn_bitgotchi, BW * 2 + 6, 48);
     lv_obj_set_pos(btn_bitgotchi, 240, SAFE_TOP + 185);
     lv_obj_set_style_bg_color(btn_bitgotchi, BG, 0);
     lv_obj_set_style_border_color(btn_bitgotchi, lv_color_hex(0xFF9900), 0);
@@ -652,7 +652,7 @@ void pet_app_create(lv_obj_t *parent) {
     lv_label_set_long_mode(lbl_console, LV_LABEL_LONG_WRAP);
     lv_obj_align(lbl_console, LV_ALIGN_TOP_LEFT, 8, 5);
 
-    make_btn(scr, SAFE_LEFT, 422, SCREEN_WIDTH - SAFE_LEFT - SAFE_RIGHT, 35, "SD LOG LOOT", loot_cb);
+    make_btn(scr, SAFE_LEFT, 422, SCREEN_WIDTH - SAFE_LEFT - SAFE_RIGHT, 46, "SD LOG LOOT", loot_cb);
 
     update_bars();
     update_pet_visuals();

@@ -17,6 +17,10 @@ static lv_obj_t *btn_send = nullptr;
 static lv_obj_t *btn_m = nullptr;
 static lv_obj_t *btn_t = nullptr;
 static lv_obj_t *btn_o = nullptr;
+static lv_obj_t *btn_name = nullptr;
+static lv_obj_t *name_kbd_container = nullptr;
+static lv_obj_t *ta_name = nullptr;
+static lv_obj_t *kb_name = nullptr;
 
 #define G  lv_color_hex(0x00E5FF)
 #define D  lv_color_hex(0x007280)
@@ -163,7 +167,7 @@ static void refresh_popup_opts(void) {
         lv_obj_align(lbl_ric, LV_ALIGN_TOP_MID, 0, 10);
         
         lv_obj_t *btn_ric = lv_button_create(opt_container);
-        lv_obj_set_size(btn_ric, 200, 40);
+        lv_obj_set_size(btn_ric, 200, 46);
         lv_obj_align(btn_ric, LV_ALIGN_TOP_MID, 0, 35);
         lv_obj_set_style_bg_color(btn_ric, BG, 0);
         lv_obj_set_style_border_color(btn_ric, G, 0);
@@ -180,7 +184,7 @@ static void refresh_popup_opts(void) {
         lv_label_set_text(lbl_freq, "Freq: 439.9875 MHz");
         lv_obj_set_style_text_color(lbl_freq, D, 0);
         lv_obj_set_style_text_font(lbl_freq, &lv_font_montserrat_16, 0);
-        lv_obj_align(lbl_freq, LV_ALIGN_TOP_MID, 0, 90);
+        lv_obj_align(lbl_freq, LV_ALIGN_TOP_MID, 0, 95);
     } else {
         lv_obj_t *lbl_title = lv_label_create(opt_container);
         lv_label_set_text(lbl_title, "SELECT FREQUENCY:");
@@ -189,7 +193,7 @@ static void refresh_popup_opts(void) {
         lv_obj_align(lbl_title, LV_ALIGN_TOP_MID, 0, 10);
         
         lv_obj_t *btn_prev = lv_button_create(opt_container);
-        lv_obj_set_size(btn_prev, 40, 40);
+        lv_obj_set_size(btn_prev, 40, 46);
         lv_obj_align(btn_prev, LV_ALIGN_TOP_MID, -90, 35);
         lv_obj_set_style_bg_color(btn_prev, BG, 0);
         lv_obj_set_style_border_color(btn_prev, G, 0);
@@ -205,10 +209,10 @@ static void refresh_popup_opts(void) {
         lv_label_set_text(lbl_val, buf);
         lv_obj_set_style_text_color(lbl_val, G, 0);
         lv_obj_set_style_text_font(lbl_val, &lv_font_montserrat_16, 0);
-        lv_obj_align(lbl_val, LV_ALIGN_TOP_MID, 0, 45);
+        lv_obj_align(lbl_val, LV_ALIGN_TOP_MID, 0, 48);
         
         lv_obj_t *btn_next = lv_button_create(opt_container);
-        lv_obj_set_size(btn_next, 40, 40);
+        lv_obj_set_size(btn_next, 40, 46);
         lv_obj_align(btn_next, LV_ALIGN_TOP_MID, 90, 35);
         lv_obj_set_style_bg_color(btn_next, BG, 0);
         lv_obj_set_style_border_color(btn_next, G, 0);
@@ -261,7 +265,7 @@ static void toggle_other_devices_cb(lv_event_t *e) {
     const char *modes_str[] = {"Pocsag", "Bruce"};
     for (int i = 0; i < 2; i++) {
         mode_select_btn[i] = lv_button_create(popup_win);
-        lv_obj_set_size(mode_select_btn[i], 110, 40);
+        lv_obj_set_size(mode_select_btn[i], 110, 46);
         lv_obj_align(mode_select_btn[i], LV_ALIGN_TOP_MID, (i == 0) ? -65 : 65, 45);
         lv_obj_set_style_bg_color(mode_select_btn[i], BG, 0);
         lv_obj_set_style_border_color(mode_select_btn[i], G, 0);
@@ -286,7 +290,7 @@ static void toggle_other_devices_cb(lv_event_t *e) {
     lv_obj_clear_flag(opt_container, LV_OBJ_FLAG_SCROLLABLE);
     
     lv_obj_t *btn_save = lv_button_create(popup_win);
-    lv_obj_set_size(btn_save, 260, 40);
+    lv_obj_set_size(btn_save, 260, 46);
     lv_obj_align(btn_save, LV_ALIGN_BOTTOM_MID, 0, -10);
     lv_obj_set_style_bg_color(btn_save, BG, 0);
     lv_obj_set_style_border_color(btn_save, G, 0);
@@ -406,6 +410,76 @@ static void send_msg_btn_cb(lv_event_t *e) {
     show_message_keyboard();
 }
 
+static void kb_name_event_cb(lv_event_t *e) {
+    lv_event_code_t code = lv_event_get_code(e);
+    if (code == LV_EVENT_READY) {
+        haptic_click();
+        if (ta_name) {
+            const char *name_txt = lv_textarea_get_text(ta_name);
+            if (name_txt && strlen(name_txt) > 0) {
+                lora_svc_set_node_name(name_txt);
+            }
+        }
+        if (name_kbd_container) {
+            lv_obj_delete(name_kbd_container);
+            name_kbd_container = nullptr;
+            ta_name = nullptr;
+            kb_name = nullptr;
+        }
+    } else if (code == LV_EVENT_CANCEL) {
+        haptic_click();
+        if (name_kbd_container) {
+            lv_obj_delete(name_kbd_container);
+            name_kbd_container = nullptr;
+            ta_name = nullptr;
+            kb_name = nullptr;
+        }
+    }
+}
+
+static void show_name_keyboard(void) {
+    name_kbd_container = lv_obj_create(scr);
+    lv_obj_set_size(name_kbd_container, 410, 502);
+    lv_obj_set_pos(name_kbd_container, 0, 0);
+    lv_obj_set_style_bg_color(name_kbd_container, BG, 0);
+    lv_obj_set_style_bg_opa(name_kbd_container, LV_OPA_COVER, 0);
+    lv_obj_set_style_pad_all(name_kbd_container, 10, 0);
+    lv_obj_clear_flag(name_kbd_container, LV_OBJ_FLAG_SCROLLABLE);
+
+    lv_obj_t *title = lv_label_create(name_kbd_container);
+    lv_label_set_text(title, "Set Mesh Nickname:");
+    lv_obj_set_style_text_color(title, G, 0);
+    lv_obj_set_style_text_font(title, &lv_font_montserrat_18, 0);
+    lv_obj_set_style_text_align(title, LV_TEXT_ALIGN_CENTER, 0);
+    lv_obj_align(title, LV_ALIGN_TOP_MID, 0, SAFE_TOP + 10);
+
+    ta_name = lv_textarea_create(name_kbd_container);
+    lv_textarea_set_password_mode(ta_name, false);
+    lv_textarea_set_one_line(ta_name, true);
+    lv_textarea_set_max_length(ta_name, 4); 
+    lv_obj_set_size(ta_name, 410 - 40, 50);
+    lv_obj_align(ta_name, LV_ALIGN_TOP_MID, 0, SAFE_TOP + 75);
+
+    
+    const char *curr_name = lora_svc_get_node_name();
+    if (curr_name) {
+        lv_textarea_set_text(ta_name, curr_name);
+    }
+
+    kb_name = lv_keyboard_create(name_kbd_container);
+    lv_keyboard_set_textarea(kb_name, ta_name);
+    lv_obj_set_size(kb_name, 410 - 20, 240);
+    lv_obj_align(kb_name, LV_ALIGN_BOTTOM_MID, 0, -SAFE_BOTTOM);
+    lv_obj_add_event_cb(kb_name, kb_name_event_cb, LV_EVENT_ALL, nullptr);
+
+    style_keyboard_pipboy(kb_name, ta_name);
+}
+
+static void name_btn_cb(lv_event_t *e) {
+    (void)e; haptic_click();
+    show_name_keyboard();
+}
+
 void lora_app_create(lv_obj_t *parent) {
     scr = lv_obj_create(parent);
     lv_obj_remove_style_all(scr);
@@ -430,7 +504,7 @@ void lora_app_create(lv_obj_t *parent) {
 
     y += 22;
     btn_m = lv_button_create(scr);
-    lv_obj_set_size(btn_m, 340, 35); lv_obj_set_pos(btn_m, x, y);
+    lv_obj_set_size(btn_m, 340, 44); lv_obj_set_pos(btn_m, x, y);
     lv_obj_set_style_bg_color(btn_m, BG, 0);
     lv_obj_set_style_border_color(btn_m, G, 0);
     lv_obj_set_style_border_width(btn_m, 1, 0);
@@ -440,9 +514,9 @@ void lora_app_create(lv_obj_t *parent) {
     lv_label_set_text(bl_m, "MESHCORE");
     lv_obj_set_style_text_color(bl_m, G, 0); lv_obj_center(bl_m);
 
-    y += 40;
+    y += 48;
     btn_t = lv_button_create(scr);
-    lv_obj_set_size(btn_t, 340, 35); lv_obj_set_pos(btn_t, x, y);
+    lv_obj_set_size(btn_t, 340, 44); lv_obj_set_pos(btn_t, x, y);
     lv_obj_set_style_bg_color(btn_t, BG, 0);
     lv_obj_set_style_border_color(btn_t, G, 0);
     lv_obj_set_style_border_width(btn_t, 1, 0);
@@ -452,9 +526,9 @@ void lora_app_create(lv_obj_t *parent) {
     lv_label_set_text(bl_t, "MESHTASTIC");
     lv_obj_set_style_text_color(bl_t, G, 0); lv_obj_center(bl_t);
 
-    y += 40;
+    y += 48;
     btn_o = lv_button_create(scr);
-    lv_obj_set_size(btn_o, 340, 35); lv_obj_set_pos(btn_o, x, y);
+    lv_obj_set_size(btn_o, 220, 44); lv_obj_set_pos(btn_o, x, y);
     lv_obj_set_style_bg_color(btn_o, BG, 0);
     lv_obj_set_style_border_color(btn_o, G, 0);
     lv_obj_set_style_border_width(btn_o, 1, 0);
@@ -464,7 +538,18 @@ void lora_app_create(lv_obj_t *parent) {
     lv_label_set_text(bl_o, "OTHER DEVICES");
     lv_obj_set_style_text_color(bl_o, G, 0); lv_obj_center(bl_o);
 
-    y += 42;
+    btn_name = lv_button_create(scr);
+    lv_obj_set_size(btn_name, 110, 44); lv_obj_set_pos(btn_name, x + 230, y);
+    lv_obj_set_style_bg_color(btn_name, BG, 0);
+    lv_obj_set_style_border_color(btn_name, G, 0);
+    lv_obj_set_style_border_width(btn_name, 1, 0);
+    lv_obj_set_style_radius(btn_name, 0, 0);
+    lv_obj_add_event_cb(btn_name, name_btn_cb, LV_EVENT_CLICKED, nullptr);
+    lv_obj_t *bl_n = lv_label_create(btn_name);
+    lv_label_set_text(bl_n, "NAME");
+    lv_obj_set_style_text_color(bl_n, G, 0); lv_obj_center(bl_n);
+
+    y += 50;
     lv_obj_t *ml = lv_label_create(scr);
     lv_label_set_text(ml, "MESSAGES:");
     lv_obj_set_style_text_color(ml, D, 0);
@@ -473,7 +558,7 @@ void lora_app_create(lv_obj_t *parent) {
 
     y += 18;
     lv_obj_t *terminal_box = lv_obj_create(scr);
-    lv_obj_set_size(terminal_box, 340, 160);
+    lv_obj_set_size(terminal_box, 340, 150);
     lv_obj_set_pos(terminal_box, x, y);
     lv_obj_set_style_bg_color(terminal_box, BG, 0);
     lv_obj_set_style_border_color(terminal_box, G, 0);
@@ -491,9 +576,9 @@ void lora_app_create(lv_obj_t *parent) {
     lv_label_set_recolor(lbl_msgs, true);
     lv_obj_align(lbl_msgs, LV_ALIGN_TOP_LEFT, 0, 0);
 
-    y += 165;
+    y += 155;
     btn_send = lv_button_create(scr);
-    lv_obj_set_size(btn_send, 340, 35); lv_obj_set_pos(btn_send, x, y);
+    lv_obj_set_size(btn_send, 340, 44); lv_obj_set_pos(btn_send, x, y);
     lv_obj_set_style_bg_color(btn_send, BG, 0);
     lv_obj_set_style_border_color(btn_send, G, 0);
     lv_obj_set_style_border_width(btn_send, 1, 0);

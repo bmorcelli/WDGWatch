@@ -7,6 +7,7 @@
 #include "freertos/portmacro.h"
 #include "../config.h"
 #include "lora_service.h"
+#include "haptic.h"
 
 static volatile bool jammer_active   = false;
 static volatile uint32_t jam_freq_hz = 433920000;
@@ -175,6 +176,10 @@ void rf_service_init(void) {
 bool rf_jammer_start(uint32_t freq_hz) {
     if (jammer_active) return true;
 
+    if (radio_lifecycle_on) {
+        rf_radio_sleep();
+    }
+
     jam_freq_hz   = freq_hz;
     jammer_active = true;
 
@@ -205,8 +210,10 @@ uint32_t rf_jammer_get_freq(void) { return jam_freq_hz; }
 
 void rf_tesla_send(void) {
     if (tesla_sending || jammer_active) return;
+    if (radio_lifecycle_on) {
+        rf_radio_sleep();
+    }
     if (!radio_lifecycle_on) {
-        
         if (!rf_radio_wake(433.92f)) return;
     }
     tesla_sending = true;
@@ -218,7 +225,25 @@ void rf_tesla_send(void) {
 
 bool rf_tesla_is_sending(void) { return tesla_sending; }
 
+static const uint32_t common_frequencies[] = {
+    315000000, 318000000, 390000000, 433075000, 433420000, 
+    433889000, 433920000, 434420000, 434775000, 438900000,
+    868350000, 868850000, 868950000, 915000000, 925000000
+};
+#define COMMON_FREQ_COUNT (sizeof(common_frequencies) / sizeof(common_frequencies[0]))
+
+struct FreqRange {
+    uint32_t start;
+    uint32_t end;
+};
+
+static const FreqRange scan_ranges[] = {
+    {300000000, 348000000},
+    {387000000, 464000000},
+    {779000000, 928000000},
+};
+#define RANGE_COUNT (sizeof(scan_ranges) / sizeof(scan_ranges[0]))
+
 void rf_service_loop(void) {
-    
     (void)tesla_pending;
 }

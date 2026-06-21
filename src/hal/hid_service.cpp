@@ -23,6 +23,8 @@
 #include "keys.h"
 #include "KeyboardLayout.h"
 
+extern "C" esp_err_t deinit_usb_hal(void);
+
 #define TAG "[HID]"
 
 #define HID_RPT_KEYBOARD  1
@@ -48,51 +50,79 @@ static bool usb_started     = false;
 
 static void start_usb_hid(void) {
     if (!usb_started) {
-        pinMode(19, INPUT);
-        pinMode(20, INPUT);
         
-        periph_module_enable(PERIPH_USB_MODULE);
-        periph_module_reset(PERIPH_USB_MODULE);
+        pinMode(19, OUTPUT_OPEN_DRAIN);
+        pinMode(20, OUTPUT_OPEN_DRAIN);
+        digitalWrite(19, LOW);
+        digitalWrite(20, LOW);
+        vTaskDelay(pdMS_TO_TICKS(150));
+
+        
+        CLEAR_PERI_REG_MASK(USB_SERIAL_JTAG_CONF0_REG, USB_SERIAL_JTAG_USB_PAD_ENABLE);
+
+        
+        usb_serial_jtag_ll_phy_disable_pull_override();
+
         
         SET_PERI_REG_MASK(RTC_CNTL_USB_CONF_REG, RTC_CNTL_USB_PAD_ENABLE);
         SET_PERI_REG_MASK(RTC_CNTL_USB_CONF_REG, RTC_CNTL_SW_HW_USB_PHY_SEL);
-        CLEAR_PERI_REG_MASK(RTC_CNTL_USB_CONF_REG, RTC_CNTL_SW_USB_PHY_SEL);
+        SET_PERI_REG_MASK(RTC_CNTL_USB_CONF_REG, RTC_CNTL_SW_USB_PHY_SEL); 
+
         
-        CLEAR_PERI_REG_MASK(USB_SERIAL_JTAG_CONF0_REG, USB_SERIAL_JTAG_USB_PAD_ENABLE);
+        static bool first_init = true;
+        if (first_init) {
+            periph_module_enable(PERIPH_USB_MODULE);
+            usb_kb.begin();
+            usb_mouse.begin();
+            usb_media.begin();
+            USB.begin();
+            first_init = false;
+            Serial.println(TAG " Native USB HID first-time initialization complete");
+        }
+
         
-        usb_kb.begin();
-        usb_mouse.begin();
-        usb_media.begin();
-        USB.begin();
+        pinMode(19, INPUT);
+        pinMode(20, INPUT);
+
         usb_started = true;
-        Serial.println(TAG " Native USB HID initialized");
         vTaskDelay(pdMS_TO_TICKS(1500));
     }
 }
 
 static void stop_usb_hid(void) {
     if (usb_started) {
-        usb_kb.end();
-        usb_mouse.end();
-        usb_media.end();
         usb_started = false;
 
-        periph_module_reset(PERIPH_USB_MODULE);
-        periph_module_disable(PERIPH_USB_MODULE);
-
-        CLEAR_PERI_REG_MASK(RTC_CNTL_USB_CONF_REG, (RTC_CNTL_SW_HW_USB_PHY_SEL | RTC_CNTL_SW_USB_PHY_SEL | RTC_CNTL_USB_PAD_ENABLE));
-
-        CLEAR_PERI_REG_MASK(USB_SERIAL_JTAG_CONF0_REG, USB_SERIAL_JTAG_PHY_SEL);
-
-        CLEAR_PERI_REG_MASK(USB_SERIAL_JTAG_CONF0_REG, USB_SERIAL_JTAG_USB_PAD_ENABLE);
-
+        
         pinMode(19, OUTPUT_OPEN_DRAIN);
         pinMode(20, OUTPUT_OPEN_DRAIN);
         digitalWrite(19, LOW);
         digitalWrite(20, LOW);
-        vTaskDelay(pdMS_TO_TICKS(50));
+        vTaskDelay(pdMS_TO_TICKS(150));
 
-        SET_PERI_REG_MASK(USB_SERIAL_JTAG_CONF0_REG, USB_SERIAL_JTAG_USB_PAD_ENABLE);
+        
+        
+        SET_PERI_REG_MASK(RTC_CNTL_USB_CONF_REG, RTC_CNTL_USB_PAD_ENABLE);
+        SET_PERI_REG_MASK(RTC_CNTL_USB_CONF_REG, RTC_CNTL_SW_HW_USB_PHY_SEL);
+        CLEAR_PERI_REG_MASK(RTC_CNTL_USB_CONF_REG, RTC_CNTL_SW_USB_PHY_SEL); 
+
+        
+        usb_serial_jtag_ll_phy_enable_external(false);
+        usb_serial_jtag_ll_phy_enable_pad(true);
+
+        
+        
+        usb_serial_jtag_pull_override_vals_t pull_vals = {
+            .dp_pu = true,
+            .dm_pu = false,
+            .dp_pd = false,
+            .dm_pd = false
+        };
+        usb_serial_jtag_ll_phy_enable_pull_override(&pull_vals);
+
+        
+        pinMode(19, INPUT);
+        pinMode(20, INPUT);
 
         vTaskDelay(pdMS_TO_TICKS(200));
         Serial.println(TAG " USB Serial/JTAG restored");
@@ -427,6 +457,10 @@ static uint8_t get_keycode_from_string(String key) {
 
 static void script_task(void *arg) {
     ScriptTaskArgs *args = (ScriptTaskArgs *)arg;
+    
+    
+    vTaskDelay(pdMS_TO_TICKS(150));
+
     Serial.printf(TAG " Running script: %s (BLE: %s)\n", args->path, args->is_ble ? "true" : "false");
 
     if (!SD.exists(args->path)) {

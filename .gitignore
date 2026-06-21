@@ -16,3 +16,10 @@ src/wifi_config.h
 # Editor / misc
 *.swp
 .claude/
+.pio_core/
+.venv/
+*.bak
+serial_debug.log
+create_release.sh
+
+

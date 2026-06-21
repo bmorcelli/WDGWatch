@@ -49,6 +49,8 @@ void recon_request_evil_twin_full(const char* ssid, int channel,
                                    const char* html_path);
 
 bool recon_is_scanning(void);
+bool recon_is_wifi_scanning(void);
+bool recon_is_ble_scanning(void);
 bool recon_is_deauthing(void);
 bool recon_is_sniffing(void);
 bool recon_is_evil_twin(void);

@@ -151,7 +151,7 @@ static void show_layout_selector(void) {
 
     for (int i = 0; i < KB_LAYOUT_COUNT; i++) {
         lv_obj_t *btn = lv_button_create(script_list);
-        lv_obj_set_size(btn, LV_PCT(100), 36);
+        lv_obj_set_size(btn, LV_PCT(100), 44);
         lv_obj_set_style_border_width(btn, 1, 0);
         lv_obj_set_style_radius(btn, 0, 0);
         lv_obj_add_event_cb(btn, layout_select_cb, LV_EVENT_CLICKED, (void *)(intptr_t)i);
@@ -175,7 +175,7 @@ static void show_layout_selector(void) {
     }
 
     lv_obj_t *close_btn = lv_button_create(script_list);
-    lv_obj_set_size(close_btn, LV_PCT(100), 36);
+    lv_obj_set_size(close_btn, LV_PCT(100), 44);
     lv_obj_set_style_bg_color(close_btn, lv_color_hex(0x1A0000), 0);
     lv_obj_set_style_border_color(close_btn, D, 0);
     lv_obj_set_style_border_width(close_btn, 1, 0);
@@ -200,8 +200,10 @@ static void script_file_cb(lv_event_t *e) {
     destroy_list_popup();
     haptic_click();
 
-    if (!hid_svc_is_active() && !hid_svc_is_usb_connected()) {
-        hid_svc_start();
+    if (is_ble_mode) {
+        if (!hid_svc_is_active()) {
+            hid_svc_start();
+        }
     }
 
     hid_svc_run_script(full_path, is_ble_mode);
@@ -245,7 +247,7 @@ static void show_script_list(bool ble_mode) {
     } else {
         for (int i = 0; i < script_count; i++) {
             lv_obj_t *btn = lv_button_create(script_list);
-            lv_obj_set_size(btn, LV_PCT(100), 36);
+            lv_obj_set_size(btn, LV_PCT(100), 44);
             lv_obj_set_style_bg_color(btn, BG, 0);
             lv_obj_set_style_border_color(btn, D, 0);
             lv_obj_set_style_border_width(btn, 1, 0);
@@ -263,7 +265,7 @@ static void show_script_list(bool ble_mode) {
     }
 
     lv_obj_t *close_btn = lv_button_create(script_list);
-    lv_obj_set_size(close_btn, LV_PCT(100), 36);
+    lv_obj_set_size(close_btn, LV_PCT(100), 44);
     lv_obj_set_style_bg_color(close_btn, lv_color_hex(0x1A0000), 0);
     lv_obj_set_style_border_color(close_btn, D, 0);
     lv_obj_set_style_border_width(close_btn, 1, 0);
@@ -370,7 +372,7 @@ void hid_app_create(lv_obj_t *parent) {
     int y  = SAFE_TOP;
 
     btn_title = lv_button_create(scr);
-    lv_obj_set_size(btn_title, 200, 32);
+    lv_obj_set_size(btn_title, 200, 44);
     lv_obj_set_pos(btn_title, (SCREEN_WIDTH - 200) / 2, y);
     lv_obj_set_style_bg_color(btn_title, BG, 0);
     lv_obj_set_style_border_color(btn_title, G, 0);
@@ -383,14 +385,14 @@ void hid_app_create(lv_obj_t *parent) {
     lv_obj_set_style_text_color(lbl_title, G, 0);
     lv_obj_set_style_text_font(lbl_title, &lv_font_montserrat_18, 0);
     lv_obj_center(lbl_title);
-    y += 38;
+    y += 50;
 
     lbl_conn = lv_label_create(scr);
     lv_label_set_text(lbl_conn, LV_SYMBOL_BLUETOOTH " NOT CONNECTED");
     lv_obj_set_style_text_color(lbl_conn, D, 0);
     lv_obj_set_style_text_font(lbl_conn, &lv_font_montserrat_16, 0);
     lv_obj_align(lbl_conn, LV_ALIGN_TOP_MID, 0, y);
-    y += 18;
+    y += 24;
 
     divider(scr, y); y += 8;
 
@@ -398,45 +400,45 @@ void hid_app_create(lv_obj_t *parent) {
 
     char kb_buf[32];
     snprintf(kb_buf, sizeof(kb_buf), "KEYBOARD: %s", hid_svc_get_layout_name(hid_svc_get_layout()));
-    btn_layout = make_btn(scr, x + cw - 140, y - 4, 140, 26, kb_buf, layout_click_cb);
+    btn_layout = make_btn(scr, x + cw - 140, y - 4, 140, 36, kb_buf, layout_click_cb);
     lv_obj_set_style_text_font(lv_obj_get_child(btn_layout, 0), &lv_font_montserrat_14, 0);
-    y += 24;
+    y += 32;
 
-    btn_badusb = make_btn(scr, x, y, cw / 2 - 4, 40,
+    btn_badusb = make_btn(scr, x, y, cw / 2 - 4, 48,
              LV_SYMBOL_USB "\nBAD USB", badusb_cb);
-    btn_badble = make_btn(scr, x + cw / 2 + 4, y, cw / 2 - 4, 40,
+    btn_badble = make_btn(scr, x + cw / 2 + 4, y, cw / 2 - 4, 48,
              LV_SYMBOL_BLUETOOTH "\nBAD BLE", badble_cb);
-    y += 50;
+    y += 58;
 
     lbl_status = lv_label_create(scr);
     lv_label_set_text(lbl_status, "SD: /badusb/*.txt");
     lv_obj_set_style_text_color(lbl_status, D, 0);
     lv_obj_set_style_text_font(lbl_status, &lv_font_montserrat_16, 0);
     lv_obj_set_pos(lbl_status, x, y);
-    y += 18;
+    y += 22;
 
     divider(scr, y); y += 8;
     section_label(scr, x, y, LV_SYMBOL_AUDIO "  MEDIA CONTROL");
     y += 20;
 
     int bw = (cw - 8) / 3;
-    make_btn(scr, x,            y, bw, 40, LV_SYMBOL_VOLUME_MAX "\nVol +", vol_up_cb);
-    make_btn(scr, x + bw + 4,  y, bw, 40, LV_SYMBOL_MUTE "\nVol -",       vol_down_cb);
-    make_btn(scr, x + (bw+4)*2, y, bw, 40, LV_SYMBOL_IMAGE "\nSS",        screenshot_cb);
-    y += 50;
+    make_btn(scr, x,            y, bw, 48, LV_SYMBOL_VOLUME_MAX "\nVol +", vol_up_cb);
+    make_btn(scr, x + bw + 4,  y, bw, 48, LV_SYMBOL_MUTE "\nVol -",       vol_down_cb);
+    make_btn(scr, x + (bw+4)*2, y, bw, 48, LV_SYMBOL_IMAGE "\nSS",        screenshot_cb);
+    y += 58;
 
     divider(scr, y); y += 8;
     section_label(scr, x, y, LV_SYMBOL_SETTINGS "  AIR MOUSE");
     y += 20;
 
-    btn_airmouse = make_btn(scr, x, y, cw, 40,
+    btn_airmouse = make_btn(scr, x, y, cw, 48,
              LV_SYMBOL_EYE_OPEN "  AIR MOUSE — START / STOP", airmouse_cb);
-    y += 45;
+    y += 56;
 
-    btn_mouse_left = make_btn(scr, x, y, 95, 45, "LEFT", mouse_left_cb);
+    btn_mouse_left = make_btn(scr, x, y, 95, 48, "LEFT", mouse_left_cb);
 
     scroll_area = lv_obj_create(scr);
-    lv_obj_set_size(scroll_area, 130, 45);
+    lv_obj_set_size(scroll_area, 130, 48);
     lv_obj_set_pos(scroll_area, x + 95 + 10, y);
     lv_obj_set_style_bg_color(scroll_area, BG, 0);
     lv_obj_set_style_border_color(scroll_area, G, 0);
@@ -454,7 +456,7 @@ void hid_app_create(lv_obj_t *parent) {
     lv_obj_set_style_text_font(lbl_scroll, &lv_font_montserrat_18, 0);
     lv_obj_center(lbl_scroll);
 
-    btn_mouse_right = make_btn(scr, x + 95 + 10 + 130 + 10, y, 95, 45, "RIGHT", mouse_right_cb);
+    btn_mouse_right = make_btn(scr, x + 95 + 10 + 130 + 10, y, 95, 48, "RIGHT", mouse_right_cb);
 
     lv_obj_set_style_bg_color(btn_mouse_left, BG, LV_STATE_DISABLED);
     lv_obj_set_style_border_color(btn_mouse_left, D, LV_STATE_DISABLED);
@@ -468,7 +470,7 @@ void hid_app_create(lv_obj_t *parent) {
     lv_obj_set_style_border_color(btn_mouse_right, D, LV_STATE_DISABLED);
     lv_obj_set_style_text_color(lv_obj_get_child(btn_mouse_right, 0), D, LV_STATE_DISABLED);
 
-    y += 50;
+    y += 56;
 
     lbl_airmouse = lv_label_create(scr);
     lv_label_set_text(lbl_airmouse, "Gyro mouse  |  OFF");

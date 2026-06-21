@@ -970,15 +970,26 @@ void api_loop(void) {
         }
     }
 
-    static bool was_scanning = false;
-    bool scanning_now = recon_is_scanning();
-    if (was_scanning && !scanning_now) {
+    static bool was_wifi_scanning = false;
+    static bool was_ble_scanning = false;
+
+    bool wifi_scanning_now = recon_is_wifi_scanning();
+    bool ble_scanning_now = recon_is_ble_scanning();
+
+    if (was_wifi_scanning && !wifi_scanning_now) {
         char buf[128];
-        snprintf(buf, sizeof(buf), "{\"event\":\"scan_done\",\"wifi\":%d,\"ble\":%d}",
-                 recon_wifi_count(), recon_ble_count());
+        snprintf(buf, sizeof(buf), "{\"event\":\"scan_done\",\"type\":\"wifi\",\"wifi\":%d}",
+                 recon_wifi_count());
         push_event(buf);
     }
-    was_scanning = scanning_now;
+    if (was_ble_scanning && !ble_scanning_now) {
+        char buf[128];
+        snprintf(buf, sizeof(buf), "{\"event\":\"scan_done\",\"type\":\"ble\",\"ble\":%d}",
+                 recon_ble_count());
+        push_event(buf);
+    }
+    was_wifi_scanning = wifi_scanning_now;
+    was_ble_scanning = ble_scanning_now;
 
     static int last_deauth_count = 0;
     int dc = recon_deauth_detect_count();
