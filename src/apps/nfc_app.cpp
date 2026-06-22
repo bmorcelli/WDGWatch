@@ -4,6 +4,7 @@
 #include "../config.h"
 #include "../hal/haptic.h"
 #include "../hal/nfc_service.h"
+#include "app_common.h"
 
 static lv_obj_t *scr = nullptr;
 static lv_obj_t *lbl_status = nullptr;
@@ -11,9 +12,9 @@ static lv_obj_t *lbl_uid = nullptr;
 static lv_obj_t *lbl_ndef = nullptr;
 static lv_obj_t *lbl_saved = nullptr;
 
-#define G  lv_color_hex(0x00E5FF)
-#define D  lv_color_hex(0x007280)
-#define BG lv_color_hex(0x000000)
+#define G  lv_color_hex(PIPBOY_GREEN)
+#define D  lv_color_hex(PIPBOY_GREEN_DIM)
+#define BG lv_color_hex(PIPBOY_BG)
 
 static lv_obj_t* make_btn(lv_obj_t *par, int x, int y, int w, int h, const char *txt, lv_event_cb_t cb) {
     lv_obj_t *btn = lv_button_create(par);
@@ -21,7 +22,7 @@ static lv_obj_t* make_btn(lv_obj_t *par, int x, int y, int w, int h, const char 
     lv_obj_set_style_bg_color(btn, BG, 0);
     lv_obj_set_style_border_color(btn, G, 0);
     lv_obj_set_style_border_width(btn, 1, 0);
-    lv_obj_set_style_radius(btn, 0, 0);
+    style_button_by_position(btn, y, h);
     lv_obj_add_event_cb(btn, cb, LV_EVENT_CLICKED, nullptr);
     lv_obj_t *l = lv_label_create(btn);
     lv_label_set_text(l, txt);
@@ -120,7 +121,6 @@ void nfc_app_create(lv_obj_t *parent) {
     lv_obj_set_width(lbl_saved, 350);
     lv_label_set_long_mode(lbl_saved, LV_LABEL_LONG_WRAP);
     update_saved_list();
-
 }
 
 void nfc_app_update(void) {

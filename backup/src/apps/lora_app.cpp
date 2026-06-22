@@ -4,7 +4,6 @@
 #include "../config.h"
 #include "../hal/haptic.h"
 #include "../hal/lora_service.h"
-#include "app_common.h"
 
 static lv_obj_t *scr = nullptr;
 static lv_obj_t *lbl_status = nullptr;
@@ -23,9 +22,9 @@ static lv_obj_t *name_kbd_container = nullptr;
 static lv_obj_t *ta_name = nullptr;
 static lv_obj_t *kb_name = nullptr;
 
-#define G  lv_color_hex(PIPBOY_GREEN)
-#define D  lv_color_hex(PIPBOY_GREEN_DIM)
-#define BG lv_color_hex(PIPBOY_BG)
+#define G  lv_color_hex(0x00E5FF)
+#define D  lv_color_hex(0x007280)
+#define BG lv_color_hex(0x000000)
 
 static void toggle_meshcore_cb(lv_event_t *e) {
     (void)e; haptic_click();
@@ -254,7 +253,7 @@ static void toggle_other_devices_cb(lv_event_t *e) {
     lv_obj_set_style_bg_color(popup_win, BG, 0);
     lv_obj_set_style_border_color(popup_win, G, 0);
     lv_obj_set_style_border_width(popup_win, 2, 0);
-    lv_obj_set_style_radius(popup_win, 20, 0);
+    lv_obj_set_style_radius(popup_win, 10, 0);
     lv_obj_clear_flag(popup_win, LV_OBJ_FLAG_SCROLLABLE);
     
     lv_obj_t *title = lv_label_create(popup_win);
@@ -271,7 +270,7 @@ static void toggle_other_devices_cb(lv_event_t *e) {
         lv_obj_set_style_bg_color(mode_select_btn[i], BG, 0);
         lv_obj_set_style_border_color(mode_select_btn[i], G, 0);
         lv_obj_set_style_border_width(mode_select_btn[i], 1, 0);
-        lv_obj_set_style_radius(mode_select_btn[i], 12, 0);
+        lv_obj_set_style_radius(mode_select_btn[i], 5, 0);
         lv_obj_add_event_cb(mode_select_btn[i], mode_btn_cb, LV_EVENT_CLICKED, (void*)(intptr_t)i);
         
         lv_obj_t *lbl = lv_label_create(mode_select_btn[i]);
@@ -296,7 +295,6 @@ static void toggle_other_devices_cb(lv_event_t *e) {
     lv_obj_set_style_bg_color(btn_save, BG, 0);
     lv_obj_set_style_border_color(btn_save, G, 0);
     lv_obj_set_style_border_width(btn_save, 1, 0);
-    lv_obj_set_style_radius(btn_save, 12, 0);
     lv_obj_add_event_cb(btn_save, save_and_close_cb, LV_EVENT_CLICKED, nullptr);
     
     lv_obj_t *lbl_save = lv_label_create(btn_save);
@@ -510,7 +508,7 @@ void lora_app_create(lv_obj_t *parent) {
     lv_obj_set_style_bg_color(btn_m, BG, 0);
     lv_obj_set_style_border_color(btn_m, G, 0);
     lv_obj_set_style_border_width(btn_m, 1, 0);
-    style_button_by_position(btn_m, y, 44);
+    lv_obj_set_style_radius(btn_m, 0, 0);
     lv_obj_add_event_cb(btn_m, toggle_meshcore_cb, LV_EVENT_CLICKED, nullptr);
     lv_obj_t *bl_m = lv_label_create(btn_m);
     lv_label_set_text(bl_m, "MESHCORE");
@@ -522,7 +520,7 @@ void lora_app_create(lv_obj_t *parent) {
     lv_obj_set_style_bg_color(btn_t, BG, 0);
     lv_obj_set_style_border_color(btn_t, G, 0);
     lv_obj_set_style_border_width(btn_t, 1, 0);
-    style_button_by_position(btn_t, y, 44);
+    lv_obj_set_style_radius(btn_t, 0, 0);
     lv_obj_add_event_cb(btn_t, toggle_meshtastic_cb, LV_EVENT_CLICKED, nullptr);
     lv_obj_t *bl_t = lv_label_create(btn_t);
     lv_label_set_text(bl_t, "MESHTASTIC");
@@ -534,7 +532,7 @@ void lora_app_create(lv_obj_t *parent) {
     lv_obj_set_style_bg_color(btn_o, BG, 0);
     lv_obj_set_style_border_color(btn_o, G, 0);
     lv_obj_set_style_border_width(btn_o, 1, 0);
-    style_button_by_position(btn_o, y, 44);
+    lv_obj_set_style_radius(btn_o, 0, 0);
     lv_obj_add_event_cb(btn_o, toggle_other_devices_cb, LV_EVENT_CLICKED, nullptr);
     lv_obj_t *bl_o = lv_label_create(btn_o);
     lv_label_set_text(bl_o, "OTHER DEVICES");
@@ -545,7 +543,7 @@ void lora_app_create(lv_obj_t *parent) {
     lv_obj_set_style_bg_color(btn_name, BG, 0);
     lv_obj_set_style_border_color(btn_name, G, 0);
     lv_obj_set_style_border_width(btn_name, 1, 0);
-    style_button_by_position(btn_name, y, 44);
+    lv_obj_set_style_radius(btn_name, 0, 0);
     lv_obj_add_event_cb(btn_name, name_btn_cb, LV_EVENT_CLICKED, nullptr);
     lv_obj_t *bl_n = lv_label_create(btn_name);
     lv_label_set_text(bl_n, "NAME");
@@ -584,7 +582,7 @@ void lora_app_create(lv_obj_t *parent) {
     lv_obj_set_style_bg_color(btn_send, BG, 0);
     lv_obj_set_style_border_color(btn_send, G, 0);
     lv_obj_set_style_border_width(btn_send, 1, 0);
-    style_button_by_position(btn_send, y, 44);
+    lv_obj_set_style_radius(btn_send, 0, 0);
     lv_obj_add_event_cb(btn_send, send_msg_btn_cb, LV_EVENT_CLICKED, nullptr);
     lv_obj_t *bl_send = lv_label_create(btn_send);
     lv_label_set_text(bl_send, "SEND MESSAGE");
@@ -686,9 +684,6 @@ void lora_app_destroy(void) {
     kb_message = nullptr;
     btn_send = nullptr;
     btn_m = btn_t = btn_o = nullptr;
-    name_kbd_container = nullptr;
-    ta_name = nullptr;
-    kb_name = nullptr;
     
     if (popup_win) {
         lv_obj_delete(popup_win);

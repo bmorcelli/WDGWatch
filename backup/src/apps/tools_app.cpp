@@ -3,13 +3,12 @@
 #include <cstdio>
 #include "../config.h"
 #include "../hal/haptic.h"
-#include "app_common.h"
 
 static lv_obj_t *scr = nullptr;
 
-#define G  lv_color_hex(PIPBOY_GREEN)
-#define D  lv_color_hex(PIPBOY_GREEN_DIM)
-#define BG lv_color_hex(PIPBOY_BG)
+#define G  lv_color_hex(0x00E5FF)
+#define D  lv_color_hex(0x007280)
+#define BG lv_color_hex(0x000000)
 
 #define SA_X      SAFE_LEFT
 #define SA_Y      SAFE_TOP
@@ -37,15 +36,14 @@ static const uint32_t ct_presets[] = { 1, 3, 5, 10, 15 };
 #define CT_PRESET_COUNT 5
 static int ct_preset_idx = 0;
 
-static lv_obj_t* make_btn(lv_obj_t *par, int x, int y, int w, int h,
+static lv_obj_t* make_btn(lv_obj_t *par, int w, int h,
                            const char *txt, lv_event_cb_t cb) {
     lv_obj_t *btn = lv_button_create(par);
     lv_obj_set_size(btn, w, h);
-    lv_obj_set_pos(btn, x, y);
     lv_obj_set_style_bg_color(btn, BG, 0);
     lv_obj_set_style_border_color(btn, G, 0);
     lv_obj_set_style_border_width(btn, 1, 0);
-    style_button_by_position(btn, y, h);
+    lv_obj_set_style_radius(btn, 4, 0);
     lv_obj_set_style_pad_all(btn, 0, 0);
     lv_obj_add_event_cb(btn, cb, LV_EVENT_CLICKED, nullptr);
     lv_obj_t *l = lv_label_create(btn);
@@ -204,62 +202,67 @@ void tools_app_create(lv_obj_t *parent) {
     const int CW = SA_W;
 
     int y = 0;
-    lv_obj_set_style_pad_bottom(scr, 40, 0);
 
     lv_obj_t *title = lv_label_create(scr);
     lv_label_set_text(title, "[ TOOLS ]");
     lv_obj_set_style_text_color(title, G, 0);
     lv_obj_set_style_text_font(title, &lv_font_montserrat_22, 0);
     lv_obj_set_pos(title, CW / 2 - 50, y);
-    y += 26;
+    y += 30;
 
     lv_obj_t *fl_lbl = make_section_label(scr, "FLASHLIGHT");
     lv_obj_set_pos(fl_lbl, 0, y);
-    y += 18;
+    y += 20;
 
-    lv_obj_t *fl_btn = make_btn(scr, CW / 4 - CW / 8, y, CW / 2, 44,
+    lv_obj_t *fl_btn = make_btn(scr, CW / 2, 48,
                                 LV_SYMBOL_EYE_OPEN "  TOGGLE", flashlight_cb);
-    y += 50;
+    lv_obj_set_pos(fl_btn, CW / 4 - CW / 8, y);
+    y += 58;
 
     lv_obj_t *sw_sec = make_section_label(scr, "STOPWATCH");
     lv_obj_set_pos(sw_sec, 0, y);
-    y += 18;
+    y += 22;
 
     lbl_stopwatch = lv_label_create(scr);
     lv_label_set_text(lbl_stopwatch, "00:00.00");
     lv_obj_set_style_text_color(lbl_stopwatch, G, 0);
-    lv_obj_set_style_text_font(lbl_stopwatch, &lv_font_montserrat_40, 0);
+    lv_obj_set_style_text_font(lbl_stopwatch, &lv_font_montserrat_48, 0);
     lv_obj_set_pos(lbl_stopwatch, 0, y);
-    y += 46;
+    y += 56;
 
-    lv_obj_t *sw_btn1 = make_btn(scr, 0, y, 140, 44, "START / STOP", stopwatch_cb);
-    lv_obj_t *sw_btn2 = make_btn(scr, 150, y, 100, 44, "RESET", stopwatch_reset_cb);
-    y += 50;
+    lv_obj_t *sw_btn1 = make_btn(scr, 140, 48, "START / STOP", stopwatch_cb);
+    lv_obj_set_pos(sw_btn1, 0, y);
+    lv_obj_t *sw_btn2 = make_btn(scr, 100, 48, "RESET", stopwatch_reset_cb);
+    lv_obj_set_pos(sw_btn2, 150, y);
+    y += 60;
 
     lv_obj_t *ct_sec = make_section_label(scr, "COUNTDOWN TIMER");
     lv_obj_set_pos(ct_sec, 0, y);
-    y += 18;
+    y += 22;
 
-    lv_obj_t *preset_btn = make_btn(scr, 0, y, 120, 44, "SET TIME", ct_preset_cb);
-    y += 50;
+    lv_obj_t *preset_btn = make_btn(scr, 120, 48, "SET TIME", ct_preset_cb);
+    lv_obj_set_pos(preset_btn, 0, y);
+    y += 56;
 
     lbl_timer = lv_label_create(scr);
     lv_obj_set_style_text_color(lbl_timer, G, 0);
-    lv_obj_set_style_text_font(lbl_timer, &lv_font_montserrat_40, 0);
+    lv_obj_set_style_text_font(lbl_timer, &lv_font_montserrat_48, 0);
     lv_obj_set_pos(lbl_timer, 0, y);
     ct_update_preset_label();
-    y += 46;
+    y += 56;
 
     lbl_timer_status = lv_label_create(scr);
     lv_label_set_text(lbl_timer_status, "");
     lv_obj_set_style_text_color(lbl_timer_status, D, 0);
     lv_obj_set_style_text_font(lbl_timer_status, &lv_font_montserrat_18, 0);
     lv_obj_set_pos(lbl_timer_status, 0, y);
-    y += 18;
+    y += 22;
 
-    btn_timer_start = make_btn(scr, 0, y, 140, 44, "START / STOP", ct_start_cb);
-    btn_timer_reset = make_btn(scr, 150, y, 100, 44, "RESET", ct_reset_cb);
-    y += 50;
+    btn_timer_start = make_btn(scr, 140, 48, "START / STOP", ct_start_cb);
+    lv_obj_set_pos(btn_timer_start, 0, y);
+    btn_timer_reset = make_btn(scr, 100, 48, "RESET", ct_reset_cb);
+    lv_obj_set_pos(btn_timer_reset, 150, y);
+    y += 58;
 
     sw_timer = lv_timer_create(sw_tick, 50, nullptr);
     ct_timer = lv_timer_create(ct_tick, 250, nullptr);

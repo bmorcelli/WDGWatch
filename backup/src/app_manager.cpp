@@ -11,9 +11,6 @@
 #include "apps/hid_app.h"
 #include "apps/rf_app.h"
 #include "apps/pet_app.h"
-#include "apps/settings_app.h"
-#include "apps/tools_app.h"
-#include "apps/audio_app.h"
 #include "hal/rf_service.h"
 #include "hal/haptic.h"
 #include <SD.h>
@@ -22,7 +19,6 @@
 #endif
 
 static AppId current_app = APP_WATCHFACE;
-static AppId previous_app = APP_WATCHFACE;
 static lv_obj_t *scr_watchface = nullptr;
 static lv_obj_t *scr_menu = nullptr;
 static lv_obj_t *scr_app = nullptr;
@@ -59,9 +55,6 @@ static void cleanup_app(void) {
         case APP_HID:      hid_app_destroy();  break;
         case APP_RF:       rf_app_destroy();   break;
         case APP_PET:      pet_app_destroy();  break;
-        case APP_SETTINGS: settings_app_destroy(); break;
-        case APP_TOOLS:    tools_app_destroy(); break;
-        case APP_AUDIO:    audio_app_destroy(); break;
         default: break;
     }
 
@@ -88,9 +81,6 @@ static void launch_app(AppId app) {
         case APP_HID:      hid_app_create(scr_app);    break;
         case APP_RF:       rf_app_create(scr_app);     break;
         case APP_PET:      pet_app_create(scr_app);    break;
-        case APP_SETTINGS: settings_app_create(scr_app); break;
-        case APP_TOOLS:    tools_app_create(scr_app); break;
-        case APP_AUDIO:    audio_app_create(scr_app); break;
         default: break;
     }
 
@@ -144,7 +134,7 @@ static void create_menu_screen(void) {
 
     lv_obj_t *grid = lv_obj_create(scr_menu);
     lv_obj_remove_style_all(grid);
-    lv_obj_set_size(grid, SCREEN_WIDTH - SAFE_LEFT - SAFE_RIGHT, 350);
+    lv_obj_set_size(grid, SCREEN_WIDTH - SAFE_LEFT - SAFE_RIGHT, SCREEN_HEIGHT - SAFE_TOP - 25 - SAFE_BOTTOM);
     lv_obj_set_pos(grid, SAFE_LEFT, SAFE_TOP + 25);
     lv_obj_set_flex_flow(grid, LV_FLEX_FLOW_ROW_WRAP);
     lv_obj_set_flex_align(grid, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_START);
@@ -152,7 +142,7 @@ static void create_menu_screen(void) {
     lv_obj_set_style_pad_column(grid, 8, 0);
     lv_obj_set_scrollbar_mode(grid, LV_SCROLLBAR_MODE_OFF);
 
-    static AppId btn_ids[APP_COUNT];
+    static AppId btn_ids[9];
 
     for (int i = 0; i < MENU_ITEM_COUNT; i++) {
         btn_ids[i] = menu_app_ids[i];
@@ -164,7 +154,7 @@ static void create_menu_screen(void) {
         lv_obj_set_style_bg_opa(btn, LV_OPA_COVER, 0);
         lv_obj_set_style_border_color(btn, PIPBOY_GREEN_DIM_16, 0);
         lv_obj_set_style_border_width(btn, 1, 0);
-        lv_obj_set_style_radius(btn, 16, 0);
+        lv_obj_set_style_radius(btn, 0, 0);
         lv_obj_add_flag(btn, LV_OBJ_FLAG_CLICKABLE);
         lv_obj_set_style_bg_color(btn, PIPBOY_GREEN_16, LV_STATE_PRESSED);
         lv_obj_set_style_bg_opa(btn, 50, LV_STATE_PRESSED);
@@ -176,31 +166,6 @@ static void create_menu_screen(void) {
         lv_obj_center(lbl);
 
         lv_obj_add_event_cb(btn, menu_btn_cb, LV_EVENT_CLICKED, &btn_ids[i]);
-    }
-
-    static AppId bot_ids[] = { APP_TOOLS, APP_SETTINGS };
-    static const char* bot_labels[] = { "TOOLS", "SETTINGS" };
-
-    for (int i = 0; i < 2; i++) {
-        lv_obj_t *btn = lv_button_create(scr_menu);
-        lv_obj_set_size(btn, 160, 40);
-        lv_obj_set_pos(btn, SAFE_LEFT + i * 200, 418);
-        lv_obj_set_style_bg_color(btn, PIPBOY_BG_16, 0);
-        lv_obj_set_style_bg_opa(btn, LV_OPA_COVER, 0);
-        lv_obj_set_style_border_color(btn, PIPBOY_GREEN_DIM_16, 0);
-        lv_obj_set_style_border_width(btn, 1, 0);
-        lv_obj_set_style_radius(btn, 8, 0);
-        lv_obj_add_flag(btn, LV_OBJ_FLAG_CLICKABLE);
-        lv_obj_set_style_bg_color(btn, PIPBOY_GREEN_16, LV_STATE_PRESSED);
-        lv_obj_set_style_bg_opa(btn, 50, LV_STATE_PRESSED);
-
-        lv_obj_t *lbl = lv_label_create(btn);
-        lv_label_set_text(lbl, bot_labels[i]);
-        lv_obj_set_style_text_color(lbl, PIPBOY_GREEN_16, 0);
-        lv_obj_set_style_text_font(lbl, &lv_font_montserrat_14, 0);
-        lv_obj_center(lbl);
-
-        lv_obj_add_event_cb(btn, menu_btn_cb, LV_EVENT_CLICKED, &bot_ids[i]);
     }
 
     lv_obj_add_event_cb(scr_menu, [](lv_event_t *e) {
@@ -321,10 +286,6 @@ void app_manager_show(AppId app) {
     if (app_transitioning) return;
     app_transitioning = true;
 
-    if (current_app == APP_WATCHFACE || current_app == APP_MENU) {
-        previous_app = current_app;
-    }
-
     if (current_app != APP_WATCHFACE && current_app != APP_MENU && current_app != APP_BOOT) {
         cleanup_app();
     }
@@ -354,9 +315,11 @@ AppId app_manager_current(void) { return current_app; }
 
 void app_manager_back(void) {
     if (app_transitioning) return;
-    AppId target = previous_app;
-    previous_app = APP_WATCHFACE;
-    app_manager_show(target);
+    if (current_app != APP_WATCHFACE && current_app != APP_MENU) {
+        cleanup_app();
+    }
+    current_app = APP_WATCHFACE;
+    lv_screen_load(scr_watchface);
 }
 
 void app_manager_handle_gesture(lv_dir_t dir) {
@@ -386,24 +349,6 @@ void app_manager_update(void) {
         case APP_HID:    hid_app_update();    break;
         case APP_RF:     rf_app_update();     break;
         case APP_PET:    pet_app_update();    break;
-        case APP_AUDIO:  audio_app_update();  break;
-    }
-}
-
-void app_manager_theme_changed(void) {
-    if (scr_menu) {
-        lv_obj_delete(scr_menu);
-        scr_menu = nullptr;
-    }
-    create_menu_screen();
-
-    if (scr_watchface) {
-        watchface_create(scr_watchface);
-    }
-
-    if (current_app == APP_MENU) {
-        lv_screen_load(scr_menu);
-    } else if (current_app == APP_WATCHFACE) {
-        lv_screen_load(scr_watchface);
+        default: break;
     }
 }

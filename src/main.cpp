@@ -17,6 +17,7 @@
 #include "hal/rf_service.h"
 #include "hal/hid_service.h"
 #include "apps/gps_app.h"
+#include "hal/sound_settings.h"
 
 #include <bosch/BoschSensorDataHelper.hpp>
 
@@ -115,6 +116,7 @@ void setup() {
     });
 
     haptic_init();
+    sound_settings_init();
     boot_screen_update_progress("System ready", 100);
     delay(600);
 

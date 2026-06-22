@@ -1,7 +1,5 @@
 #include "watchface.h"
 #include "theme.h"
-#define RC_G theme_color_recolor_str
-#define RC_D theme_color_dim_recolor_str
 #include <cstdio>
 #include <math.h>
 #include "../apps/gps_app.h"
@@ -14,8 +12,6 @@
 #include "../hal/power_hal.h"
 #include "../app_manager.h"
 #include "../hal/audio_record.h"
-#include "../hal/sound_settings.h"
-#include "../apps/app_common.h"
 
 #define LV_SYMBOL_SMILE "\xEF\x84\x98"
 #ifdef LV_SYMBOL_BELL
@@ -110,12 +106,11 @@ static void play_alarm_sound(int duration_ms, int freq_hz) {
     while (samples_written < total_samples) {
         int to_write = total_samples - samples_written;
         if (to_write > chunk_size) to_write = chunk_size;
-        float vol_factor = (float)sound_get_volume() / 100.0f;
         for (int i = 0; i < to_write; i++) {
             float t = (float)sample_idx / sample_rate;
             
             float phase = 2.0f * pi * (f_start * t + 0.5f * (f_end - f_start) * t * t / T);
-            int16_t val = (int16_t)(sinf(phase) * 25000.0f * vol_factor);
+            int16_t val = (int16_t)(sinf(phase) * 25000.0f);
             buf[i * 2]     = val;
             buf[i * 2 + 1] = val;
             sample_idx++;
@@ -224,7 +219,7 @@ static void trigger_alarm(void) {
         lv_obj_set_style_bg_opa(ring_btns[i], LV_OPA_TRANSP, 0);
         lv_obj_set_style_border_color(ring_btns[i], G, 0);
         lv_obj_set_style_border_width(ring_btns[i], 2, 0);
-        style_button_by_position(ring_btns[i], 310, 50);
+        lv_obj_set_style_radius(ring_btns[i], 0, 0);
         lv_obj_add_event_cb(ring_btns[i], ring_btn_click_cb, LV_EVENT_CLICKED, nullptr);
     }
     
@@ -299,7 +294,7 @@ static lv_obj_t* make_adjust_btn(lv_obj_t *par, int x, int y, const char *txt, l
     lv_obj_set_style_bg_color(btn, BG, 0);
     lv_obj_set_style_border_color(btn, D, 0);
     lv_obj_set_style_border_width(btn, 1, 0);
-    style_button_by_position(btn, y, 40);
+    lv_obj_set_style_radius(btn, 0, 0);
     lv_obj_add_event_cb(btn, cb, LV_EVENT_CLICKED, nullptr);
     
     lv_obj_t *l = lv_label_create(btn);
@@ -321,7 +316,7 @@ static void alarm_bell_click_cb(lv_event_t *e) {
     lv_obj_set_style_bg_opa(alarm_win, LV_OPA_COVER, 0);
     lv_obj_set_style_border_color(alarm_win, G, 0);
     lv_obj_set_style_border_width(alarm_win, 2, 0);
-    lv_obj_set_style_radius(alarm_win, 20, 0);
+    lv_obj_set_style_radius(alarm_win, 5, 0);
     lv_obj_center(alarm_win);
     
     lv_obj_add_flag(alarm_win, LV_OBJ_FLAG_CLICKABLE);
@@ -368,7 +363,7 @@ static void alarm_bell_click_cb(lv_event_t *e) {
     btn_alarm_toggle = lv_button_create(alarm_win);
     lv_obj_set_size(btn_alarm_toggle, 220, 45);
     lv_obj_set_pos(btn_alarm_toggle, 40, 225);
-    style_button_by_position(btn_alarm_toggle, 225, 45);
+    lv_obj_set_style_radius(btn_alarm_toggle, 0, 0);
     lv_obj_set_style_border_width(btn_alarm_toggle, 1, 0);
     lv_obj_add_event_cb(btn_alarm_toggle, alarm_toggle_cb, LV_EVENT_CLICKED, nullptr);
     
@@ -383,7 +378,7 @@ static void alarm_bell_click_cb(lv_event_t *e) {
     lv_obj_set_style_bg_color(btn_close, BG, 0);
     lv_obj_set_style_border_color(btn_close, G, 0);
     lv_obj_set_style_border_width(btn_close, 1, 0);
-    style_button_by_position(btn_close, 280, 40);
+    lv_obj_set_style_radius(btn_close, 0, 0);
     lv_obj_add_event_cb(btn_close, alarm_close_cb, LV_EVENT_CLICKED, nullptr);
     
     lv_obj_t *lbl_close = lv_label_create(btn_close);
@@ -820,14 +815,14 @@ void watchface_set_sync_status(bool wifi, bool ntp_ok, bool gps_fix) {
     bool rec = audio_rec_is_recording();
 
     snprintf(b, sizeof(b),
-        "#%s " LV_SYMBOL_WIFI " %s#  #%s " LV_SYMBOL_GPS " %s#  #%s " LV_SYMBOL_KEYBOARD " %s#  #%s " LV_SYMBOL_BLUETOOTH " %s#  #%s " LV_SYMBOL_BULLET " %s#  #%s " LV_SYMBOL_EYE_OPEN " %s#  #%s " LV_SYMBOL_BULLET " REC#",
-        wifi ? RC_G : RC_D, wifi ? "ON" : "--",
-        gps_fix ? RC_G : RC_D, gps_fix ? "FIX" : "--",
-        ws ? RC_G : RC_D, ws ? "ON" : "--",
-        wdg ? RC_G : RC_D, wdg ? "ON" : "--",
-        mc ? RC_G : RC_D, mc ? "ON" : "--",
-        bg ? RC_G : RC_D, bg ? "ON" : "--",
-        rec ? "FF3333" : RC_D);
+        "%s " LV_SYMBOL_WIFI " %s#  %s " LV_SYMBOL_GPS " %s#  %s " LV_SYMBOL_KEYBOARD " %s#  %s " LV_SYMBOL_BLUETOOTH " %s#  %s " LV_SYMBOL_BULLET " %s#  %s " LV_SYMBOL_EYE_OPEN " %s#  %s " LV_SYMBOL_BULLET " REC#",
+        wifi ? "#00e5ff" : "#007280", wifi ? "ON" : "--",
+        gps_fix ? "#00e5ff" : "#007280", gps_fix ? "FIX" : "--",
+        ws ? "#00e5ff" : "#007280", ws ? "ON" : "--",
+        wdg ? "#00e5ff" : "#007280", wdg ? "ON" : "--",
+        mc ? "#00e5ff" : "#007280", mc ? "ON" : "--",
+        bg ? "#00e5ff" : "#007280", bg ? "ON" : "--",
+        rec ? "#aa0000" : "#007280");
 
     if (lbl_sync) {
         lv_label_set_text(lbl_sync, b);

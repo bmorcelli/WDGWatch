@@ -4,14 +4,13 @@
 #include <cstdio>
 #include "../config.h"
 #include "../hal/haptic.h"
-#include "../hal/sound_settings.h"
 #include "../hal/time_sync.h"
 #include "../hal/power_hal.h"
-#include "app_common.h"
-#include "../ui/theme.h"
 
 static lv_obj_t *scr = nullptr;
 static lv_obj_t *info_label = nullptr;
+static lv_obj_t *wifi_label = nullptr;
+static lv_obj_t *ntp_status_label = nullptr;
 static lv_timer_t *refresh_timer = nullptr;
 static uint32_t last_brightness_change = 0;
 static uint32_t boot_time_ms = 0;
@@ -36,12 +35,6 @@ static void brightness_cb(lv_event_t *e) {
     instance.setBrightness(val);
 }
 
-static void volume_cb(lv_event_t *e) {
-    lv_obj_t *slider = (lv_obj_t *)lv_event_get_target(e);
-    int val = lv_slider_get_value(slider);
-    sound_set_volume(val);
-}
-
 static void haptic_toggle_cb(lv_event_t *e) {
     lv_obj_t *sw = (lv_obj_t *)lv_event_get_target(e);
     bool on = lv_obj_has_state(sw, LV_STATE_CHECKED);
@@ -49,14 +42,13 @@ static void haptic_toggle_cb(lv_event_t *e) {
     if (on) haptic_click();
 }
 
-static void color_btn_cb(lv_event_t *e) {
-    uint8_t idx = (uint8_t)(intptr_t)lv_event_get_user_data(e);
+static void ntp_sync_cb(lv_event_t *e) {
+    (void)e;
     haptic_click();
-    theme_color_set_idx(idx);
-
-    lv_obj_t *parent = lv_obj_get_parent(scr);
-    settings_app_destroy();
-    settings_app_create(parent);
+    time_sync_force_retry();
+    if (ntp_status_label) {
+        lv_label_set_text(ntp_status_label, "NTP SYNC REQUESTED...");
+    }
 }
 
 static void format_uptime(uint32_t ms, char *buf, size_t len) {
@@ -92,6 +84,21 @@ static void refresh_info_cb(lv_timer_t *t) {
         uptime_str
     );
     lv_label_set_text(info_label, info);
+
+    if (wifi_label) {
+        if (time_sync_wifi_connected()) {
+            char wbuf[64];
+            snprintf(wbuf, sizeof(wbuf), "Connected: %s", WiFi.SSID().c_str());
+            lv_label_set_text(wifi_label, wbuf);
+        } else {
+            lv_label_set_text(wifi_label, "Not connected");
+        }
+    }
+
+    if (ntp_status_label) {
+        lv_label_set_text(ntp_status_label,
+            time_sync_is_synced() ? "NTP: SYNCED" : "NTP: NOT SYNCED");
+    }
 }
 
 static lv_obj_t *make_section_label(lv_obj_t *parent, const char *text,
@@ -155,28 +162,11 @@ void settings_app_create(lv_obj_t *parent) {
     lv_obj_set_style_bg_color(slider, DK, 0);
     lv_obj_set_style_bg_color(slider, G, LV_PART_INDICATOR);
     lv_obj_set_style_bg_color(slider, G, LV_PART_KNOB);
-    lv_obj_set_style_radius(slider, 11, 0);
-    lv_obj_set_style_radius(slider, 11, LV_PART_INDICATOR);
-    lv_obj_set_style_radius(slider, LV_RADIUS_CIRCLE, LV_PART_KNOB);
+    lv_obj_set_style_radius(slider, 0, 0);
+    lv_obj_set_style_radius(slider, 0, LV_PART_INDICATOR);
     lv_obj_set_style_pad_all(slider, 4, LV_PART_KNOB);
     lv_obj_add_event_cb(slider, brightness_cb, LV_EVENT_VALUE_CHANGED, nullptr);
     lv_obj_set_style_pad_bottom(slider, 6, 0);
-
-    make_section_label(cont, "VOLUME", 0, 0);
-
-    lv_obj_t *vol_slider = lv_slider_create(cont);
-    lv_obj_set_size(vol_slider, CW - 10, 22);
-    lv_slider_set_range(vol_slider, 0, 100);
-    lv_slider_set_value(vol_slider, sound_get_volume(), LV_ANIM_OFF);
-    lv_obj_set_style_bg_color(vol_slider, DK, 0);
-    lv_obj_set_style_bg_color(vol_slider, G, LV_PART_INDICATOR);
-    lv_obj_set_style_bg_color(vol_slider, G, LV_PART_KNOB);
-    lv_obj_set_style_radius(vol_slider, 11, 0);
-    lv_obj_set_style_radius(vol_slider, 11, LV_PART_INDICATOR);
-    lv_obj_set_style_radius(vol_slider, LV_RADIUS_CIRCLE, LV_PART_KNOB);
-    lv_obj_set_style_pad_all(vol_slider, 4, LV_PART_KNOB);
-    lv_obj_add_event_cb(vol_slider, volume_cb, LV_EVENT_VALUE_CHANGED, nullptr);
-    lv_obj_set_style_pad_bottom(vol_slider, 6, 0);
 
     lv_obj_t *haptic_row = lv_obj_create(cont);
     lv_obj_remove_style_all(haptic_row);
@@ -198,40 +188,49 @@ void settings_app_create(lv_obj_t *parent) {
     lv_obj_set_style_bg_color(sw, G, LV_PART_INDICATOR | LV_STATE_CHECKED);
     lv_obj_set_style_bg_color(sw, DK, LV_PART_INDICATOR);
     lv_obj_set_style_bg_color(sw, G, LV_PART_KNOB);
-    lv_obj_set_style_radius(sw, 12, 0);
-    lv_obj_set_style_radius(sw, 12, LV_PART_INDICATOR);
-    lv_obj_set_style_radius(sw, LV_RADIUS_CIRCLE, LV_PART_KNOB);
+    lv_obj_set_style_radius(sw, 0, 0);
+    lv_obj_set_style_radius(sw, 0, LV_PART_INDICATOR);
+    lv_obj_set_style_radius(sw, 0, LV_PART_KNOB);
     if (haptic_is_enabled()) {
         lv_obj_add_state(sw, LV_STATE_CHECKED);
     }
     lv_obj_add_event_cb(sw, haptic_toggle_cb, LV_EVENT_VALUE_CHANGED, nullptr);
 
-    make_section_label(cont, "THEME COLOR", 0, 0);
+    make_section_label(cont, "WIFI", 0, 0);
 
-    lv_obj_t *color_row = lv_obj_create(cont);
-    lv_obj_remove_style_all(color_row);
-    lv_obj_set_size(color_row, CW, 36);
-    lv_obj_set_style_bg_opa(color_row, LV_OPA_TRANSP, 0);
-    lv_obj_set_flex_flow(color_row, LV_FLEX_FLOW_ROW);
-    lv_obj_set_flex_align(color_row, LV_FLEX_ALIGN_SPACE_EVENLY,
-                          LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-    lv_obj_set_style_pad_bottom(color_row, 6, 0);
+    wifi_label = make_body_label(cont,
+        time_sync_wifi_connected() ? WiFi.SSID().c_str() : "Not connected",
+        0, 0, CW);
+    lv_obj_set_style_pad_bottom(wifi_label, 6, 0);
 
-    static const uint32_t colors[] = {0x00E5FF, 0x00FF66, 0xFF9F00, 0xFF3333, 0x3399FF};
-    for (int i = 0; i < 5; i++) {
-        lv_obj_t *btn = lv_button_create(color_row);
-        lv_obj_set_size(btn, 32, 32);
-        lv_obj_set_style_bg_color(btn, lv_color_hex(colors[i]), 0);
-        lv_obj_set_style_radius(btn, 6, 0);
-        if (theme_color_get_idx() == i) {
-            lv_obj_set_style_border_color(btn, lv_color_hex(0xFFFFFFFF), 0);
-            lv_obj_set_style_border_width(btn, 2, 0);
-        } else {
-            lv_obj_set_style_border_color(btn, lv_color_hex(0x333333), 0);
-            lv_obj_set_style_border_width(btn, 1, 0);
-        }
-        lv_obj_add_event_cb(btn, color_btn_cb, LV_EVENT_CLICKED, (void*)(intptr_t)i);
-    }
+    lv_obj_t *ntp_row = lv_obj_create(cont);
+    lv_obj_remove_style_all(ntp_row);
+    lv_obj_set_size(ntp_row, CW, 48);
+    lv_obj_set_style_bg_opa(ntp_row, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_pad_bottom(ntp_row, 6, 0);
+
+    ntp_status_label = lv_label_create(ntp_row);
+    lv_label_set_text(ntp_status_label,
+        time_sync_is_synced() ? "NTP: SYNCED" : "NTP: NOT SYNCED");
+    lv_obj_set_style_text_color(ntp_status_label, D, 0);
+    lv_obj_set_style_text_font(ntp_status_label, &lv_font_montserrat_18, 0);
+    lv_obj_align(ntp_status_label, LV_ALIGN_LEFT_MID, 0, 0);
+
+    lv_obj_t *ntp_btn = lv_btn_create(ntp_row);
+    lv_obj_set_size(ntp_btn, 120, 44);
+    lv_obj_align(ntp_btn, LV_ALIGN_RIGHT_MID, 0, 0);
+    lv_obj_set_style_bg_color(ntp_btn, DK, 0);
+    lv_obj_set_style_bg_color(ntp_btn, G, LV_STATE_PRESSED);
+    lv_obj_set_style_radius(ntp_btn, 0, 0);
+    lv_obj_set_style_border_color(ntp_btn, G, 0);
+    lv_obj_set_style_border_width(ntp_btn, 1, 0);
+    lv_obj_add_event_cb(ntp_btn, ntp_sync_cb, LV_EVENT_CLICKED, nullptr);
+
+    lv_obj_t *ntp_btn_lbl = lv_label_create(ntp_btn);
+    lv_label_set_text(ntp_btn_lbl, "FORCE SYNC");
+    lv_obj_set_style_text_color(ntp_btn_lbl, G, 0);
+    lv_obj_set_style_text_font(ntp_btn_lbl, &lv_font_montserrat_16, 0);
+    lv_obj_center(ntp_btn_lbl);
 
     make_section_label(cont, "SYSTEM INFO", 0, 0);
 
@@ -247,6 +246,8 @@ void settings_app_destroy(void) {
         refresh_timer = nullptr;
     }
     info_label = nullptr;
+    wifi_label = nullptr;
+    ntp_status_label = nullptr;
     if (scr) {
         lv_obj_delete(scr);
         scr = nullptr;

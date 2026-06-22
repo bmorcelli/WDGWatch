@@ -7,10 +7,10 @@
 #include "../hal/rf_service.h"
 #include "../hal/haptic.h"
 
-#define G  lv_color_hex(PIPBOY_GREEN)
-#define D  lv_color_hex(PIPBOY_GREEN_DIM)
+#define G  lv_color_hex(0x00E5FF)
+#define D  lv_color_hex(0x007280)
 #define R  lv_color_hex(0xFF3B3B)
-#define BG lv_color_hex(PIPBOY_BG)
+#define BG lv_color_hex(0x000000)
 
 static lv_obj_t *scr           = nullptr;
 static lv_obj_t *lbl_jammer    = nullptr;
@@ -55,7 +55,7 @@ static lv_obj_t* make_btn(lv_obj_t *par, int x, int y, int w, int h,
     lv_obj_set_style_bg_color(btn, BG, 0);
     lv_obj_set_style_border_color(btn, G, 0);
     lv_obj_set_style_border_width(btn, 1, 0);
-    style_button_by_position(btn, y, h);
+    lv_obj_set_style_radius(btn, 0, 0);
     lv_obj_set_style_pad_all(btn, 0, 0);
     lv_obj_set_style_bg_color(btn, G, LV_STATE_PRESSED);
     lv_obj_set_style_bg_opa(btn, 40, LV_STATE_PRESSED);
@@ -133,6 +133,7 @@ void rf_app_create(lv_obj_t *parent) {
     lv_obj_set_style_bg_color(scr, BG, 0);
     lv_obj_set_style_bg_opa(scr, LV_OPA_COVER, 0);
     lv_obj_center(scr);
+    app_add_back_button(scr);
 
     int x = SAFE_LEFT + 5;
     int y = SAFE_TOP;

@@ -7,7 +7,6 @@
 #include "../hal/time_sync.h"
 #include "../web/web_server.h"
 #include "../hal/ble_uart_service.h"
-#include "app_common.h"
 
 extern "C" int ieee80211_raw_frame_sanity_check(int32_t arg, int32_t arg2, int32_t arg3) {
     if (arg == 31337) return 1;
@@ -27,9 +26,9 @@ static lv_obj_t *lbl_status = nullptr;
 static lv_obj_t *lbl_ip = nullptr;
 static lv_obj_t *lbl_clients = nullptr;
 
-#define G  lv_color_hex(PIPBOY_GREEN)
-#define D  lv_color_hex(PIPBOY_GREEN_DIM)
-#define BG lv_color_hex(PIPBOY_BG)
+#define G  lv_color_hex(0x00E5FF)
+#define D  lv_color_hex(0x007280)
+#define BG lv_color_hex(0x000000)
 
 static lv_obj_t* make_btn(lv_obj_t *par, int x, int y, int w, int h, const char *txt, lv_event_cb_t cb) {
     lv_obj_t *btn = lv_button_create(par);
@@ -38,7 +37,7 @@ static lv_obj_t* make_btn(lv_obj_t *par, int x, int y, int w, int h, const char 
     lv_obj_set_style_border_color(btn, G, 0);
     lv_obj_set_style_border_color(btn, D, LV_STATE_DISABLED);
     lv_obj_set_style_border_width(btn, 1, 0);
-    style_button_by_position(btn, y, h);
+    lv_obj_set_style_radius(btn, 0, 0);
     lv_obj_add_event_cb(btn, cb, LV_EVENT_CLICKED, nullptr);
     lv_obj_t *l = lv_label_create(btn);
     lv_label_set_text(l, txt);
@@ -216,7 +215,7 @@ static void show_scan_results(int n) {
     lv_obj_set_style_bg_color(wifi_scan_list, lv_color_hex(0x001010), 0);
     lv_obj_set_style_border_color(wifi_scan_list, G, 0);
     lv_obj_set_style_border_width(wifi_scan_list, 1, 0);
-    lv_obj_set_style_radius(wifi_scan_list, 20, 0);
+    lv_obj_set_style_radius(wifi_scan_list, 0, 0);
     lv_obj_set_scrollbar_mode(wifi_scan_list, LV_SCROLLBAR_MODE_AUTO);
     lv_obj_set_scroll_dir(wifi_scan_list, LV_DIR_VER);
     lv_obj_set_flex_flow(wifi_scan_list, LV_FLEX_FLOW_COLUMN);
@@ -231,7 +230,7 @@ static void show_scan_results(int n) {
     lv_obj_set_size(btn_close, LV_PCT(100), 48);
     lv_obj_set_style_border_width(btn_close, 1, 0);
     lv_obj_set_style_border_color(btn_close, lv_color_hex(0xFF3B30), 0);
-    lv_obj_set_style_radius(btn_close, 12, 0);
+    lv_obj_set_style_radius(btn_close, 0, 0);
     lv_obj_set_style_bg_color(btn_close, BG, 0);
     lv_obj_add_event_cb(btn_close, scan_list_close_cb, LV_EVENT_CLICKED, nullptr);
     lv_obj_t *lbl_close = lv_label_create(btn_close);
@@ -422,7 +421,7 @@ static void show_city_list(void) {
     lv_obj_set_style_bg_color(clock_city_list, lv_color_hex(0x001010), 0);
     lv_obj_set_style_border_color(clock_city_list, G, 0);
     lv_obj_set_style_border_width(clock_city_list, 1, 0);
-    lv_obj_set_style_radius(clock_city_list, 20, 0);
+    lv_obj_set_style_radius(clock_city_list, 0, 0);
     lv_obj_set_scrollbar_mode(clock_city_list, LV_SCROLLBAR_MODE_AUTO);
     lv_obj_set_scroll_dir(clock_city_list, LV_DIR_VER);
     lv_obj_set_flex_flow(clock_city_list, LV_FLEX_FLOW_COLUMN);
@@ -437,7 +436,7 @@ static void show_city_list(void) {
     lv_obj_set_size(btn_close, LV_PCT(100), 48);
     lv_obj_set_style_border_width(btn_close, 1, 0);
     lv_obj_set_style_border_color(btn_close, lv_color_hex(0xFF3B30), 0);
-    lv_obj_set_style_radius(btn_close, 12, 0);
+    lv_obj_set_style_radius(btn_close, 0, 0);
     lv_obj_set_style_bg_color(btn_close, BG, 0);
     lv_obj_add_event_cb(btn_close, city_list_close_cb, LV_EVENT_CLICKED, nullptr);
     lv_obj_t *lbl_close = lv_label_create(btn_close);
@@ -515,35 +514,35 @@ void wifi_app_create(lv_obj_t *parent) {
     lv_obj_set_width(lbl_ip, 340);
     lv_label_set_long_mode(lbl_ip, LV_LABEL_LONG_WRAP);
 
-    y += 34;
+    y += 38;
     lbl_clients = lv_label_create(scr);
     lv_label_set_text(lbl_clients, "");
     lv_obj_set_style_text_color(lbl_clients, D, 0);
     lv_obj_set_style_text_font(lbl_clients, &lv_font_montserrat_16, 0);
     lv_obj_set_pos(lbl_clients, x, y);
 
-    y += 18;
-    int bw = 340, bh = 44;
+    y += 20;
+    int bw = 340, bh = 50;
     make_btn(scr, x, y, bw, bh, LV_SYMBOL_WIFI " WEB SERVER ON / OFF", toggle_web_cb);
 
-    y += bh + 6;
-    make_btn(scr, x, y, bw, 44, LV_SYMBOL_BLUETOOTH " Watch Dogs Connect", toggle_ble_cb);
+    y += bh + 8;
+    make_btn(scr, x, y, bw, 48, LV_SYMBOL_BLUETOOTH " Watch Dogs Connect", toggle_ble_cb);
 
-    y += 44 + 6;
+    y += 48 + 8;
     lbl_ble_status = lv_label_create(scr);
     lv_label_set_text(lbl_ble_status, ble_uart_is_connected() ? "BLE: CONNECTED" : "BLE: OFF");
     lv_obj_set_style_text_color(lbl_ble_status, D, 0);
     lv_obj_set_style_text_font(lbl_ble_status, &lv_font_montserrat_16, 0);
     lv_obj_set_pos(lbl_ble_status, x, y);
 
-    y += 18;
-    make_btn(scr, x, y, bw, 44, LV_SYMBOL_REFRESH " NTP SYNC", ntp_cb);
+    y += 20;
+    make_btn(scr, x, y, bw, 48, LV_SYMBOL_REFRESH " NTP SYNC", ntp_cb);
 
-    y += 44 + 6;
-    make_btn(scr, x, y, 165, 44, "WIFI ON/OFF", toggle_wifi_cb);
-    btn_clock = make_btn(scr, x + 175, y, 165, 44, "CLOCK", toggle_clock_cb);
+    y += 48 + 8;
+    make_btn(scr, x, y, 165, 48, "WIFI ON/OFF", toggle_wifi_cb);
+    btn_clock = make_btn(scr, x + 175, y, 165, 48, "CLOCK", toggle_clock_cb);
 
-    y += 44 + 6;
+    y += 48 + 8;
     lv_obj_t *hint = lv_label_create(scr);
     lv_label_set_text(hint, "1. Tap WEB ON/OFF\n2. Connect phone to\n   WiFi: SCR Terminal\n   Pass: pip12345\n3. Open 192.168.4.1");
     lv_obj_set_style_text_color(hint, D, 0);

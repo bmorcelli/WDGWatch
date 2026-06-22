@@ -3,9 +3,10 @@
 #include <LilyGoLib.h>
 #include <cstdio>
 
-#define G  lv_color_hex(0x00E5FF)
-#define D  lv_color_hex(0x007280)
-#define BG lv_color_hex(0x000000)
+#define G  lv_color_hex(PIPBOY_GREEN)
+#define D  lv_color_hex(PIPBOY_GREEN_DIM)
+#define DK lv_color_hex(PIPBOY_GREEN_DARK)
+#define BG lv_color_hex(PIPBOY_BG)
 
 static lv_obj_t *overlay_scr = nullptr;
 static lv_obj_t *lbl_action = nullptr;
@@ -145,7 +146,7 @@ void action_overlay_show(const char *action_name) {
 
         lv_obj_t *hint = lv_label_create(overlay_scr);
         lv_label_set_text(hint, "Controlled from phone");
-        lv_obj_set_style_text_color(hint, lv_color_hex(0x003840), 0);
+        lv_obj_set_style_text_color(hint, DK, 0);
         lv_obj_set_style_text_font(hint, &lv_font_montserrat_16, 0);
         lv_obj_align(hint, LV_ALIGN_BOTTOM_MID, 0, -(SAFE_BOTTOM + 10));
 

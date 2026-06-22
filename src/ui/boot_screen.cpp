@@ -2,10 +2,10 @@
 #include "../config.h"
 #include <stdio.h>
 
-#define CLR_MAIN  lv_color_hex(0x00E5FF)
-#define CLR_DIM   lv_color_hex(0x007280)
-#define CLR_DARK  lv_color_hex(0x003840)
-#define CLR_BLACK lv_color_hex(0x000000)
+#define CLR_MAIN  lv_color_hex(PIPBOY_GREEN)
+#define CLR_DIM   lv_color_hex(PIPBOY_GREEN_DIM)
+#define CLR_DARK  lv_color_hex(PIPBOY_GREEN_DARK)
+#define CLR_BLACK lv_color_hex(PIPBOY_BG)
 
 static lv_obj_t *boot_scr     = nullptr;
 static lv_obj_t *bar_progress = nullptr;

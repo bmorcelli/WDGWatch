@@ -173,6 +173,21 @@ The SCR-Bit virtual pet evolves into an autonomous cyber-recon agent via the **P
     *   `ls` / `cd <dir>` / `mkdir <name>` / `rm <path>` / `mv <src> <dst>` / `cp <src> <dst>`
     *   `cat <file>` / `write <file> <text>` / `nano <file>` / `upload` / `download`
 
+### 12. 🎨 Dynamic Pip-Boy Theme Engine
+*   **Global Styling:** A centralized theme engine that dynamically updates all UI elements (borders, buttons, status indicators, keyboards) across the system.
+*   **Real-time Recoloring:** Switching themes (e.g., from Cyan to Green or Amber) instantly forces an in-memory rebuild of active views, applying the new aesthetic without requiring a device reboot.
+*   **Persistent Customization:** User theme preferences are saved to NVS and applied automatically upon startup.
+
+### 13. 💡 Utility Tools (Flashlight, Stopwatch, Timer)
+*   **Flashlight:** Toggle maximum screen brightness with a white background for emergency illumination.
+*   **Chronograph Suite:** Includes a high-precision Stopwatch and a programmable Countdown Timer with predefined presets and haptic alarm feedback.
+*   **LED Signage Controller:** Dedicated full-screen, ergonomically optimized keyboard mode for typing and broadcasting messages to external LED displays over WiFi.
+
+### 14. 🕵️‍♂️ BLE Whisper Pair Auditor
+*   **Vulnerability Testing:** A specialized BLE auditing tool designed to test nearby Bluetooth devices for pairing vulnerabilities (KBP characteristic on `0xFE2C` FP service).
+*   **Active Interaction:** Automatically connects to selected targets, attempts characteristic discovery, and listens for unauthorized notification streams, flagging devices as `[VULNERABLE]` or `[SAFE]`.
+*   **Audit Logging:** Logs all interaction attempts and outcomes directly to the SD card under `/whisper/audit_log.json` for later analysis.
+
 ---
 
 ## 📊 Feature Matrix (English)
@@ -205,6 +220,10 @@ The SCR-Bit virtual pet evolves into an autonomous cyber-recon agent via the **P
 | 🎤 **Audio Recorder (Mic to SD)** | 🟢 Yes | 🔴 No | — | 16kHz 16-bit Mono |
 | ✈️ **ADS-B Flight Radar (Live)** | 🟢 Yes | 🔴 No | — | adsb.fi API / GPS |
 | 🦋 **Bit-Gotchi Recon Agent** | 🟢 Yes | 🔴 No | — | PCAP → `/bit` on SD |
+| 🎨 **Dynamic Theme Engine** | 🟢 Yes | 🟢 Yes | `theme` | No Reboot Required |
+| 💡 **Flashlight & Timers** | 🟢 Yes | 🔴 No | — | Haptic Alarms |
+| 🪧 **LED Sign Controller** | 🟢 Yes | 🔴 No | — | WiFi Broadcasting |
+| 🕵️‍♂️ **BLE Whisper Pair Auditor** | 🟢 Yes | 🔴 No | — | Vulnerability Testing |
 
 ---
 
@@ -506,6 +525,21 @@ SCR-Bit sanal peti, **Politician** pasif yakalama motoru sayesinde otonom bir si
     *   `ls` / `cd <klasör>` / `mkdir <ad>` / `rm <yol>` / `mv <kaynak> <hedef>` / `cp <kaynak> <hedef>`
     *   `cat <dosya>` / `write <dosya> <metin>` / `nano <dosya>` / `upload` / `download`
 
+### 12. 🎨 Dinamik Pip-Boy Tema Motoru
+*   **Evrensel Stiller:** Sistemdeki tüm UI öğelerini (kenarlıklar, butonlar, durum göstergeleri, klavyeler) dinamik olarak güncelleyen merkezi bir tema motoru.
+*   **Eşzamanlı Renk Değişimi:** Tema değiştirildiğinde (örn. Camgöbeğinden Yeşile veya Kehribar rengine), arayüz anında yeniden çizilir ve cihazın yeniden başlatılmasına gerek kalmadan yeni görünüm uygulanır.
+*   **Kalıcı Kişiselleştirme:** Kullanıcının tema tercihleri NVS hafızasına kaydedilir ve açılışta otomatik olarak yüklenir.
+
+### 13. 💡 Günlük Araçlar (El Feneri, Kronometre, Zamanlayıcı)
+*   **El Feneri:** Ekran parlaklığını maksimuma çıkararak acil durum aydınlatması sağlar.
+*   **Zamanlama Araçları:** Yüksek hassasiyetli Kronometre ve titreşim bildirimli (haptik), ön tanımlı sürelere sahip Geri Sayım Sayacı içerir.
+*   **LED Tabela Kontrolcüsü:** Harici LED tabelalara WiFi üzerinden metin göndermek için ergonomik, tam ekran ve Pip-Boy temasıyla uyumlu özel bir klavye modülü barındırır.
+
+### 14. 🕵️‍♂️ BLE Whisper Pair Denetleyicisi
+*   **Zafiyet Testi:** Çevredeki Bluetooth cihazlarını eşleştirme zafiyetlerine karşı test etmek için tasarlanmış özel bir BLE denetim aracı (0xFE2C FP servisindeki KBP karakteristiği).
+*   **Aktif Etkileşim:** Seçilen hedeflere otomatik olarak bağlanır, karakteristik keşfi yapar ve yetkisiz bildirim (notification) sızıntılarını dinleyerek cihazları `[VULNERABLE]` (Savunmasız) veya `[SAFE]` (Güvenli) olarak işaretler.
+*   **Denetim Günlüğü:** Tüm etkileşim denemelerini ve sonuçlarını daha sonra analiz edilmek üzere SD karttaki `/whisper/audit_log.json` dosyasına kaydeder.
+
 ---
 
 ## 📊 Özellik Tablosu (Türkçe)
@@ -538,6 +572,10 @@ SCR-Bit sanal peti, **Politician** pasif yakalama motoru sayesinde otonom bir si
 | 🎤 **Ses Kaydedici (SD Karta Kayıt)** | 🟢 Evet | 🔴 Hayır | — | 16kHz 16-bit Mono |
 | ✈️ **ADS-B Uçuş Radarı (Canlı)** | 🟢 Evet | 🔴 Hayır | — | adsb.fi API / GPS |
 | 🦋 **Bit-Gotchi Recon Ajanı** | 🟢 Evet | 🔴 Hayır | — | PCAP → SD `/bit` |
+| 🎨 **Dinamik Tema Motoru** | 🟢 Evet | 🟢 Evet | `theme` | Yeniden Başlatma Gerektirmez |
+| 💡 **El Feneri ve Sayaçlar** | 🟢 Evet | 🔴 Hayır | — | Titreşimli Alarmlar |
+| 🪧 **LED Tabela Kontrolcüsü** | 🟢 Evet | 🔴 Hayır | — | WiFi Yayın Desteği |
+| 🕵️‍♂️ **BLE Whisper Pair Denetleyicisi** | 🟢 Evet | 🔴 Hayır | — | Zafiyet Testi |
 
 ---
 

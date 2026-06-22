@@ -5,14 +5,18 @@
 #define PIPBOY_MAX_BRIGHTNESS      255
 #define PIPBOY_DEFAULT_BRIGHTNESS  128
 
-#define PIPBOY_GREEN        0x00E5FF
-#define PIPBOY_GREEN_DIM    0x007280
-#define PIPBOY_GREEN_DARK   0x003840
+extern uint32_t current_primary_hex;
+extern uint32_t current_dim_hex;
+extern uint32_t current_dark_hex;
+
+#define PIPBOY_GREEN        current_primary_hex
+#define PIPBOY_GREEN_DIM    current_dim_hex
+#define PIPBOY_GREEN_DARK   current_dark_hex
 #define PIPBOY_BG           0x000000
 
-#define PIPBOY_GREEN_16     lv_color_hex(0x00E5FF)
-#define PIPBOY_GREEN_DIM_16 lv_color_hex(0x007280)
-#define PIPBOY_DARK_16      lv_color_hex(0x003840)
+#define PIPBOY_GREEN_16     lv_color_hex(current_primary_hex)
+#define PIPBOY_GREEN_DIM_16 lv_color_hex(current_dim_hex)
+#define PIPBOY_DARK_16      lv_color_hex(current_dark_hex)
 #define PIPBOY_BG_16        lv_color_hex(0x000000)
 
 #define SAFE_TOP    35

@@ -25,9 +25,9 @@ static bool gps_enabled = false;
 static bool wardriving_active = false;
 static String wardriving_filepath = "";
 
-#define G lv_color_hex(PIPBOY_GREEN)
-#define D lv_color_hex(PIPBOY_GREEN_DIM)
-#define BG lv_color_hex(PIPBOY_BG)
+#define G lv_color_hex(0x00E5FF)
+#define D lv_color_hex(0x007280)
+#define BG lv_color_hex(0x000000)
 
 static void update_btn_style(lv_obj_t *btn, bool active) {
     if (!btn) return;
@@ -52,7 +52,7 @@ static lv_obj_t* make_btn(lv_obj_t *par, int x, int y, int w, int h, const char 
     lv_obj_set_style_bg_color(btn, BG, 0);
     lv_obj_set_style_border_color(btn, G, 0);
     lv_obj_set_style_border_width(btn, 1, 0);
-    style_button_by_position(btn, y, h);
+    lv_obj_set_style_radius(btn, 0, 0);
     lv_obj_add_event_cb(btn, cb, LV_EVENT_CLICKED, nullptr);
     lv_obj_t *l = lv_label_create(btn);
     lv_label_set_text(l, txt);
@@ -148,6 +148,7 @@ void gps_app_create(lv_obj_t *parent) {
     lv_obj_set_style_bg_color(scr, BG, 0);
     lv_obj_set_style_bg_opa(scr, LV_OPA_COVER, 0);
     lv_obj_center(scr);
+    app_add_back_button(scr);
 
     lv_obj_t *title = lv_label_create(scr);
     lv_label_set_text(title, "[ GPS TRACKER ]");

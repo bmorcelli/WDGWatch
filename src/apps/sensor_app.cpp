@@ -7,6 +7,7 @@
 #include "../hal/haptic.h"
 #include <Preferences.h>
 #include <bosch/bhy2_parse.h>
+#include "app_common.h"
 
 static lv_obj_t *scr = nullptr;
 static lv_obj_t *lbl_batt = nullptr;
@@ -281,12 +282,13 @@ void sensor_app_create(lv_obj_t *parent) {
 
     cal_btn_ref = lv_button_create(scr);
     lv_obj_t *cal_btn = cal_btn_ref;
+    int cal_btn_y = compass_cy + COMPASS_R + 25;
     lv_obj_set_size(cal_btn, 200, 48);
-    lv_obj_set_pos(cal_btn, SCREEN_WIDTH/2 - 100, compass_cy + COMPASS_R + 25);
+    lv_obj_set_pos(cal_btn, SCREEN_WIDTH/2 - 100, cal_btn_y);
     lv_obj_set_style_bg_color(cal_btn, BG, 0);
     lv_obj_set_style_border_color(cal_btn, D, 0);
     lv_obj_set_style_border_width(cal_btn, 1, 0);
-    lv_obj_set_style_radius(cal_btn, 0, 0);
+    style_button_by_position(cal_btn, cal_btn_y, 48);
     lv_obj_add_event_cb(cal_btn, calibrate_compass, LV_EVENT_CLICKED, nullptr);
     lv_obj_t *cl = lv_label_create(cal_btn);
     lv_label_set_text(cl, "POINT N + CALIBRATE");

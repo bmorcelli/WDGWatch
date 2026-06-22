@@ -7,9 +7,9 @@
 #include <time.h>
 #include <SD.h>
 
-#define G  lv_color_hex(PIPBOY_GREEN)
-#define D  lv_color_hex(PIPBOY_GREEN_DIM)
-#define BG lv_color_hex(PIPBOY_BG)
+#define G  lv_color_hex(0x00E5FF)
+#define D  lv_color_hex(0x007280)
+#define BG lv_color_hex(0x000000)
 
 static lv_obj_t *scr = nullptr;
 static Preferences prefs;
@@ -267,7 +267,7 @@ static lv_obj_t* make_btn(lv_obj_t *par, int x, int y, int w, int h,
     lv_obj_set_style_bg_color(btn, BG, 0);
     lv_obj_set_style_border_color(btn, G, 0);
     lv_obj_set_style_border_width(btn, 1, 0);
-    style_button_by_position(btn, y, h);
+    lv_obj_set_style_radius(btn, 0, 0);
     lv_obj_set_style_pad_all(btn, 0, 0);
     lv_obj_set_style_bg_color(btn, G, LV_STATE_PRESSED);
     lv_obj_set_style_bg_opa(btn, 40, LV_STATE_PRESSED);
@@ -382,7 +382,7 @@ static void loot_cb(lv_event_t *e) {
     lv_obj_set_style_bg_color(modal, BG, 0);
     lv_obj_set_style_border_color(modal, G, 0);
     lv_obj_set_style_border_width(modal, 1, 0);
-    lv_obj_set_style_radius(modal, 20, 0);
+    lv_obj_set_style_radius(modal, 0, 0);
     
     lv_obj_t* title = lv_label_create(modal);
     lv_label_set_text(title, "CAPTURED PCAP LOOT");
@@ -448,6 +448,7 @@ void pet_app_create(lv_obj_t *parent) {
     lv_obj_set_style_bg_color(scr, BG, 0);
     lv_obj_set_style_bg_opa(scr, LV_OPA_COVER, 0);
     lv_obj_center(scr);
+    app_add_back_button(scr);
 
     lv_obj_t *title = lv_label_create(scr);
     lv_label_set_text(title, "[ SCR-PET ]");
@@ -551,13 +552,12 @@ void pet_app_create(lv_obj_t *parent) {
     make_btn(scr, 314, SAFE_TOP + 100, BW, BH, "STATUS", status_cb);
 
     btn_bitgotchi = lv_button_create(scr);
-    int bg_y = SAFE_TOP + 185;
     lv_obj_set_size(btn_bitgotchi, BW * 2 + 6, 48);
-    lv_obj_set_pos(btn_bitgotchi, 240, bg_y);
+    lv_obj_set_pos(btn_bitgotchi, 240, SAFE_TOP + 185);
     lv_obj_set_style_bg_color(btn_bitgotchi, BG, 0);
     lv_obj_set_style_border_color(btn_bitgotchi, lv_color_hex(0xFF9900), 0);
     lv_obj_set_style_border_width(btn_bitgotchi, 1, 0);
-    style_button_by_position(btn_bitgotchi, bg_y, 48);
+    lv_obj_set_style_radius(btn_bitgotchi, 0, 0);
     lv_obj_set_style_pad_all(btn_bitgotchi, 0, 0);
     lv_obj_set_style_bg_color(btn_bitgotchi, lv_color_hex(0xFF9900), LV_STATE_PRESSED);
     lv_obj_set_style_bg_opa(btn_bitgotchi, 40, LV_STATE_PRESSED);

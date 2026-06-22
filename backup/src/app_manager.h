@@ -10,4 +10,3 @@ void app_manager_back(void);
 void app_manager_handle_gesture(lv_dir_t dir);
 
 void app_manager_update(void);
-void app_manager_theme_changed(void);

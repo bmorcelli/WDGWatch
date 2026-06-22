@@ -6,10 +6,10 @@
 #include "../hal/hid_service.h"
 #include "../hal/haptic.h"
 
-#define G       lv_color_hex(PIPBOY_GREEN)
-#define D       lv_color_hex(PIPBOY_GREEN_DIM)
+#define G       lv_color_hex(0x00E5FF)
+#define D       lv_color_hex(0x007280)
 #define RED lv_color_hex(0xFF3B3B)
-#define BG  lv_color_hex(PIPBOY_BG)
+#define BG  lv_color_hex(0x000000)
 
 #define SD_SCRIPT_DIR "/badusb"
 
@@ -45,7 +45,7 @@ static lv_obj_t* make_btn(lv_obj_t *par, int x, int y, int w, int h,
     lv_obj_set_style_bg_color(btn, BG, 0);
     lv_obj_set_style_border_color(btn, G, 0);
     lv_obj_set_style_border_width(btn, 1, 0);
-    style_button_by_position(btn, y, h);
+    lv_obj_set_style_radius(btn, 0, 0);
     lv_obj_set_style_pad_all(btn, 0, 0);
     lv_obj_set_style_bg_color(btn, G, LV_STATE_PRESSED);
     lv_obj_set_style_bg_opa(btn, 40, LV_STATE_PRESSED);
@@ -138,7 +138,7 @@ static void show_layout_selector(void) {
     lv_obj_set_style_bg_color(script_list, lv_color_hex(0x001010), 0);
     lv_obj_set_style_border_color(script_list, G, 0);
     lv_obj_set_style_border_width(script_list, 1, 0);
-    lv_obj_set_style_radius(script_list, 20, 0);
+    lv_obj_set_style_radius(script_list, 0, 0);
     lv_obj_set_scrollbar_mode(script_list, LV_SCROLLBAR_MODE_AUTO);
     lv_obj_set_scroll_dir(script_list, LV_DIR_VER);
     lv_obj_set_flex_flow(script_list, LV_FLEX_FLOW_COLUMN);
@@ -153,7 +153,7 @@ static void show_layout_selector(void) {
         lv_obj_t *btn = lv_button_create(script_list);
         lv_obj_set_size(btn, LV_PCT(100), 44);
         lv_obj_set_style_border_width(btn, 1, 0);
-        lv_obj_set_style_radius(btn, 12, 0);
+        lv_obj_set_style_radius(btn, 0, 0);
         lv_obj_add_event_cb(btn, layout_select_cb, LV_EVENT_CLICKED, (void *)(intptr_t)i);
 
         lv_obj_t *lbl = lv_label_create(btn);
@@ -179,7 +179,7 @@ static void show_layout_selector(void) {
     lv_obj_set_style_bg_color(close_btn, lv_color_hex(0x1A0000), 0);
     lv_obj_set_style_border_color(close_btn, D, 0);
     lv_obj_set_style_border_width(close_btn, 1, 0);
-    lv_obj_set_style_radius(close_btn, 12, 0);
+    lv_obj_set_style_radius(close_btn, 0, 0);
     lv_obj_add_event_cb(close_btn, [](lv_event_t *e) { (void)e; destroy_list_popup(); }, LV_EVENT_CLICKED, nullptr);
     lv_obj_t *cl = lv_label_create(close_btn);
     lv_label_set_text(cl, LV_SYMBOL_CLOSE "  CANCEL");
@@ -228,7 +228,7 @@ static void show_script_list(bool ble_mode) {
     lv_obj_set_style_bg_color(script_list, lv_color_hex(0x001010), 0);
     lv_obj_set_style_border_color(script_list, G, 0);
     lv_obj_set_style_border_width(script_list, 1, 0);
-    lv_obj_set_style_radius(script_list, 20, 0);
+    lv_obj_set_style_radius(script_list, 0, 0);
     lv_obj_set_scrollbar_mode(script_list, LV_SCROLLBAR_MODE_AUTO);
     lv_obj_set_scroll_dir(script_list, LV_DIR_VER);
     lv_obj_set_flex_flow(script_list, LV_FLEX_FLOW_COLUMN);
@@ -251,7 +251,7 @@ static void show_script_list(bool ble_mode) {
             lv_obj_set_style_bg_color(btn, BG, 0);
             lv_obj_set_style_border_color(btn, D, 0);
             lv_obj_set_style_border_width(btn, 1, 0);
-            lv_obj_set_style_radius(btn, 12, 0);
+            lv_obj_set_style_radius(btn, 0, 0);
             lv_obj_add_event_cb(btn, script_file_cb, LV_EVENT_CLICKED, (void *)(intptr_t)i);
 
             lv_obj_t *lbl = lv_label_create(btn);
@@ -269,7 +269,7 @@ static void show_script_list(bool ble_mode) {
     lv_obj_set_style_bg_color(close_btn, lv_color_hex(0x1A0000), 0);
     lv_obj_set_style_border_color(close_btn, D, 0);
     lv_obj_set_style_border_width(close_btn, 1, 0);
-    lv_obj_set_style_radius(close_btn, 12, 0);
+    lv_obj_set_style_radius(close_btn, 0, 0);
     lv_obj_add_event_cb(close_btn, [](lv_event_t *e) { (void)e; destroy_list_popup(); }, LV_EVENT_CLICKED, nullptr);
     lv_obj_t *cl = lv_label_create(close_btn);
     lv_label_set_text(cl, LV_SYMBOL_CLOSE "  CANCEL");
@@ -365,6 +365,7 @@ void hid_app_create(lv_obj_t *parent) {
     lv_obj_set_style_bg_color(scr, BG, 0);
     lv_obj_set_style_bg_opa(scr, LV_OPA_COVER, 0);
     lv_obj_center(scr);
+    app_add_back_button(scr);
 
     int x  = SAFE_LEFT + 5;
     int cw = SCREEN_WIDTH - SAFE_LEFT - SAFE_RIGHT - 10;
@@ -376,7 +377,7 @@ void hid_app_create(lv_obj_t *parent) {
     lv_obj_set_style_bg_color(btn_title, BG, 0);
     lv_obj_set_style_border_color(btn_title, G, 0);
     lv_obj_set_style_border_width(btn_title, 1, 0);
-    style_button_by_position(btn_title, y, 44);
+    lv_obj_set_style_radius(btn_title, 0, 0);
     lv_obj_add_event_cb(btn_title, title_click_cb, LV_EVENT_CLICKED, nullptr);
 
     lbl_title = lv_label_create(btn_title);
@@ -442,7 +443,7 @@ void hid_app_create(lv_obj_t *parent) {
     lv_obj_set_style_bg_color(scroll_area, BG, 0);
     lv_obj_set_style_border_color(scroll_area, G, 0);
     lv_obj_set_style_border_width(scroll_area, 1, 0);
-    style_button_by_position(scroll_area, y, 48);
+    lv_obj_set_style_radius(scroll_area, 0, 0);
     lv_obj_set_style_bg_color(scroll_area, G, LV_STATE_PRESSED);
     lv_obj_set_style_bg_opa(scroll_area, 40, LV_STATE_PRESSED);
     lv_obj_add_flag(scroll_area, LV_OBJ_FLAG_CLICKABLE);
