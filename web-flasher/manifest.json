@@ -1,6 +1,6 @@
 {
   "name": "SCR Terminal (WDGWatch)",
-  "version": "v2.5.1",
+  "version": "v2.5.4",
   "new_install_prompt_erase": true,
   "builds": [
     {
