@@ -1,5 +1,6 @@
 #include "wifi_app.h"
 #include <WiFi.h>
+#include <NimBLEDevice.h>
 #include <LilyGoLib.h>
 #include <cstdio>
 #include "../config.h"
@@ -142,39 +143,27 @@ static void style_keyboard_pipboy(lv_obj_t *kb, lv_obj_t *ta) {
     lv_obj_set_style_text_font(kb, &lv_font_montserrat_16, LV_PART_ITEMS);
 }
 
+enum WifiConnectState {
+    WIFI_CONN_IDLE,
+    WIFI_CONN_START,
+    WIFI_CONN_WAITING
+};
+static WifiConnectState conn_state = WIFI_CONN_IDLE;
+static String connect_ssid = "";
+static String connect_password = "";
+static uint32_t conn_start_time = 0;
+static bool conn_ble_was_adv = false;
+
 static void wifi_connect_attempt(const char* ssid, const char* password) {
-    if (lbl_status) lv_label_set_text(lbl_status, "CONNECTING...");
+    connect_ssid = ssid;
+    connect_password = password;
+    conn_state = WIFI_CONN_START;
+
+    if (lbl_status) lv_label_set_text(lbl_status, "WIFI CONNECTING...");
     if (lbl_ip) {
         char b[128];
         snprintf(b, sizeof(b), "SSID: %s\nConnecting...", ssid);
         lv_label_set_text(lbl_ip, b);
-    }
-    lv_timer_handler();
-
-    WiFi.disconnect(true);
-    WiFi.mode(WIFI_STA);
-    WiFi.begin(ssid, password);
-
-    int retries = 30;
-    while (WiFi.status() != WL_CONNECTED && retries > 0) {
-        delay(250);
-        lv_timer_handler();
-        retries--;
-    }
-
-    if (WiFi.status() == WL_CONNECTED) {
-        if (lbl_status) lv_label_set_text(lbl_status, "CONNECTED");
-        if (lbl_ip) {
-            char b[128];
-            snprintf(b, sizeof(b), "SSID: %s\nIP: %s", ssid, WiFi.localIP().toString().c_str());
-            lv_label_set_text(lbl_ip, b);
-        }
-        time_sync_save_network(ssid, password, false);
-    } else {
-        WiFi.disconnect(true);
-        WiFi.mode(WIFI_OFF);
-        if (lbl_status) lv_label_set_text(lbl_status, "NO CONNECTION");
-        if (lbl_ip) lv_label_set_text(lbl_ip, "FAILED");
     }
 }
 
@@ -335,17 +324,32 @@ static void toggle_wifi_cb(lv_event_t *e) {
     (void)e; haptic_click();
 
     if (WiFi.status() == WL_CONNECTED || WiFi.getMode() != WIFI_OFF) {
-        WiFi.disconnect(true);
+        WiFi.disconnect(false);
         WiFi.mode(WIFI_OFF);
         if (lbl_status) lv_label_set_text(lbl_status, "WIFI OFF");
         if (lbl_ip) lv_label_set_text(lbl_ip, "");
     } else {
-        if (lbl_status) lv_label_set_text(lbl_status, "SCANNING...");
+        if (lbl_status) lv_label_set_text(lbl_status, "WIFI SCANNING...");
         if (lbl_ip) lv_label_set_text(lbl_ip, "Searching networks...");
-        lv_timer_handler();
+        for (int i = 0; i < 10; i++) {
+            instance.loop();
+            lv_timer_handler();
+            delay(20);
+        }
+
+        bool ble_was_adv = false;
+        if (NimBLEDevice::isInitialized() && NimBLEDevice::getAdvertising()->isAdvertising()) {
+            NimBLEDevice::getAdvertising()->stop();
+            ble_was_adv = true;
+        }
 
         WiFi.mode(WIFI_STA);
         int n = WiFi.scanNetworks();
+
+        if (ble_was_adv && NimBLEDevice::isInitialized()) {
+            NimBLEDevice::getAdvertising()->start();
+        }
+
         if (n <= 0) {
             if (lbl_status) lv_label_set_text(lbl_status, "SCAN FAILED");
             if (lbl_ip) lv_label_set_text(lbl_ip, "No networks found");
@@ -554,6 +558,48 @@ void wifi_app_create(lv_obj_t *parent) {
 void wifi_app_update(void) {
     if (!scr) return;
 
+    
+    if (conn_state == WIFI_CONN_START) {
+        conn_ble_was_adv = false;
+        if (NimBLEDevice::isInitialized() && NimBLEDevice::getAdvertising()->isAdvertising()) {
+            NimBLEDevice::getAdvertising()->stop();
+            conn_ble_was_adv = true;
+        }
+
+        WiFi.disconnect(false);
+        WiFi.mode(WIFI_STA);
+        WiFi.begin(connect_ssid.c_str(), connect_password.c_str());
+        conn_start_time = millis();
+        conn_state = WIFI_CONN_WAITING;
+    } 
+    else if (conn_state == WIFI_CONN_WAITING) {
+        if (WiFi.status() == WL_CONNECTED && WiFi.localIP() != IPAddress(0, 0, 0, 0)) {
+            if (lbl_status) lv_label_set_text(lbl_status, "CONNECTED");
+            if (lbl_ip) {
+                char b[128];
+                snprintf(b, sizeof(b), "SSID: %s\nIP: %s", connect_ssid.c_str(), WiFi.localIP().toString().c_str());
+                lv_label_set_text(lbl_ip, b);
+            }
+            time_sync_save_network(connect_ssid.c_str(), connect_password.c_str(), false);
+            
+            if (conn_ble_was_adv && NimBLEDevice::isInitialized()) {
+                NimBLEDevice::getAdvertising()->start();
+            }
+            conn_state = WIFI_CONN_IDLE;
+        } 
+        else if (millis() - conn_start_time >= 15000UL) { 
+            WiFi.disconnect(false);
+            WiFi.mode(WIFI_OFF);
+            if (lbl_status) lv_label_set_text(lbl_status, "NO CONNECTION");
+            if (lbl_ip) lv_label_set_text(lbl_ip, "FAILED");
+            
+            if (conn_ble_was_adv && NimBLEDevice::isInitialized()) {
+                NimBLEDevice::getAdvertising()->start();
+            }
+            conn_state = WIFI_CONN_IDLE;
+        }
+    }
+
     if (btn_clock) {
         if (WiFi.status() == WL_CONNECTED) {
             lv_obj_remove_state(btn_clock, LV_STATE_DISABLED);
@@ -574,7 +620,11 @@ void wifi_app_update(void) {
                 ble_uart_stop();
             }
             if (lbl_status) lv_label_set_text(lbl_status, "STARTING AP...");
-            lv_timer_handler();
+            for (int i = 0; i < 10; i++) {
+                instance.loop();
+                lv_timer_handler();
+                delay(20);
+            }
             web_server_init();
             if (lbl_status) lv_label_set_text(lbl_status, "WEB SERVER ON");
             if (lbl_ip) {
@@ -614,6 +664,7 @@ void wifi_app_update(void) {
 }
 
 void wifi_app_destroy(void) {
+    conn_state = WIFI_CONN_IDLE;
     if (scr) { lv_obj_delete(scr); scr = nullptr; }
     wifi_scan_list = nullptr;
     wifi_kbd_container = nullptr;
@@ -621,4 +672,8 @@ void wifi_app_destroy(void) {
     kb_password = nullptr;
     btn_clock = nullptr;
     clock_city_list = nullptr;
+    lbl_status = nullptr;
+    lbl_ip = nullptr;
+    lbl_ble_status = nullptr;
+    lbl_clients = nullptr;
 }

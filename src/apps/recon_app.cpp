@@ -1332,6 +1332,15 @@ static void led_show_step_1() {
             led_show_step_2();
         }, LV_EVENT_CLICKED, (void*)(intptr_t)i);
     }
+    if (led_device_count == 0) {
+        lv_obj_t* no_devices_lbl = lv_label_create(led_list);
+        lv_label_set_text(no_devices_lbl, "No LED signs found.");
+        lv_obj_set_style_text_color(no_devices_lbl, D, 0);
+        lv_obj_set_style_text_font(no_devices_lbl, &lv_font_montserrat_16, 0);
+        lv_obj_set_width(no_devices_lbl, lv_pct(100));
+        lv_obj_set_style_text_align(no_devices_lbl, LV_TEXT_ALIGN_CENTER, 0);
+        lv_obj_set_style_pad_top(no_devices_lbl, 40, 0);
+    }
 }
 
 static void led_show_step_2() {
@@ -1619,20 +1628,6 @@ static void led_scan_task(lv_event_t* e) {
             lv_strlcpy(d.default_pass, dpass, sizeof(d.default_pass));
             led_device_count++;
         }
-    }
-    
-    if (led_device_count == 0) {
-        LedSignDevice& d1 = led_devices[led_device_count++];
-        lv_strlcpy(d1.ssid, "Manual Huidu (HD)", sizeof(d1.ssid));
-        d1.rssi = -50;
-        lv_strlcpy(d1.protocol, "Huidu (HD)", sizeof(d1.protocol));
-        lv_strlcpy(d1.default_pass, "88888888", sizeof(d1.default_pass));
-
-        LedSignDevice& d2 = led_devices[led_device_count++];
-        lv_strlcpy(d2.ssid, "Manual Onbon (BX)", sizeof(d2.ssid));
-        d2.rssi = -55;
-        lv_strlcpy(d2.protocol, "Onbon (BX)", sizeof(d2.protocol));
-        lv_strlcpy(d2.default_pass, "88888888", sizeof(d2.default_pass));
     }
     
     for (int i = 0; i < led_device_count - 1; i++) {

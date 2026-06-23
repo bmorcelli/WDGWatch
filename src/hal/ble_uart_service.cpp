@@ -15,8 +15,9 @@
 
 static NimBLEServer *pServer = nullptr;
 static NimBLECharacteristic *pTxChar = nullptr;
-static bool ble_connected = false;
 static bool ble_initialized = false;
+static bool ble_active = false;
+static bool ble_connected = false;
 
 static char pin_code[7] = "000000";
 static uint32_t pin_numeric = 0;
@@ -102,9 +103,7 @@ class RxCallbacks : public NimBLECharacteristicCallbacks {
 };
 
 void ble_uart_init(void) {
-    if (ble_initialized) return;
-
-    generate_pin();
+    if (ble_active) return;
 
     uint8_t mac[6];
     esp_efuse_mac_get_default(mac);
@@ -114,33 +113,39 @@ void ble_uart_init(void) {
     for (int i = 0; i < 5; i++) { suffix[i] = charset[seed % 32]; seed /= 32; }
     suffix[5] = 0;
     char ble_name[32];
-    snprintf(ble_name, sizeof(ble_name), "SCR Terminal-%s", suffix);
+    snprintf(ble_name, sizeof(ble_name), "SCR-BLE-%s", suffix);
 
-    if (NimBLEDevice::isInitialized()) {
-        NimBLEDevice::deinit(true);
-        delay(50);
+    if (!ble_initialized) {
+        generate_pin();
+
+        if (!NimBLEDevice::isInitialized()) {
+            NimBLEDevice::init(ble_name);
+        }
+        NimBLEDevice::setSecurityAuth(false, false, false);
+        NimBLEDevice::setSecurityIOCap(BLE_HS_IO_NO_INPUT_OUTPUT);
+
+        pServer = NimBLEDevice::createServer();
+        pServer->setCallbacks(new ServerCallbacks());
+
+        NimBLEService *pService = pServer->createService(NUS_SERVICE_UUID);
+
+        pTxChar = pService->createCharacteristic(
+            NUS_TX_UUID,
+            NIMBLE_PROPERTY::NOTIFY | NIMBLE_PROPERTY::READ
+        );
+
+        NimBLECharacteristic *pRxChar = pService->createCharacteristic(
+            NUS_RX_UUID,
+            NIMBLE_PROPERTY::WRITE | NIMBLE_PROPERTY::WRITE_NR
+        );
+        pRxChar->setCallbacks(new RxCallbacks());
+
+        pServer->start();
+        ble_initialized = true;
     }
-    NimBLEDevice::init(ble_name);
-    NimBLEDevice::setSecurityAuth(true, false, false);
+
+    NimBLEDevice::setSecurityAuth(false, false, false);
     NimBLEDevice::setSecurityIOCap(BLE_HS_IO_NO_INPUT_OUTPUT);
-
-    pServer = NimBLEDevice::createServer();
-    pServer->setCallbacks(new ServerCallbacks());
-
-    NimBLEService *pService = pServer->createService(NUS_SERVICE_UUID);
-
-    pTxChar = pService->createCharacteristic(
-        NUS_TX_UUID,
-        NIMBLE_PROPERTY::NOTIFY | NIMBLE_PROPERTY::READ
-    );
-
-    NimBLECharacteristic *pRxChar = pService->createCharacteristic(
-        NUS_RX_UUID,
-        NIMBLE_PROPERTY::WRITE | NIMBLE_PROPERTY::WRITE_NR
-    );
-    pRxChar->setCallbacks(new RxCallbacks());
-
-    pServer->start();
 
     NimBLEAdvertising *pAdv = NimBLEDevice::getAdvertising();
 
@@ -156,34 +161,30 @@ void ble_uart_init(void) {
     pAdv->start();
     Serial.printf("[BLE] Advertising: %s\n", ble_name);
 
-    ble_initialized = true;
+    ble_active = true;
     Serial.printf("[BLE] Started: %s PIN: %s\n", ble_name, pin_code);
 }
 
 void ble_uart_stop(void) {
-    if (!ble_initialized) return;
+    if (!ble_active) return;
 
     if (ble_connected && pServer) {
         pServer->disconnect(0);
-        ble_connected = false;
     }
 
     NimBLEDevice::stopAdvertising();
-    NimBLEDevice::deinit(true);
 
-    pServer = nullptr;
-    pTxChar = nullptr;
-    ble_initialized = false;
+    ble_active = false;
     ble_connected = false;
     Serial.println("[BLE] Stopped");
 }
 
 bool ble_uart_is_active(void) {
-    return ble_initialized;
+    return ble_active;
 }
 
 void ble_uart_loop(void) {
-    if (!ble_initialized) return;
+    if (!ble_active) return;
 
     if (ble_just_connected) {
         ble_just_connected = false;
@@ -194,12 +195,9 @@ void ble_uart_loop(void) {
 
     if (show_pin_flag) {
         show_pin_flag = false;
-        action_overlay_show("PAIRING");
-        action_overlay_set_status(pin_code);
     }
     if (hide_pin_flag) {
         hide_pin_flag = false;
-        action_overlay_hide();
     }
 
     if (ble_connected && action_overlay_is_active()) {
@@ -250,7 +248,6 @@ void ble_uart_send(const char *data) {
     for (int i = 0; i < len; i += 20) {
         int chunk = (len - i > 20) ? 20 : len - i;
         pTxChar->notify((const uint8_t*)(data + i), chunk);
-        if (i + 20 < len) delay(5);
     }
 
     pTxChar->notify((const uint8_t*)"\n", 1);

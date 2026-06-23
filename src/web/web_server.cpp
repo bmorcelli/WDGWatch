@@ -19,6 +19,8 @@
 #include "../hal/rf_service.h"
 #include <SD.h>
 #include <FS.h>
+#include <NimBLEDevice.h>
+#include "../hal/ble_uart_service.h"
 
 static AsyncWebServer server(80);
 static AsyncWebSocket ws("/ws");
@@ -650,40 +652,75 @@ void web_server_init(void) {
     Serial.println("[WEB] Server started on port 80");
 }
 
+static bool scan_running = false;
+
 static void process_wifi_scan(void) {
-    if (!flag_wifi_scan) return;
-    flag_wifi_scan = false;
+    if (flag_wifi_scan && !scan_running) {
+        flag_wifi_scan = false;
+        Serial.println("[WEB] Starting async WiFi scan (AP_STA mode)...");
 
-    Serial.println("[WEB] WiFi scan (AP_STA mode)...");
-    int n = WiFi.scanNetworks(false, true, false, 300);
-
-    JsonDocument doc;
-    doc["type"] = "wifi_scan";
-    JsonArray nets = doc["networks"].to<JsonArray>();
-    scan_cache_count = 0;
-    if (n > 0) {
-        int max = n > 30 ? 30 : n;
-        for (int i = 0; i < max; i++) {
-            strncpy(scan_cache[i].ssid, WiFi.SSID(i).c_str(), 32);
-            scan_cache[i].ssid[32] = '\0';
-            strncpy(scan_cache[i].bssid, WiFi.BSSIDstr(i).c_str(), 17);
-            scan_cache[i].bssid[17] = '\0';
-            scan_cache[i].rssi = WiFi.RSSI(i);
-            scan_cache[i].ch = WiFi.channel(i);
-
-            JsonObject o = nets.add<JsonObject>();
-            o["ssid"] = scan_cache[i].ssid;
-            o["rssi"] = scan_cache[i].rssi;
-            o["ch"] = scan_cache[i].ch;
+        bool ble_was_adv = false;
+        if (NimBLEDevice::isInitialized() && NimBLEDevice::getAdvertising()->isAdvertising()) {
+            NimBLEDevice::getAdvertising()->stop();
+            ble_was_adv = true;
         }
-        scan_cache_count = max;
+
+        WiFi.scanNetworks(true, true, false, 300);
+        scan_running = true;
     }
-    WiFi.scanDelete();
-    scan_cache_ts = millis();
-    char buf[2048];
-    serializeJson(doc, buf, sizeof(buf));
-    ws_broadcast(buf);
-    Serial.printf("[WEB] Scan done: %d networks\n", scan_cache_count);
+
+    if (scan_running) {
+        int16_t n = WiFi.scanComplete();
+        if (n >= 0) {
+            Serial.printf("[WEB] Async WiFi scan done: %d networks found\n", n);
+            scan_running = false;
+
+            if (NimBLEDevice::isInitialized() && !ble_uart_is_connected()) {
+                NimBLEDevice::getAdvertising()->start();
+            }
+
+            JsonDocument doc;
+            doc["type"] = "wifi_scan";
+            JsonArray nets = doc["networks"].to<JsonArray>();
+            scan_cache_count = 0;
+            if (n > 0) {
+                int max = n > 30 ? 30 : n;
+                for (int i = 0; i < max; i++) {
+                    strncpy(scan_cache[i].ssid, WiFi.SSID(i).c_str(), 32);
+                    scan_cache[i].ssid[32] = '\0';
+                    strncpy(scan_cache[i].bssid, WiFi.BSSIDstr(i).c_str(), 17);
+                    scan_cache[i].bssid[17] = '\0';
+                    scan_cache[i].rssi = WiFi.RSSI(i);
+                    scan_cache[i].ch = WiFi.channel(i);
+
+                    JsonObject o = nets.add<JsonObject>();
+                    o["ssid"] = scan_cache[i].ssid;
+                    o["rssi"] = scan_cache[i].rssi;
+                    o["ch"] = scan_cache[i].ch;
+                }
+                scan_cache_count = max;
+            }
+            scan_cache_ts = millis();
+            char buf[2048];
+            serializeJson(doc, buf, sizeof(buf));
+            ws_broadcast(buf);
+            WiFi.scanDelete();
+        } else if (n == WIFI_SCAN_FAILED) {
+            Serial.println("[WEB] Async WiFi scan failed.");
+            scan_running = false;
+
+            if (NimBLEDevice::isInitialized() && !ble_uart_is_connected()) {
+                NimBLEDevice::getAdvertising()->start();
+            }
+
+            JsonDocument doc;
+            doc["type"] = "wifi_scan";
+            doc["networks"] = JsonArray();
+            char buf[128];
+            serializeJson(doc, buf, sizeof(buf));
+            ws_broadcast(buf);
+        }
+    }
 }
 
 static void process_hw_flags(void) {

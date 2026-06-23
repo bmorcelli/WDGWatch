@@ -15,6 +15,7 @@ bool time_sync_wifi_connected(void);
 void time_sync_force_retry(void);
 void time_sync_set_timezone(const char *tz);
 String time_sync_get_timezone(void);
+void time_sync_adjust_offset(int hours);
 
 void time_sync_load_networks(void);
 void time_sync_save_network(const char *ssid, const char *password, bool hidden = false);

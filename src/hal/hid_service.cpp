@@ -38,6 +38,7 @@ static NimBLECharacteristic *media_input = nullptr;
 static NimBLECharacteristic *mouse_input = nullptr;
 static NimBLEServer        *hid_server = nullptr;
 static bool hid_active      = false;
+static bool hid_initialized = false;
 static bool hid_connected   = false;
 static bool script_running  = false;
 static bool script_abort    = false;
@@ -642,26 +643,30 @@ bool hid_svc_start(void) {
     ble_uart_stop();
     delay(100);
 
-    if (!NimBLEDevice::isInitialized()) {
-        NimBLEDevice::init("SCR-Keyboard");
+    if (!hid_initialized) {
+        if (!NimBLEDevice::isInitialized()) {
+            NimBLEDevice::init("SCR-Keyboard");
+        }
+
+        hid_server = NimBLEDevice::createServer();
+        hid_server->setCallbacks(new HIDServerCallbacks());
+
+        hid_device = new NimBLEHIDDevice(hid_server);
+        hid_device->setManufacturer("WDGWatch");
+        hid_device->setPnp(0x02, 0x045E, 0x02FD, 0x0110);
+        hid_device->setHidInfo(0x00, 0x02);
+
+        hid_device->setReportMap((uint8_t*)HID_DESC, sizeof(HID_DESC));
+
+        kb_input    = hid_device->getInputReport(HID_RPT_KEYBOARD);
+        kb_output   = hid_device->getOutputReport(HID_RPT_KEYBOARD);
+        media_input = hid_device->getInputReport(HID_RPT_MEDIA);
+        mouse_input = hid_device->getInputReport(HID_RPT_MOUSE);
+
+        hid_initialized = true;
     }
 
-    hid_server = NimBLEDevice::createServer();
-    hid_server->setCallbacks(new HIDServerCallbacks());
-
-    hid_device = new NimBLEHIDDevice(hid_server);
-    hid_device->setManufacturer("WDGWatch");
-    hid_device->setPnp(0x02, 0x045E, 0x02FD, 0x0110);
-    hid_device->setHidInfo(0x00, 0x02);
-
-    hid_device->setReportMap((uint8_t*)HID_DESC, sizeof(HID_DESC));
-
-    kb_input    = hid_device->getInputReport(HID_RPT_KEYBOARD);
-    kb_output   = hid_device->getOutputReport(HID_RPT_KEYBOARD);
-    media_input = hid_device->getInputReport(HID_RPT_MEDIA);
-    mouse_input = hid_device->getInputReport(HID_RPT_MOUSE);
-
-    NimBLEDevice::setSecurityAuth(true, true, true);
+    NimBLEDevice::setSecurityAuth(true, false, false);
     NimBLEDevice::setSecurityIOCap(BLE_HS_IO_NO_INPUT_OUTPUT);
 
     NimBLEAdvertising *adv = NimBLEDevice::getAdvertising();
@@ -669,14 +674,10 @@ bool hid_svc_start(void) {
     NimBLEAdvertisementData advData;
     advData.setFlags(BLE_HS_ADV_F_DISC_GEN | BLE_HS_ADV_F_BREDR_UNSUP);
     advData.setName("SCR-Keyboard");
-    advData.setAppearance(HID_KEYBOARD);
-    advData.setCompleteServices(NimBLEUUID(hid_device->getHidService()->getUUID()));
+    advData.setAppearance(961); 
     adv->setAdvertisementData(advData);
 
-    NimBLEAdvertisementData scanData;
-    scanData.setName("SCR-Keyboard");
-    adv->setScanResponseData(scanData);
-
+    adv->addServiceUUID(hid_device->getHidService()->getUUID());
     adv->start();
 
     hid_active = true;
@@ -695,14 +696,7 @@ void hid_svc_stop(void) {
         hid_server->disconnect(0);
     }
     delay(100);
-    NimBLEDevice::deinit(true);
 
-    hid_device  = nullptr;
-    kb_input    = nullptr;
-    kb_output   = nullptr;
-    media_input = nullptr;
-    mouse_input = nullptr;
-    hid_server  = nullptr;
     hid_active    = false;
     hid_connected = false;
     script_running = false;

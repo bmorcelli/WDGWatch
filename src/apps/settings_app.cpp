@@ -49,6 +49,16 @@ static void haptic_toggle_cb(lv_event_t *e) {
     if (on) haptic_click();
 }
 
+static void time_adj_btn_cb(lv_event_t *e) {
+    int adj = (int)(intptr_t)lv_event_get_user_data(e);
+    haptic_click();
+    time_sync_adjust_offset(adj);
+
+    lv_obj_t *parent = lv_obj_get_parent(scr);
+    settings_app_destroy();
+    settings_app_create(parent);
+}
+
 static void color_btn_cb(lv_event_t *e) {
     uint8_t idx = (uint8_t)(intptr_t)lv_event_get_user_data(e);
     haptic_click();
@@ -232,6 +242,49 @@ void settings_app_create(lv_obj_t *parent) {
         }
         lv_obj_add_event_cb(btn, color_btn_cb, LV_EVENT_CLICKED, (void*)(intptr_t)i);
     }
+
+    make_section_label(cont, "TIME CALIBRATE", 0, 0);
+
+    lv_obj_t *time_row = lv_obj_create(cont);
+    lv_obj_remove_style_all(time_row);
+    lv_obj_set_size(time_row, CW, 45);
+    lv_obj_set_style_bg_opa(time_row, LV_OPA_TRANSP, 0);
+    lv_obj_set_flex_flow(time_row, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(time_row, LV_FLEX_ALIGN_SPACE_EVENLY,
+                          LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_style_pad_bottom(time_row, 6, 0);
+
+    lv_obj_t *btn_minus = lv_button_create(time_row);
+    lv_obj_set_size(btn_minus, 85, 32);
+    lv_obj_set_style_bg_color(btn_minus, DK, 0);
+    lv_obj_set_style_border_color(btn_minus, G, 0);
+    lv_obj_set_style_border_width(btn_minus, 1, 0);
+    lv_obj_set_style_radius(btn_minus, 6, 0);
+    lv_obj_add_event_cb(btn_minus, time_adj_btn_cb, LV_EVENT_CLICKED, (void*)(intptr_t)-1);
+    lv_obj_t *lbl_minus = lv_label_create(btn_minus);
+    lv_label_set_text(lbl_minus, "-1 HOUR");
+    lv_obj_set_style_text_color(lbl_minus, G, 0);
+    lv_obj_set_style_text_font(lbl_minus, &lv_font_montserrat_14, 0);
+    lv_obj_center(lbl_minus);
+
+    lv_obj_t *lbl_tz = lv_label_create(time_row);
+    String current_tz = time_sync_get_timezone();
+    lv_label_set_text(lbl_tz, current_tz.c_str());
+    lv_obj_set_style_text_color(lbl_tz, G, 0);
+    lv_obj_set_style_text_font(lbl_tz, &lv_font_montserrat_16, 0);
+
+    lv_obj_t *btn_plus = lv_button_create(time_row);
+    lv_obj_set_size(btn_plus, 85, 32);
+    lv_obj_set_style_bg_color(btn_plus, DK, 0);
+    lv_obj_set_style_border_color(btn_plus, G, 0);
+    lv_obj_set_style_border_width(btn_plus, 1, 0);
+    lv_obj_set_style_radius(btn_plus, 6, 0);
+    lv_obj_add_event_cb(btn_plus, time_adj_btn_cb, LV_EVENT_CLICKED, (void*)(intptr_t)1);
+    lv_obj_t *lbl_plus = lv_label_create(btn_plus);
+    lv_label_set_text(lbl_plus, "+1 HOUR");
+    lv_obj_set_style_text_color(lbl_plus, G, 0);
+    lv_obj_set_style_text_font(lbl_plus, &lv_font_montserrat_14, 0);
+    lv_obj_center(lbl_plus);
 
     make_section_label(cont, "SYSTEM INFO", 0, 0);
 

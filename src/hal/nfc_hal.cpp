@@ -127,6 +127,7 @@ uint32_t interval = 0;
 
 void loopNFCReader()
 {
+    if (!_nfc_running) return;
 #if POLLING
     NFCReader.rfalNfcWorker();
 #else
@@ -140,22 +141,24 @@ void loopNFCReader()
         rfalNfcDevice   *nfcDev;
         NFCReader.rfalNfcGetActiveDevice(&nfcDev);
         NFCReader.rfalNfcaPollerInitialize();
-        if (NFCReader.rfalNfcaPollerCheckPresence(RFAL_14443A_SHORTFRAME_CMD_WUPA, &sensRes) == ST_ERR_NONE) {
+        ReturnCode err = NFCReader.rfalNfcaPollerCheckPresence(RFAL_14443A_SHORTFRAME_CMD_WUPA, &sensRes);
+        if (err == ST_ERR_NONE) {
             if (((nfcDev->dev.nfca.type == RFAL_NFCA_T1T) && (!rfalNfcaIsSensResT1T(&sensRes))) ||
                     ((nfcDev->dev.nfca.type != RFAL_NFCA_T1T) &&
                      (NFCReader.rfalNfcaPollerSelect(nfcDev->dev.nfca.nfcId1, nfcDev->dev.nfca.nfcId1Len, &selRes) != ST_ERR_NONE))) {
                 state = ST_POLLING;
                 Serial.println("Start discovery");
-
                 return ;
             }
             if (millis() > interval) {
                 Serial.println("Operation completed,Tag can be removed from the field");
                 interval = millis() + 1000;
             }
-
             NFCReader.rfalNfcaPollerSleep();
-
+        } else if (err == ST_ERR_TIMEOUT) {
+            state = ST_POLLING;
+            Serial.println("Start discovery");
+            return ;
         }
     }
     break;
@@ -645,14 +648,6 @@ bool beginNFC(notify_callback_t notify_cb, ndef_event_callback_t event_cb)
     bool res = false;
     ndef_notify_cb = notify_cb;
     ndef_event_cb = event_cb;
-    Serial.print("Initializing NFC: ");
-    res = NFCReader.rfalNfcInitialize() == ST_ERR_NONE;
-    if (!res) {
-        Serial.println("Failed to find NFC Reader - check your wiring!");
-        return false;
-    } else {
-        Serial.println("Initializing NFC Reader succeeded");
-    }
     rfalNfcDiscoverParam discover_params;
     discover_params.devLimit = 1;
     discover_params.techs2Find = RFAL_NFC_POLL_TECH_A;
@@ -660,9 +655,16 @@ bool beginNFC(notify_callback_t notify_cb, ndef_event_callback_t event_cb)
     discover_params.notifyCb = demoNotif;
     discover_params.totalDuration = 1000U;
     discover_params.wakeupEnabled = false;
-    Serial.print("Starting discovery mode: ");
-    Serial.println(NFCReader.rfalNfcDiscover(&discover_params));
+    Serial.print("Starting discovery ");
+    NFCReader.rfalNfcInitialize();
+    if (NFCReader.rfalNfcDiscover(&discover_params) != ST_ERR_NONE) {
+        Serial.println("failed!");
+        return false;
+    }
+    Serial.println("success.");
+    state = ST_POLLING;
     _nfc_running = true;
+    NFCReader.rfalNfcDeactivate(true);
     return true;
 }
 

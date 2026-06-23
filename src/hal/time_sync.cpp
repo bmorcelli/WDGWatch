@@ -8,12 +8,14 @@
 #include <vector>
 #include "../config.h"
 #include "../web/web_server.h"
+#include "../app_manager.h"
+#include "recon_service.h"
 
 static void wifi_shutdown_safe(void) {
     if (web_server_is_active()) {
         WiFi.disconnect(false);
     } else {
-        WiFi.disconnect(true);
+        WiFi.disconnect(false);
         WiFi.mode(WIFI_OFF);
     }
 }
@@ -241,6 +243,32 @@ String time_sync_get_timezone(void) {
     return tz;
 }
 
+void time_sync_adjust_offset(int hours) {
+    String tz = time_sync_get_timezone();
+    int sign_idx = tz.indexOf('-');
+    if (sign_idx == -1) {
+        sign_idx = tz.indexOf('+');
+    }
+    int current_offset = 0;
+    String prefix = "GST";
+    if (sign_idx != -1) {
+        prefix = tz.substring(0, sign_idx);
+        String offset_str = tz.substring(sign_idx);
+        current_offset = offset_str.toInt();
+    }
+    
+    current_offset -= hours;
+    
+    char new_tz[32];
+    if (current_offset >= 0) {
+        snprintf(new_tz, sizeof(new_tz), "%s+%d", prefix.c_str(), current_offset);
+    } else {
+        snprintf(new_tz, sizeof(new_tz), "%s%d", prefix.c_str(), current_offset);
+    }
+    
+    time_sync_set_timezone(new_tz);
+}
+
 void time_sync_init(const WiFiNetwork *nets, int count) {
     networks = nets;
     network_count = count;
@@ -270,8 +298,30 @@ void time_sync_init(const WiFiNetwork *nets, int count) {
     instance.rtc.hwClockRead();
 }
 
+static bool is_wifi_busy(void) {
+    if (app_manager_current() == APP_WIFI || app_manager_current() == APP_RECON) {
+        return true;
+    }
+    if (web_server_is_active()) {
+        return true;
+    }
+    if (recon_is_scanning() || recon_is_deauthing() || recon_is_sniffing() ||
+        recon_is_evil_twin() || recon_is_beacon_spamming() || recon_is_deauth_detecting() ||
+        recon_is_arp_scanning() || recon_is_ip_sniffing() || recon_is_adsb_tracking()) {
+        return true;
+    }
+    return false;
+}
+
 void time_sync_loop(void) {
-    if (synced) return;
+    if (synced || is_wifi_busy()) {
+        if (wifi_enabled) {
+            wifi_shutdown_safe();
+            wifi_enabled = false;
+            wifi_connected = false;
+        }
+        return;
+    }
     if (ntp_got_time) {
         ntp_got_time = false;
         instance.rtc.hwClockWrite();

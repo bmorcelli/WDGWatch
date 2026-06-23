@@ -314,10 +314,6 @@ static void dedup_preseed(const uint8_t *pkt, int len) {
 static uint32_t get_unix_timestamp(void);
 
 static void save_message_to_sd(const char *channel_name, const MeshMsg &m) {
-    if (!SD.exists("/lora")) {
-        SD.mkdir("/lora");
-    }
-    
     char path[64];
     const char *fn = "other";
     if (strcasecmp(channel_name, "public") == 0) fn = "meshcore";
@@ -328,37 +324,16 @@ static void save_message_to_sd(const char *channel_name, const MeshMsg &m) {
     
     snprintf(path, sizeof(path), "/lora/%s.txt", fn);
     
-    String lines[25] = {};
-    int count = 0;
-    if (SD.exists(path)) {
-        File f = SD.open(path, FILE_READ);
-        if (f) {
-            while (f.available() && count < 20) {
-                String l = f.readStringUntil('\n');
-                if (l.length() > 0) {
-                    lines[count++] = l;
-                }
-            }
-            f.close();
-        }
+    if (!SD.exists("/lora")) {
+        SD.mkdir("/lora");
     }
-    
-    if (count >= 20) {
-        for (int i = 0; i < 19; i++) {
-            lines[i] = lines[i+1];
-        }
-        count = 19;
-    }
-    
+
     char new_line[256];
     snprintf(new_line, sizeof(new_line), "%lu|%s|%d|%.0f|%s", (unsigned long)m.timestamp, channel_name, m.hops, m.rssi, m.text);
-    lines[count++] = String(new_line);
     
-    File f = SD.open(path, FILE_WRITE);
+    File f = SD.open(path, FILE_APPEND);
     if (f) {
-        for (int i = 0; i < count; i++) {
-            f.println(lines[i]);
-        }
+        f.println(new_line);
         f.close();
     }
 }

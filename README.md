@@ -73,10 +73,13 @@ The device utilizes the onboard SX1262 transceiver to interface with multiple de
     FSK compatibility with Bruce firmware LORA chat devices, running on selected presets (`433.920 MHz`, `868.000 MHz`, `915.000 MHz`). Supports setting custom screen chat alias names (`lora setname <name>`).
 *   **LoRa Web & Watch Terminal UI:** Includes a dynamic, 4-direction scrollable console terminal logging incoming messages across all networks in real-time, with automated session-specific logging to the SD card (`/lora/`).
 
-### 6. 🏷️ NFC Scan, Save & Emulation
+### 6. 🏷️ NFC Scan, Save, Emulation, Dict Attack & EMV Reader
 *   **NFC Scan:** Reads ISO-14443A HF tags and NDEF payloads via the ST25R3916 chip **(Web UI)**.
 *   **NFC Save & Export:** Saves scanned tag metadata to SD card, exports tags to Flipper Zero compatible `.nfc` format, and allows downloading saved tag files as Base64 **(Web UI)**.
 *   **NFC Emulation:** Emulates saved card profiles through the ST25R3916 transceiver.
+*   **Mifare Classic Dictionary Attack:** Attempts to crack and dump Mifare Classic sector data using a combination of default system keys and custom keys loaded from the SD card.
+*   **EMV Contactless Reader:** Reads contactless credit/debit cards using raw APDU transceive sequences, extracting the PAN (masked card number), expiry date, card brand (Visa, Mastercard, Troy, etc.), and cardholder name.
+*   **Stabilized RFAL Layer:** Features synchronized RFAL state discovery cycles and increased LDO/crystal oscillators startup delays (50ms) for maximum hardware stability.
 
 ### 7. ⌨️ HID Controller (BadUSB, BadBLE, Air Mouse)
 *   **BadUSB & BadBLE:** Emulates a keyboard/mouse over wired USB or wireless BLE HID.
@@ -177,6 +180,7 @@ The SCR-Bit virtual pet evolves into an autonomous cyber-recon agent via the **P
 *   **Global Styling:** A centralized theme engine that dynamically updates all UI elements (borders, buttons, status indicators, keyboards) across the system.
 *   **Real-time Recoloring:** Switching themes (e.g., from Cyan to Green or Amber) instantly forces an in-memory rebuild of active views, applying the new aesthetic without requiring a device reboot.
 *   **Persistent Customization:** User theme preferences are saved to NVS and applied automatically upon startup.
+*   **Watchface Visual Enhancements:** Real-time CPU/Internal temperature rendering (in °C) across all watchface layouts (Pip-Boy, Minimal, Analog), and an updated rounded-border visual active/inactive alarm indicator.
 
 ### 13. 💡 Utility Tools (Flashlight, Stopwatch, Timer)
 *   **Flashlight:** Toggle maximum screen brightness with a white background for emergency illumination.
@@ -206,6 +210,8 @@ The SCR-Bit virtual pet evolves into an autonomous cyber-recon agent via the **P
 | 🛜 **SSID Beacon Spoofer** | 🟢 Yes | 🔴 No | — | Up to 15 SSIDs |
 | 😈 **Evil Twin AP Creator** | 🟢 Yes | 🟢 Yes | `evil_twin` | Basic AP |
 | 🏷️ **NFC Scan (ISO-14443A/NDEF)** | 🟢 Yes | 🟢 Yes | `nfc_scan` | Stable |
+| 🔑 **Mifare Classic Dict Attack** | 🟢 Yes | 🔴 No | — | Stable |
+| 💳 **EMV Contactless Card Reader** | 🟢 Yes | 🔴 No | — | Stable |
 | 🌌 **LoRa MeshCore Node ("SCRW")** | 🟢 Yes | 🟢 Yes | `lora_send` | 869.618 MHz |
 | 🛜 **Meshtastic Chat (LongFast)** | 🟢 Yes | 🟢 Yes | — | 869.525 MHz |
 | 📟 **POCSAG Pager (FSK)** | 🟢 Yes | 🟢 Yes | — | RIC Code Input |
@@ -426,10 +432,13 @@ Cihaz, dahili SX1262 alıcı-vericisini kullanarak çeşitli merkeziyetsiz telsi
     Bruce yazılımı kullanan cihazlarla FSK tabanlı LORA mesajlaşma uyumluluğu. En çok kullanılan frekanslar (`433.920 MHz`, `868.000 MHz`, `915.000 MHz`) arasında dinamik geçiş imkanı sağlar.
 *   **LoRa Web ve Saat Terminal Arayüzü:** Gelen mesajları anlık olarak gösteren, 4 yöne kaydırılabilir retro konsol ekranı ve her protokol oturumu için SD kartta `/lora/` dizininde otomatik dosya tabanlı kayıt (log) tutma sistemi.
 
-### 6. 🏷️ NFC Tarama ve Emülasyon
+### 6. 🏷️ NFC Tarama, Emülasyon, Kırma (Dict Attack) ve EMV Okuyucu
 *   **NFC Tarama:** ST25R3916 entegresini kullanarak 13.56 MHz NFC etiketlerini ve NDEF mesaj içeriklerini okur **(Web Arayüzü)**.
 *   **NFC Kaydetme & Flipper Dışa Aktarma:** Okunan etiket verilerini SD karta kaydeder, Flipper Zero formatıyla uyumlu `.nfc` dosyası olarak dışa aktarır ve API ile Base64 formatında bilgisayara indirilmesini sağlar **(Web Arayüzü)**.
 *   **NFC Emülasyon:** Kayıtlı etiket verilerini ST25R3916 üzerinden taklit eder (emüle eder).
+*   **Mifare Classic Şifre Kırma (Dict Attack):** Varsayılan fabrika şifreleri ve SD karttan yüklenen özel anahtarlar ile Mifare Classic kartların sektör şifrelerini kırmayı ve veriyi dump etmeyi dener.
+*   **EMV Temassız Kart Okuyucu:** Ham APDU zincirlerini kullanarak temassız kredi/banka kartlarını tarar; kart numarasını (maskeli), son kullanma tarihini, kart markasını (Visa, Mastercard, Troy vb.) ve kart sahibi ismini ekrana getirir.
+*   **Kararlı RFAL Katmanı:** Maksimum donanımsal kararlılık için optimize edilmiş RFAL durum makineleri ve 50ms LDO/osilatör güç kararlılık gecikmeleri ile kesintisiz tarama döngüleri.
 
 ### 7. ⌨️ HID Denetleyici (BadUSB, BadBLE, Air Mouse)
 *   **BadUSB ve BadBLE:** Kablolu USB veya kablosuz BLE HID üzerinden klavye/fare emülasyonu.
@@ -529,6 +538,7 @@ SCR-Bit sanal peti, **Politician** pasif yakalama motoru sayesinde otonom bir si
 *   **Evrensel Stiller:** Sistemdeki tüm UI öğelerini (kenarlıklar, butonlar, durum göstergeleri, klavyeler) dinamik olarak güncelleyen merkezi bir tema motoru.
 *   **Eşzamanlı Renk Değişimi:** Tema değiştirildiğinde (örn. Camgöbeğinden Yeşile veya Kehribar rengine), arayüz anında yeniden çizilir ve cihazın yeniden başlatılmasına gerek kalmadan yeni görünüm uygulanır.
 *   **Kalıcı Kişiselleştirme:** Kullanıcının tema tercihleri NVS hafızasına kaydedilir ve açılışta otomatik olarak yüklenir.
+*   **Saat Kadranı Görsel Yenilikleri:** Tüm kadran düzenlerinde (Pip-Boy, Minimal, Analog) gerçek zamanlı CPU/İç sıcaklık gösterimi (°C) ve yuvarlatılmış çerçevelere sahip, aktif/pasif alarm durumuna göre renk değiştiren yeni görsel alarm ikonu.
 
 ### 13. 💡 Günlük Araçlar (El Feneri, Kronometre, Zamanlayıcı)
 *   **El Feneri:** Ekran parlaklığını maksimuma çıkararak acil durum aydınlatması sağlar.
@@ -558,6 +568,8 @@ SCR-Bit sanal peti, **Politician** pasif yakalama motoru sayesinde otonom bir si
 | 🛜 **SSID Beacon Spoofer** | 🟢 Evet | 🔴 Hayır | — | 15 SSID'ye Kadar |
 | 😈 **Evil Twin AP Oluşturucu** | 🟢 Evet | 🟢 Evet | `evil_twin` | Temel AP |
 | 🏷️ **NFC Tarama (ISO-14443A/NDEF)** | 🟢 Evet | 🟢 Evet | `nfc_scan` | Kararlı |
+| 🔑 **Mifare Classic Şifre Kırma** | 🟢 Evet | 🔴 Hayır | — | Kararlı |
+| 💳 **EMV Temassız Kart Okuyucu** | 🟢 Evet | 🔴 Hayır | — | Kararlı |
 | 🌌 **LoRa MeshCore Düğümü ("SCRW")** | 🟢 Evet | 🟢 Evet | `lora_send` | 869.618 MHz |
 | 🛜 **Meshtastic Sohbet (LongFast)** | 🟢 Evet | 🟢 Evet | — | 869.525 MHz |
 | 📟 **POCSAG Pager (FSK)** | 🟢 Evet | 🟢 Evet | — | RIC Kod Girişi |

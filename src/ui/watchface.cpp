@@ -280,6 +280,7 @@ static void alarm_toggle_cb(lv_event_t *e) {
     update_toggle_button_style();
     if (lbl_alarm_bell) {
         lv_obj_set_style_text_color(lbl_alarm_bell, alarm_enabled ? G : D, 0);
+        lv_obj_set_style_border_color(lbl_alarm_bell, alarm_enabled ? G : D, 0);
     }
     haptic_click();
 }
@@ -395,6 +396,7 @@ static void alarm_bell_click_cb(lv_event_t *e) {
 
 static lv_obj_t *lbl_time = nullptr;
 static lv_obj_t *lbl_seconds = nullptr;
+static lv_obj_t *lbl_temp = nullptr;
 static lv_obj_t *lbl_month = nullptr;
 static lv_obj_t *lbl_date = nullptr;
 static lv_obj_t *lbl_sync = nullptr;
@@ -468,11 +470,17 @@ static void create_pipboy(void) {
 
     lbl_alarm_bell = lv_label_create(scr);
     lv_label_set_text(lbl_alarm_bell, "ALARM");
-    lv_obj_set_style_text_font(lbl_alarm_bell, &lv_font_montserrat_14, 0);
-    lv_obj_set_size(lbl_alarm_bell, 65, 25);
+    lv_obj_set_style_text_font(lbl_alarm_bell, &lv_font_montserrat_16, 0);
+    lv_obj_set_size(lbl_alarm_bell, 85, 30);
     lv_obj_set_style_text_align(lbl_alarm_bell, LV_TEXT_ALIGN_CENTER, 0);
-    lv_obj_set_pos(lbl_alarm_bell, XM - 110, Y0 + 44);
+    lv_obj_set_pos(lbl_alarm_bell, XM - 120, Y0 + 41);
     lv_obj_add_flag(lbl_alarm_bell, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_set_style_bg_color(lbl_alarm_bell, BG, 0);
+    lv_obj_set_style_bg_opa(lbl_alarm_bell, LV_OPA_COVER, 0);
+    lv_obj_set_style_border_color(lbl_alarm_bell, alarm_enabled ? G : D, 0);
+    lv_obj_set_style_border_width(lbl_alarm_bell, 1, 0);
+    lv_obj_set_style_radius(lbl_alarm_bell, 10, 0);
+    lv_obj_set_style_pad_top(lbl_alarm_bell, 4, 0);
     lv_obj_set_style_text_color(lbl_alarm_bell, alarm_enabled ? G : D, 0);
     lv_obj_add_event_cb(lbl_alarm_bell, alarm_bell_click_cb, LV_EVENT_CLICKED, nullptr);
 
@@ -495,7 +503,13 @@ static void create_pipboy(void) {
     lv_label_set_text(lbl_seconds, ":00");
     lv_obj_set_style_text_color(lbl_seconds, D, 0);
     lv_obj_set_style_text_font(lbl_seconds, &lv_font_montserrat_22, 0);
-    lv_obj_align(lbl_seconds, LV_ALIGN_CENTER, 0, 55);
+    lv_obj_align(lbl_seconds, LV_ALIGN_CENTER, 70, 55);
+
+    lbl_temp = lv_label_create(scr);
+    lv_label_set_text(lbl_temp, "--°C");
+    lv_obj_set_style_text_color(lbl_temp, D, 0);
+    lv_obj_set_style_text_font(lbl_temp, &lv_font_montserrat_22, 0);
+    lv_obj_align(lbl_temp, LV_ALIGN_CENTER, -70, 55);
 
     lbl_steps_v = lv_label_create(scr);
     lv_label_set_text(lbl_steps_v, "STEPS: 0");
@@ -534,6 +548,12 @@ static void create_minimal(void) {
     lv_obj_set_style_text_font(m_date, &lv_font_montserrat_20, 0);
     lv_obj_align(m_date, LV_ALIGN_CENTER, 0, 40);
 
+    lbl_temp = lv_label_create(scr);
+    lv_label_set_text(lbl_temp, "--°C");
+    lv_obj_set_style_text_color(lbl_temp, D, 0);
+    lv_obj_set_style_text_font(lbl_temp, &lv_font_montserrat_18, 0);
+    lv_obj_align(lbl_temp, LV_ALIGN_TOP_LEFT, SAFE_LEFT+5, Y0+40);
+
     m_bat = lv_label_create(scr);
     lv_label_set_text(m_bat, "80%");
     lv_obj_set_style_text_color(m_bat, D, 0);
@@ -542,11 +562,17 @@ static void create_minimal(void) {
 
     lbl_alarm_bell = lv_label_create(scr);
     lv_label_set_text(lbl_alarm_bell, "ALARM");
-    lv_obj_set_style_text_font(lbl_alarm_bell, &lv_font_montserrat_14, 0);
-    lv_obj_set_size(lbl_alarm_bell, 65, 25);
+    lv_obj_set_style_text_font(lbl_alarm_bell, &lv_font_montserrat_16, 0);
+    lv_obj_set_size(lbl_alarm_bell, 85, 30);
     lv_obj_set_style_text_align(lbl_alarm_bell, LV_TEXT_ALIGN_CENTER, 0);
-    lv_obj_set_pos(lbl_alarm_bell, X0 + 5, Y0 + 12);
+    lv_obj_set_pos(lbl_alarm_bell, X0 + 5, Y0 + 9);
     lv_obj_add_flag(lbl_alarm_bell, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_set_style_bg_color(lbl_alarm_bell, BG, 0);
+    lv_obj_set_style_bg_opa(lbl_alarm_bell, LV_OPA_COVER, 0);
+    lv_obj_set_style_border_color(lbl_alarm_bell, alarm_enabled ? G : D, 0);
+    lv_obj_set_style_border_width(lbl_alarm_bell, 1, 0);
+    lv_obj_set_style_radius(lbl_alarm_bell, 10, 0);
+    lv_obj_set_style_pad_top(lbl_alarm_bell, 4, 0);
     lv_obj_set_style_text_color(lbl_alarm_bell, alarm_enabled ? G : D, 0);
     lv_obj_add_event_cb(lbl_alarm_bell, alarm_bell_click_cb, LV_EVENT_CLICKED, nullptr);
 
@@ -604,6 +630,12 @@ static void create_analog(void) {
     lv_obj_set_style_text_font(a_time_lbl, &lv_font_montserrat_20, 0);
     lv_obj_align(a_time_lbl, LV_ALIGN_CENTER, 0, 100);
 
+    lbl_temp = lv_label_create(scr);
+    lv_label_set_text(lbl_temp, "--°C");
+    lv_obj_set_style_text_color(lbl_temp, D, 0);
+    lv_obj_set_style_text_font(lbl_temp, &lv_font_montserrat_18, 0);
+    lv_obj_align(lbl_temp, LV_ALIGN_CENTER, 0, 75);
+
     a_date_lbl = lv_label_create(scr);
     lv_label_set_text(a_date_lbl, "MAR 26");
     lv_obj_set_style_text_color(a_date_lbl, D, 0);
@@ -616,11 +648,17 @@ static void create_analog(void) {
 
     lbl_alarm_bell = lv_label_create(scr);
     lv_label_set_text(lbl_alarm_bell, "ALARM");
-    lv_obj_set_style_text_font(lbl_alarm_bell, &lv_font_montserrat_14, 0);
-    lv_obj_set_size(lbl_alarm_bell, 65, 25);
+    lv_obj_set_style_text_font(lbl_alarm_bell, &lv_font_montserrat_16, 0);
+    lv_obj_set_size(lbl_alarm_bell, 85, 30);
     lv_obj_set_style_text_align(lbl_alarm_bell, LV_TEXT_ALIGN_CENTER, 0);
-    lv_obj_set_pos(lbl_alarm_bell, XM - 110, Y0 + 44);
+    lv_obj_set_pos(lbl_alarm_bell, XM - 120, Y0 + 41);
     lv_obj_add_flag(lbl_alarm_bell, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_set_style_bg_color(lbl_alarm_bell, BG, 0);
+    lv_obj_set_style_bg_opa(lbl_alarm_bell, LV_OPA_COVER, 0);
+    lv_obj_set_style_border_color(lbl_alarm_bell, alarm_enabled ? G : D, 0);
+    lv_obj_set_style_border_width(lbl_alarm_bell, 1, 0);
+    lv_obj_set_style_radius(lbl_alarm_bell, 10, 0);
+    lv_obj_set_style_pad_top(lbl_alarm_bell, 4, 0);
     lv_obj_set_style_text_color(lbl_alarm_bell, alarm_enabled ? G : D, 0);
     lv_obj_add_event_cb(lbl_alarm_bell, alarm_bell_click_cb, LV_EVENT_CLICKED, nullptr);
 }
@@ -628,7 +666,7 @@ static void create_analog(void) {
 static void rebuild_face(void) {
     if (scr) { lv_obj_delete(scr); scr = nullptr; }
 
-    lbl_time = lbl_seconds = lbl_month = lbl_date = lbl_sync = nullptr;
+    lbl_time = lbl_seconds = lbl_temp = lbl_month = lbl_date = lbl_sync = nullptr;
     bar_battery = lbl_battery = lbl_steps_v = lbl_gps = nullptr;
     m_time = m_date = m_bat = m_sync = nullptr;
     a_time_lbl = a_date_lbl = nullptr;
@@ -808,7 +846,13 @@ void watchface_set_gps(float lat, float lon, float alt) {
     }
 }
 
-void watchface_set_temperature(int16_t temp_c) { (void)temp_c; }
+void watchface_set_temperature(int16_t temp_c) {
+    if (lbl_temp) {
+        char buf[16];
+        snprintf(buf, sizeof(buf), "%d°C", temp_c);
+        lv_label_set_text(lbl_temp, buf);
+    }
+}
 
 void watchface_set_sync_status(bool wifi, bool ntp_ok, bool gps_fix) {
     c_ntp = ntp_ok; c_wifi = wifi; c_gps = gps_fix;
@@ -839,4 +883,19 @@ void watchface_set_sync_status(bool wifi, bool ntp_ok, bool gps_fix) {
 }
 
 void watchface_update(void) {}
-void watchface_destroy(void) { if (scr) { lv_obj_delete(scr); scr = nullptr; } }
+void watchface_destroy(void) {
+    if (scr) {
+        lv_obj_delete(scr);
+        scr = nullptr;
+    }
+    lbl_time = lbl_seconds = lbl_temp = lbl_month = lbl_date = lbl_sync = nullptr;
+    bar_battery = lbl_battery = lbl_steps_v = lbl_gps = nullptr;
+    m_time = m_date = m_bat = m_sync = nullptr;
+    a_time_lbl = a_date_lbl = nullptr;
+    line_hour = line_min = line_sec = nullptr;
+    lbl_alarm_bell = nullptr;
+    for (int i = 0; i < 7; i++) {
+        day_labels[i] = nullptr;
+        day_boxes[i] = nullptr;
+    }
+}

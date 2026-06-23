@@ -633,7 +633,7 @@ static void start_deauth(void) {
     vTaskDelay(pdMS_TO_TICKS(50));
 
     
-    WiFi.disconnect(true);
+    WiFi.disconnect(false);
     WiFi.softAPdisconnect(true);
     vTaskDelay(pdMS_TO_TICKS(100));
 
@@ -731,7 +731,7 @@ static void stop_deauth_and_restore(void) {
     vTaskDelay(pdMS_TO_TICKS(100)); 
     
     WiFi.softAPdisconnect(true);
-    WiFi.disconnect(true);
+    WiFi.disconnect(false);
     vTaskDelay(pdMS_TO_TICKS(100)); 
     
     if (was_web_server_active) {
@@ -1065,7 +1065,7 @@ static void poll_arp_scan(void) {
                 local[2]&mask[2], local[3]&mask[3]);
         } else if (now - arp_wifi_start_ms > ARP_WIFI_TIMEOUT_MS) {
             Serial.println("[ARP] WiFi connection timeout, aborting");
-            WiFi.disconnect(true);
+            WiFi.disconnect(false);
             WiFi.mode(WIFI_OFF);
             arp_waiting_wifi = false;
             state = RECON_IDLE;
@@ -1486,7 +1486,7 @@ void recon_service_loop(void) {
             stop_deauth_and_restore();
             return;
         } else if (state == RECON_ARP_SCANNING) {
-            WiFi.disconnect(true);
+            WiFi.disconnect(false);
             WiFi.mode(WIFI_OFF);
             arp_waiting_wifi = false;
             state = RECON_IDLE;
@@ -1495,7 +1495,7 @@ void recon_service_loop(void) {
             stop_ip_sniff();
             return;
         } else if (state == RECON_ADSB_TRACKING) {
-            WiFi.disconnect(true);
+            WiFi.disconnect(false);
             WiFi.mode(WIFI_OFF);
             adsb_waiting_wifi = false;
             adsb_has_aircraft = false;

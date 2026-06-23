@@ -197,7 +197,7 @@ void loop() {
 static void update_watchface_data(void) {
 
     struct tm timeinfo;
-    if (time_sync_is_synced() && getLocalTime(&timeinfo, 0)) {
+    if (getLocalTime(&timeinfo, 0)) {
 
         watchface_set_time(timeinfo.tm_hour, timeinfo.tm_min);
         watchface_set_seconds(timeinfo.tm_sec);
@@ -233,4 +233,24 @@ static void update_watchface_data(void) {
     }
     watchface_set_steps(steps, 5000);
     watchface_set_distance((steps * 0.7f) / 1000.0f);
+
+    
+    static uint32_t last_temp_read_ms = 0;
+    static int16_t cached_temp = 25;
+    static bool first_read = true;
+    uint32_t current_ms = millis();
+    
+    if (first_read || (current_ms - last_temp_read_ms >= 10800000UL)) {
+        first_read = false;
+        last_temp_read_ms = current_ms;
+        
+        instance.pmu.enableTemperatureMeasure();
+        delay(10);
+        float t = instance.pmu.getTemperature();
+        instance.pmu.disableTemperatureMeasure();
+        if (!isnan(t)) {
+            cached_temp = (int16_t)(t - 4.5f);
+        }
+    }
+    watchface_set_temperature(cached_temp);
 }

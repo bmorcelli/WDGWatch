@@ -259,16 +259,6 @@ static void boot_timer_cb(lv_timer_t *timer) {
 void app_manager_init(void) {
     pipboy_theme_init();
 
-    scr_watchface = lv_obj_create(nullptr);
-    lv_obj_set_style_bg_color(scr_watchface, PIPBOY_BG_16, 0);
-    lv_obj_set_style_bg_opa(scr_watchface, LV_OPA_COVER, 0);
-    lv_obj_set_scrollbar_mode(scr_watchface, LV_SCROLLBAR_MODE_OFF);
-
-    watchface_create(scr_watchface);
-    lv_obj_add_event_cb(scr_watchface, watchface_gesture_cb, LV_EVENT_GESTURE, nullptr);
-
-    create_menu_screen();
-
     bool custom_boot_file = false;
     if (SD.exists("/custom_boot.txt")) {
         custom_boot_file = true;
@@ -311,8 +301,7 @@ void app_manager_init(void) {
         boot_step = 0;
         boot_timer = lv_timer_create(boot_timer_cb, 500, nullptr);
     } else {
-        lv_screen_load(scr_watchface);
-        current_app = APP_WATCHFACE;
+        app_manager_show(APP_WATCHFACE);
     }
 }
 
@@ -325,20 +314,33 @@ void app_manager_show(AppId app) {
         previous_app = current_app;
     }
 
-    if (current_app != APP_WATCHFACE && current_app != APP_MENU && current_app != APP_BOOT) {
-        cleanup_app();
-    }
-    if (current_app == APP_BOOT && scr_boot != nullptr) {
+    if (current_app == APP_WATCHFACE && scr_watchface != nullptr) {
+        watchface_destroy();
+        lv_obj_delete(scr_watchface);
+        scr_watchface = nullptr;
+    } else if (current_app == APP_MENU && scr_menu != nullptr) {
+        lv_obj_delete(scr_menu);
+        scr_menu = nullptr;
+    } else if (current_app == APP_BOOT && scr_boot != nullptr) {
         lv_obj_delete(scr_boot);
         scr_boot = nullptr;
+    } else if (current_app != APP_WATCHFACE && current_app != APP_MENU && current_app != APP_BOOT) {
+        cleanup_app();
     }
 
     switch (app) {
         case APP_WATCHFACE:
+            scr_watchface = lv_obj_create(nullptr);
+            lv_obj_set_style_bg_color(scr_watchface, PIPBOY_BG_16, 0);
+            lv_obj_set_style_bg_opa(scr_watchface, LV_OPA_COVER, 0);
+            lv_obj_set_scrollbar_mode(scr_watchface, LV_SCROLLBAR_MODE_OFF);
+            watchface_create(scr_watchface);
+            lv_obj_add_event_cb(scr_watchface, watchface_gesture_cb, LV_EVENT_GESTURE, nullptr);
             lv_screen_load(scr_watchface);
             current_app = APP_WATCHFACE;
             break;
         case APP_MENU:
+            create_menu_screen();
             lv_screen_load(scr_menu);
             current_app = APP_MENU;
             break;
@@ -395,15 +397,22 @@ void app_manager_theme_changed(void) {
         lv_obj_delete(scr_menu);
         scr_menu = nullptr;
     }
-    create_menu_screen();
-
     if (scr_watchface) {
-        watchface_create(scr_watchface);
+        watchface_destroy();
+        lv_obj_delete(scr_watchface);
+        scr_watchface = nullptr;
     }
 
     if (current_app == APP_MENU) {
+        create_menu_screen();
         lv_screen_load(scr_menu);
     } else if (current_app == APP_WATCHFACE) {
+        scr_watchface = lv_obj_create(nullptr);
+        lv_obj_set_style_bg_color(scr_watchface, PIPBOY_BG_16, 0);
+        lv_obj_set_style_bg_opa(scr_watchface, LV_OPA_COVER, 0);
+        lv_obj_set_scrollbar_mode(scr_watchface, LV_SCROLLBAR_MODE_OFF);
+        watchface_create(scr_watchface);
+        lv_obj_add_event_cb(scr_watchface, watchface_gesture_cb, LV_EVENT_GESTURE, nullptr);
         lv_screen_load(scr_watchface);
     }
 }
